@@ -1,0 +1,35 @@
+# Cloudflare static asset headers: https://developers.cloudflare.com/workers/static-assets/headers/
+#
+# Rules that match the same path are combined, so the Content-Security-Policy
+# for the landing page and the one for the web app are scoped to disjoint
+# paths. Two CSP headers on one response would both be enforced.
+
+/*
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=(), browsing-topics=()
+  Cross-Origin-Opener-Policy: same-origin
+  X-Frame-Options: DENY
+
+# Landing page: no inline code, nothing from other origins.
+/
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Link: </index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"; type="text/plain"
+  Vary: Accept
+
+# Web app: the diary never leaves the browser. connect-src keeps every request
+# on this origin and img-src blocks remote images, so a pasted image URL can't
+# leak that a diary was opened. 'wasm-unsafe-eval' runs the password
+# key-derivation WebAssembly; 'unsafe-inline' styles cover Svelte transitions
+# and the editor's inline style attributes.
+/app/*
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Referrer-Policy: no-referrer
+  X-Robots-Tag: noindex
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/app/assets/*
+  Cache-Control: public, max-age=31536000, immutable

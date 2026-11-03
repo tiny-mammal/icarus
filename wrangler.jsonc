@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Public site: the landing page at `/` and the browser diary at `/app/`.
+  // Build with `pnpm build:web` (wired as the deploy build command below).
+  "name": "icarus",
+  "main": "site/worker.ts",
+  "compatibility_date": "2026-11-01",
+  "routes": [{ "pattern": "icarus.4oli.com", "custom_domain": true }],
+  "build": { "command": "pnpm build:web" },
+  "assets": {
+    "directory": "./dist-web",
+    "binding": "ASSETS",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+    // Only the home page needs the Worker (Markdown negotiation for agents).
+    "run_worker_first": ["/"]
+  },
+  // No logs or analytics: the site has nothing to learn about its visitors.
+  "observability": { "enabled": false },
+  "workers_dev": false,
+  "preview_urls": false
+}

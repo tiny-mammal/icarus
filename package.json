@@ -1,7 +1,7 @@
 {
   "name": "icarus-diary",
   "version": "0.1.0",
-  "description": "Icarus Diary — a local-first, air-gapped diarying app backed by iCalendar.",
+  "description": "Icarus Diary — a free, open-source, local-first diary app backed by iCalendar.",
   "type": "module",
   "private": true,
   "scripts": {
@@ -9,6 +9,10 @@
     "dev:seed": "vite --mode seed",
     "build": "vite build",
     "preview": "vite preview",
+    "dev:site": "vite --config site/vite.config.ts",
+    "build:web": "vite build --config site/vite.config.ts && vite build --base=/app/ --outDir dist-web/app --emptyOutDir",
+    "preview:web": "wrangler dev",
+    "deploy:web": "wrangler deploy",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -50,6 +54,13 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "vite": "^6.4.5",
-    "vitest": "^4.1.12"
+    "vitest": "^4.1.12",
+    "wrangler": "^4.156.2"
+  },
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://icarus.4oli.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/martinezharo/icarus.git"
   }
 }

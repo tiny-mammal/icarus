@@ -1,0 +1,154 @@
+/*
+ * Landing page for icarus.4oli.com. It uses the app's own theme and Tailwind
+ * vocabulary, so the page looks and feels like Icarus itself. Only the site's
+ * HTML is scanned for classes.
+ */
+@import 'tailwindcss' source(none);
+@source './index.html';
+@source './404.html';
+
+@import '../src/styles/theme.css';
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-ink);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-muted) 35%, transparent);
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--color-muted);
+    outline-offset: 2px;
+  }
+
+  /* The page scrollbar is the only one here: one step brighter than the
+     app's inner scroll areas so it stays discoverable on the dark page. */
+  html::-webkit-scrollbar-thumb {
+    background-color: var(--color-faint);
+  }
+  html::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-muted);
+  }
+
+  summary {
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 1.25rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      transform 300ms var(--ease-glide);
+  }
+  .btn:active {
+    transform: scale(0.98);
+  }
+
+  /* Same treatment as the app's "Save changes" button. */
+  .btn-primary {
+    background: var(--color-text);
+    color: var(--color-ink);
+  }
+  .btn-primary:hover {
+    background: color-mix(in oklab, var(--color-text) 86%, var(--color-ink));
+  }
+
+  /* Same treatment as the welcome screen's "Open or create diary folder". */
+  .btn-secondary {
+    border: 1px solid var(--color-faint);
+    background: var(--color-slate-soft);
+    color: var(--color-text);
+  }
+  .btn-secondary:hover {
+    background: var(--color-slate);
+  }
+
+  /* The app screenshot dissolves into the page instead of ending on a hard edge. */
+  .shot-fade {
+    mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  }
+
+  /* Download dialog: the same scale-and-fade the app's dialogs use. */
+  .download-dialog {
+    opacity: 0;
+    transform: scale(0.96);
+    transition:
+      opacity 140ms ease,
+      transform 180ms var(--ease-glide),
+      overlay 180ms allow-discrete,
+      display 180ms allow-discrete;
+  }
+  .download-dialog[open] {
+    opacity: 1;
+    transform: scale(1);
+  }
+  @starting-style {
+    .download-dialog[open] {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+  .download-dialog::backdrop {
+    background: color-mix(in oklab, var(--color-ink) 70%, transparent);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition:
+      opacity 140ms ease,
+      overlay 140ms allow-discrete,
+      display 140ms allow-discrete;
+  }
+  .download-dialog[open]::backdrop {
+    opacity: 1;
+  }
+  @starting-style {
+    .download-dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  .faq-chevron {
+    transition: transform 300ms var(--ease-glide);
+  }
+  details[open] .faq-chevron {
+    transform: rotate(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

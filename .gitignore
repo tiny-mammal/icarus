@@ -37,3 +37,6 @@ blob-report/
 #agents
 .claude/
 .agents/
+# Public site build (landing + web app) and local Wrangler state
+dist-web/
+.wrangler/

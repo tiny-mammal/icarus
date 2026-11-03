@@ -20,6 +20,7 @@ jobs:
       - run: pnpm check
       - run: pnpm test
       - run: pnpm build
+      - run: pnpm build:web
       # Ubuntu's hosted image already includes Chrome and its system libraries.
       # Use it directly so browser checks do not stall on apt/browser downloads.
       - run: google-chrome --version

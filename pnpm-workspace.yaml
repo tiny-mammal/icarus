@@ -2,3 +2,4 @@
 # ignored). `allowBuilds` replaces the removed `onlyBuiltDependencies`.
 allowBuilds:
   esbuild: true
+  workerd: true

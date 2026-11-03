@@ -82,3 +82,25 @@ browser backend has to keep working on plain-HTTP LAN addresses. Set
 The data mapping is implemented in [`src/lib/ical.ts`](src/lib/ical.ts), and
 the pluggable storage backends are in
 [`src/lib/storage/`](src/lib/storage/).
+
+## Public site
+
+`site/` holds the landing page served at <https://icarus.4oli.com>, with the
+browser app under `/app/`. One Cloudflare Worker deployment serves both as
+static assets; the Worker script only answers `Accept: text/markdown` requests
+for `/` with `index.md`, for agents.
+
+```bash
+pnpm dev:site        # landing page with hot reload on port 1440
+pnpm build:web       # landing → dist-web/, browser app → dist-web/app/
+pnpm preview:web     # build and serve the deployment locally with Wrangler
+pnpm deploy:web      # build and deploy to icarus.4oli.com
+```
+
+`site/public/_headers` sets the security headers, including a strict
+Content-Security-Policy for the app that keeps every request on the same origin.
+
+## License
+
+Icarus is free software under the [GNU General Public License v3](LICENSE) or
+any later version.

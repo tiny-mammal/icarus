@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Icarus: private, encrypted diary app. Free and open source</title>
+    <meta
+      name="description"
+      content="Icarus is a free, open-source diary app. Lock your entries with a password, keep them on your own device, and browse years of writing instantly. For desktop and the web."
+    />
+    <link rel="canonical" href="https://icarus.4oli.com/" />
+    <link rel="alternate" type="text/markdown" href="https://icarus.4oli.com/index.md" title="Icarus overview for agents" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#09090b" />
+    <meta name="author" content="Oliver Martínez" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Icarus" />
+    <meta property="og:url" content="https://icarus.4oli.com/" />
+    <meta property="og:title" content="Icarus: a private diary for all your years" />
+    <meta
+      property="og:description"
+      content="A free, open-source diary app. Password-encrypted, stored on your device, and fast across decades of entries."
+    />
+    <meta property="og:image" content="https://icarus.4oli.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Icarus: a private diary for all your years" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Icarus: a private diary for all your years" />
+    <meta
+      name="twitter:description"
+      content="A free, open-source diary app. Password-encrypted, stored on your device, and fast across decades of entries."
+    />
+    <meta name="twitter:image" content="https://icarus.4oli.com/og-image.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://icarus.4oli.com/#website",
+            "url": "https://icarus.4oli.com/",
+            "name": "Icarus",
+            "inLanguage": "en",
+            "publisher": { "@id": "https://icarus.4oli.com/#author" }
+          },
+          {
+            "@type": "Person",
+            "@id": "https://icarus.4oli.com/#author",
+            "name": "Oliver Martínez",
+            "url": "https://github.com/martinezharo"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://icarus.4oli.com/#app",
+            "name": "Icarus",
+            "alternateName": "Icarus Diary",
+            "url": "https://icarus.4oli.com/",
+            "description": "A free, open-source diary app. Entries are encrypted with your password, stored only on your device in a standard .ics calendar file, and browsable across many years without delay.",
+            "applicationCategory": "LifestyleApplication",
+            "applicationSubCategory": "Diary",
+            "operatingSystem": "Windows, macOS, Linux, Web browser",
+            "isAccessibleForFree": true,
+            "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+            "screenshot": "https://icarus.4oli.com/app-calendar.webp",
+            "image": "https://icarus.4oli.com/og-image.png",
+            "author": { "@id": "https://icarus.4oli.com/#author" },
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+            "featureList": [
+              "Password encryption of diary entries and drafts",
+              "Local-first storage with no account or server",
+              "Entries stored in the standard iCalendar (.ics) format",
+              "Import and export of .ics files",
+              "Calendar view and instant search across years of entries",
+              "Markdown editor",
+              "Desktop app and web app"
+            ]
+          },
+          {
+            "@type": "SoftwareSourceCode",
+            "@id": "https://icarus.4oli.com/#source",
+            "name": "Icarus source code",
+            "codeRepository": "https://github.com/martinezharo/icarus",
+            "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+            "programmingLanguage": ["TypeScript", "Svelte", "Rust"],
+            "targetProduct": { "@id": "https://icarus.4oli.com/#app" },
+            "author": { "@id": "https://icarus.4oli.com/#author" }
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://icarus.4oli.com/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Is Icarus free?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Yes. Icarus is free and open source under the GNU General Public License v3. There are no accounts, ads or subscriptions." }
+              },
+              {
+                "@type": "Question",
+                "name": "Where is my diary stored?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Only on your device. The desktop app saves it in a folder you choose, and the web app keeps it in your browser's storage. Icarus has no servers that receive or store diaries." }
+              },
+              {
+                "@type": "Question",
+                "name": "What happens if I forget my password?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Use the recovery key you saved when you set your password. Without the password or the recovery key, no one can open the diary." }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I bring the diary I already have?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Yes. Import any .ics file and each entry appears on its day. You can export your diary as .ics at any time." }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./main.ts"></script>
+  </head>
+  <body class="relative min-h-screen bg-ink text-text">
+    <a
+      href="#main"
+      class="sr-only rounded-lg bg-text px-3 py-2 text-sm font-medium text-ink focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50"
+      >Skip to content</a
+    >
+
+    <!-- Transparent: it sits on top of the hero so the vignette runs behind it. -->
+    <header class="absolute inset-x-0 top-0 z-20">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <a href="/" class="flex items-center gap-2 text-sm font-semibold tracking-tight text-text" aria-label="Icarus home">
+          <span class="grid h-6 w-6 place-items-center rounded-full border border-faint" aria-hidden="true">
+            <span class="h-1.5 w-1.5 rounded-full bg-muted"></span>
+          </span>
+          Icarus
+        </a>
+        <nav class="flex items-center gap-1 text-sm" aria-label="Primary">
+          <a href="/app/" class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text">Web app</a>
+          <a
+            href="https://github.com/martinezharo/icarus"
+            rel="noopener"
+            class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text"
+            >GitHub</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero: the app's welcome screen, opened up. -->
+      <section class="vignette relative overflow-hidden px-4 pt-34 sm:px-6 sm:pt-42" aria-labelledby="hero-title">
+        <div class="pointer-events-none absolute -top-40 left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-slate/20 blur-3xl" aria-hidden="true"></div>
+
+        <div class="relative mx-auto flex max-w-2xl flex-col items-center text-center">
+          <div class="mb-8 grid h-14 w-14 place-items-center rounded-full border border-faint" aria-hidden="true">
+            <span class="h-2.5 w-2.5 rounded-full bg-muted"></span>
+          </div>
+          <h1 id="hero-title" class="text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
+            A private diary for all your years
+          </h1>
+          <p class="mt-5 max-w-xl text-base leading-relaxed text-balance text-muted sm:text-lg">
+            Icarus is a free, open-source diary app. Lock it with a password, keep every entry on your own device,
+            and return to any day in an instant.
+          </p>
+          <div class="mt-10 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
+            <button type="button" class="btn btn-primary" data-download aria-haspopup="dialog" aria-controls="download-dialog">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              Download for desktop
+            </button>
+            <a href="/app/" class="btn btn-secondary">Open the web app</a>
+          </div>
+          <p class="mt-4 text-xs text-muted">For Windows, macOS and Linux, or right in your browser.</p>
+        </div>
+
+        <figure class="shot-fade relative mx-auto mt-16 max-w-5xl sm:mt-20">
+          <img
+            src="/app-calendar.webp"
+            width="2560"
+            height="1720"
+            alt="The Icarus calendar for October 2026, with an entry title on most days."
+            fetchpriority="high"
+            decoding="async"
+            class="block h-auto w-full rounded-t-2xl border border-b-0 border-slate"
+          />
+        </figure>
+      </section>
+
+      <section class="mx-auto max-w-5xl px-4 pt-8 sm:px-6" aria-labelledby="features-title">
+        <h2 id="features-title" class="sr-only">Why Icarus</h2>
+        <ul class="grid gap-4 sm:grid-cols-2">
+          <li class="rounded-2xl border border-slate bg-surface p-6">
+            <span class="grid h-10 w-10 place-items-center rounded-full border border-faint text-muted" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            </span>
+            <h3 class="mt-5 text-base font-semibold tracking-tight">Locked with your password</h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted">Entries and drafts are encrypted on your device. Without your password, no one else can read them.</p>
+          </li>
+          <li class="rounded-2xl border border-slate bg-surface p-6">
+            <span class="grid h-10 w-10 place-items-center rounded-full border border-faint text-muted" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
+            </span>
+            <h3 class="mt-5 text-base font-semibold tracking-tight">Nothing leaves your device</h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted">No account, no cloud, no tracking. Your diary lives in a folder you choose, or in your browser.</p>
+          </li>
+          <li class="rounded-2xl border border-slate bg-surface p-6">
+            <span class="grid h-10 w-10 place-items-center rounded-full border border-faint text-muted" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </span>
+            <h3 class="mt-5 text-base font-semibold tracking-tight">Years in an instant</h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted">Move through decades of entries and search everything you've written, with no waiting.</p>
+          </li>
+          <li class="rounded-2xl border border-slate bg-surface p-6">
+            <span class="grid h-10 w-10 place-items-center rounded-full border border-faint text-muted" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+            </span>
+            <h3 class="mt-5 text-base font-semibold tracking-tight">A file that outlasts any app</h3>
+            <p class="mt-2 text-sm leading-relaxed text-muted">Everything is saved as a standard <span class="text-text">.ics</span> calendar file. Import your old diary, export it whenever you want.</p>
+          </li>
+        </ul>
+      </section>
+
+      <section class="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6" aria-labelledby="open-title">
+        <div class="flex flex-col items-start gap-6 rounded-2xl border border-slate bg-slate-soft p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+          <div class="max-w-xl">
+            <h2 id="open-title" class="text-xl font-semibold tracking-tight">Free software, in the open</h2>
+            <p class="mt-2 text-sm leading-relaxed text-muted">
+              Icarus is open source under the GNU General Public License v3. Anyone can read the code to check how a
+              diary is handled, build it themselves, or help make it better.
+            </p>
+          </div>
+          <a href="https://github.com/martinezharo/icarus" rel="noopener" class="btn btn-secondary shrink-0">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a10.9 10.9 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+            View the source on GitHub
+          </a>
+        </div>
+      </section>
+
+      <section class="mx-auto mt-24 max-w-2xl px-4 sm:mt-32 sm:px-6" aria-labelledby="faq-title">
+        <h2 id="faq-title" class="text-xl font-semibold tracking-tight">Questions</h2>
+        <div class="mt-6 border-t border-slate">
+          <details class="group border-b border-slate">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 py-5 text-sm font-medium text-text">
+              Is Icarus free?
+              <svg class="faq-chevron shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="pb-5 text-sm leading-relaxed text-muted">Yes. Icarus is free and open source under the GNU GPL v3. There are no accounts, ads or subscriptions.</p>
+          </details>
+          <details class="group border-b border-slate">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 py-5 text-sm font-medium text-text">
+              Where is my diary stored?
+              <svg class="faq-chevron shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="pb-5 text-sm leading-relaxed text-muted">Only on your device. The desktop app saves it in a folder you choose, and the web app keeps it in your browser's storage. Icarus has no servers that receive or store diaries.</p>
+          </details>
+          <details class="group border-b border-slate">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 py-5 text-sm font-medium text-text">
+              What happens if I forget my password?
+              <svg class="faq-chevron shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="pb-5 text-sm leading-relaxed text-muted">Use the recovery key you saved when you set your password. Without the password or the recovery key, no one can open the diary.</p>
+          </details>
+          <details class="group border-b border-slate">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 py-5 text-sm font-medium text-text">
+              Can I bring the diary I already have?
+              <svg class="faq-chevron shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="pb-5 text-sm leading-relaxed text-muted">Yes. Import any .ics file and each entry appears on its day. You can export your diary as .ics at any time.</p>
+          </details>
+        </div>
+      </section>
+
+      <section class="mx-auto mt-24 flex max-w-2xl flex-col items-center px-4 text-center sm:mt-32 sm:px-6" aria-labelledby="closing-title">
+        <div class="mb-6 grid h-10 w-10 place-items-center rounded-full border border-faint" aria-hidden="true">
+          <span class="h-2 w-2 rounded-full bg-muted"></span>
+        </div>
+        <h2 id="closing-title" class="text-2xl font-semibold tracking-tight sm:text-3xl">Write today's chapter</h2>
+        <div class="mt-8 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
+          <button type="button" class="btn btn-primary" data-download aria-haspopup="dialog" aria-controls="download-dialog">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+            Download for desktop
+          </button>
+          <a href="/app/" class="btn btn-secondary">Open the web app</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mt-24 border-t border-slate sm:mt-32">
+      <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <p>
+          Icarus is free software, licensed under the
+          <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="noopener license" class="underline underline-offset-4 hover:text-text">GNU GPL v3</a>.
+        </p>
+        <a href="https://github.com/martinezharo/icarus" rel="noopener" class="hover:text-text">Source code</a>
+      </div>
+    </footer>
+    <dialog
+      id="download-dialog"
+      class="download-dialog m-auto w-[calc(100%-2rem)] max-w-xs rounded-2xl border border-slate bg-surface p-6 text-text shadow-2xl shadow-black/50"
+      aria-labelledby="download-dialog-title"
+    >
+      <div class="mb-4 grid h-10 w-10 place-items-center rounded-full border border-faint" aria-hidden="true">
+        <span class="h-2 w-2 rounded-full bg-muted"></span>
+      </div>
+      <h2 id="download-dialog-title" class="text-base font-semibold tracking-tight">Coming soon</h2>
+      <p class="mt-2 text-sm leading-relaxed text-muted">The desktop app isn't ready yet. Until then, you can write in the web app.</p>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" class="rounded-lg px-3.5 py-2 text-sm text-muted transition-colors hover:bg-slate hover:text-text" data-close>
+          Close
+        </button>
+        <a href="/app/" class="rounded-lg bg-text px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:bg-text/90">Open the web app</a>
+      </div>
+    </dialog>
+  </body>
+</html>

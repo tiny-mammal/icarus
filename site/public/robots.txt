@@ -1,0 +1,5 @@
+# Search engines and AI agents are welcome to read and cite every public page.
+User-agent: *
+Allow: /
+
+Sitemap: https://icarus.4oli.com/sitemap.xml
