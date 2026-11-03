@@ -33,6 +33,22 @@ interface FileSystemWritableFileStream {
   close(): Promise<void>;
 }
 
+let persistenceRequested = false;
+
+/**
+ * Ask the browser to keep this origin's storage under pressure instead of
+ * evicting it like a cache. Without it, a public web deployment could lose a
+ * diary when the disk fills up. Best-effort: browsers may decline silently or
+ * grant it based on engagement, and the diary still saves either way.
+ */
+function requestPersistentStorage(): void {
+  if (persistenceRequested) return;
+  persistenceRequested = true;
+  navigator.storage?.persist?.().catch(() => {
+    /* not granted or unsupported: nothing to recover */
+  });
+}
+
 /** Open a hidden file input and resolve with the chosen file (null if cancelled). */
 function pickFile(accept: string): Promise<File | null> {
   return new Promise((resolve) => {
@@ -102,6 +118,7 @@ export const webBackend: StorageBackend = {
       throw new Error('Browser backend expects a browser vault');
     }
     await idbSet(VAULT_KEY, contents);
+    requestPersistentStorage();
   },
 
   async forgetVault(ref) {
