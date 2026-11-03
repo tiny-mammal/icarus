@@ -72,7 +72,7 @@ test('creates, persists and edits an entry in IndexedDB', async ({ page }) => {
   // The vault must come back from IndexedDB, not from memory.
   await page.reload();
   await openToday(page);
-  await expect(page.getByText('Browser smoke test')).toBeVisible();
+  await expect(page.getByRole('article').getByText('Browser smoke test')).toBeVisible();
 
   // Editing exercises id generation on this origin.
   await page.getByLabel('Edit entry').first().click();
