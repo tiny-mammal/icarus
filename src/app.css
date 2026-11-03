@@ -64,21 +64,37 @@
     user-select: text;
   }
 
-  /* Slim, ghosted scrollbars. */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-slate) transparent;
+  /* Minimal scrollbars: a thin, ghosted pill with no track and no arrow
+     buttons. Chromium ignores ::-webkit-scrollbar once scrollbar-width/color
+     are set, so the standard properties only apply where webkit styling is
+     unsupported (Firefox). */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-slate) transparent;
+    }
   }
   *::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
   }
+  *::-webkit-scrollbar-button {
+    display: none;
+  }
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  /* The transparent border insets the pill so only ~4px of it is visible. */
   *::-webkit-scrollbar-thumb {
     background: var(--color-slate);
+    background-clip: content-box;
+    border: 3px solid transparent;
     border-radius: 999px;
   }
-  *::-webkit-scrollbar-track {
-    background: transparent;
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted);
+    background-clip: content-box;
   }
 
   ::selection {
