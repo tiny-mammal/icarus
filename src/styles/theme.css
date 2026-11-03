@@ -1,0 +1,80 @@
+/*
+ * Icarus visual identity, shared by the app (`src/app.css`) and the public
+ * site (`site/style.css`) so both always look like the same product.
+ * Import it after `tailwindcss`.
+ */
+
+/* Bundled, offline-friendly fonts (no CDN — air-gapped safe). */
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/jetbrains-mono/400.css';
+
+/* ------------------------------------------------------------------ */
+/* Design tokens — the monochromatic "luxury dark" identity.          */
+/* ------------------------------------------------------------------ */
+@theme {
+  --color-ink: #09090b; /* deepest background          */
+  --color-surface: #101012; /* raised surfaces           */
+  --color-slate: #27272a; /* borders / hover fills     */
+  --color-slate-soft: #18181b; /* subtle panels         */
+  --color-muted: #8b8b94; /* secondary text (WCAG AA)   */
+  --color-faint: #3f3f46; /* borders / lines only       */
+  --color-text: #fafafa; /* primary text              */
+
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  --radius-xl: 1rem;
+
+  /* Bespoke easing for the "satisfying" micro-interactions. */
+  --ease-glide: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  /* Minimal scrollbars: a thin, ghosted pill with no track and no arrow
+     buttons. Chromium ignores ::-webkit-scrollbar once scrollbar-width/color
+     are set, so the standard properties only apply where webkit styling is
+     unsupported (Firefox). */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-slate) transparent;
+    }
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-button {
+    display: none;
+  }
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  /* The transparent border insets the pill so only ~4px of it is visible. */
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-slate);
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-muted);
+    background-clip: content-box;
+  }
+}
+
+/* A faint grain/vignette helper for cinematic, full-bleed screens
+   (the app's welcome screen, the site's hero). */
+.vignette {
+  background:
+    radial-gradient(
+      120% 120% at 50% 0%,
+      color-mix(in oklab, var(--color-slate) 22%, transparent) 0%,
+      transparent 55%
+    ),
+    var(--color-ink);
+}
