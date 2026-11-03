@@ -68,23 +68,25 @@
         A quiet, local-first place for your days.<br />
         {isDesktop
           ? 'Choose where your diary, drafts and settings will live.'
-          : 'Begin by opening an existing diary, or start with a blank canvas.'}
+          : 'Start a new diary, or bring in one you already keep.'}
       </p>
     </div>
 
+    <button
+      class="mt-10 w-full rounded-xl border border-faint bg-slate-soft px-6 py-4 text-sm font-medium text-text transition-colors hover:bg-slate disabled:opacity-60"
+      onclick={() => (isDesktop ? app.openVaultFolder() : app.startNewDiary())}
+      disabled={app.busy}
+      in:fly={{ y: 16, duration: 700, delay: 180, easing: cubicOut }}
+    >
+      {isDesktop ? 'Open or create diary folder' : 'Start a new diary'}
+    </button>
     {#if isDesktop}
-      <button
-        class="mt-10 w-full rounded-xl border border-faint bg-slate-soft px-6 py-4 text-sm font-medium text-text transition-colors hover:bg-slate"
-        onclick={() => app.openVaultFolder()}
-      >
-        Open or create diary folder
-      </button>
       <p class="mt-2 text-xs text-muted">Your diary, drafts and settings will be saved here.</p>
     {/if}
 
     <!-- Drop zone / primary action -->
     <button
-      class="group {isDesktop ? 'mt-5' : 'mt-10'} flex w-full flex-col items-center gap-4 rounded-2xl border border-dashed px-8 py-10 transition-all duration-300
+      class="group mt-5 flex w-full flex-col items-center gap-4 rounded-2xl border border-dashed px-8 py-10 transition-all duration-300
         {dragHover
           ? 'scale-[1.01] border-muted bg-slate-soft'
           : 'border-faint hover:border-muted hover:bg-slate-soft/60'}"
@@ -103,25 +105,20 @@
         {dragHover
           ? 'Release to open'
           : isDesktop
-            ? 'Import an existing .ics'
+            ? 'Import an existing diary'
             : 'Import a diary (.ics)'}
       </span>
       <span class="text-xs text-muted">
         {isDesktop
-          ? 'Choose the .ics, then choose its new data folder'
+          ? 'Choose the file, then its new data folder'
           : 'Drag & drop a file here, or click to browse'}
       </span>
     </button>
 
-    <!-- Subtle skip -->
-    {#if !isDesktop}
-      <button
-        class="mt-7 text-xs text-muted underline-offset-4 transition-colors hover:text-text hover:underline"
-        onclick={() => app.skipToBlank()}
-        in:fade={{ duration: 600, delay: 420 }}
-      >
-        Skip for now, enter blank canvas
-      </button>
-    {/if}
+    <!-- What happens next: the protection choice. -->
+    <p class="mt-7 flex items-center gap-2 text-xs text-muted" in:fade={{ duration: 600, delay: 420 }}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      Next, you'll choose whether to protect it with a password.
+    </p>
   </main>
 </div>

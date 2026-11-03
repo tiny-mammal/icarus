@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { Buffer } from 'node:buffer';
+import { importPlainIcs } from './helpers';
 
 /**
  * The day pane's day stepper jumps between days that hold entries (skipping
@@ -29,15 +29,7 @@ const DIARY_ICS = [
 ].join('\r\n');
 
 async function importDiary(page: Page): Promise<void> {
-  await page.goto('/');
-  const chooserPromise = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: /Import a diary/ }).click();
-  const chooser = await chooserPromise;
-  await chooser.setFiles({
-    name: 'diary.ics',
-    mimeType: 'text/calendar',
-    buffer: Buffer.from(DIARY_ICS),
-  });
+  await importPlainIcs(page, DIARY_ICS);
 }
 
 async function openFromSearch(page: Page, title: string): Promise<void> {

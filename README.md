@@ -21,6 +21,8 @@ Built with Tauri 2, Svelte 5, TypeScript, Vite, and Tailwind CSS.
   `Ctrl/Cmd + K`.
 - Desktop folder selection, `.ics` import into that folder, and backup export.
 - Drafts and preferences persisted beside `diary.ics` on desktop.
+- Optional password protection: the diary, drafts and personal dictionary are
+  encrypted at rest, with a recovery key, auto-lock and encrypted backups.
 - Atomic `.ics` writes on desktop, so a failed save does not replace the
   original file; browser vaults live in IndexedDB and export as `.ics`.
 - A private desktop WebView session to avoid retaining browser profile data
@@ -50,6 +52,42 @@ data directory. Deleting files does not guarantee physical erasure of earlier
 disk contents. The operating system can also write process memory to swap or
 hibernation storage; choosing an external folder does not control that behavior.
 
+## Password protection
+
+Creating or importing a diary starts by asking whether to protect it with a
+password; choosing encryption writes it encrypted from the start, so it never
+reaches the disk in plain text. An existing diary can be protected later from
+**Settings → Privacy**. While
+protected, the diary, drafts and personal spell-check dictionary are only
+stored encrypted; nothing readable is written to the folder or to IndexedDB.
+Plain preferences (week start, spell check, auto-lock) stay unencrypted so the
+lock screen can use them.
+
+- **Keys.** A random 256-bit master key encrypts everything with AES-256-GCM.
+  It is stored wrapped twice: by a key derived from the password with Argon2id
+  (64 MiB, 3 passes), and by a 160-bit recovery key shown once during setup.
+  Changing the password or recovery key only rewraps the master key.
+- **Files.** On desktop the encrypted diary is `diary.icarus`, so calendar
+  apps never mistake it for `.ics`. Enabling protection writes and verifies it
+  before deleting `diary.ics`; removing protection does the reverse. Backups
+  export as encrypted `.icarus` by default, or as plain `.ics` on request.
+  Both formats can be imported.
+- **Locking.** The diary locks after a chosen period of inactivity (15 minutes
+  by default), optionally whenever the window is hidden, or from the lock
+  button. Locking saves the open draft encrypted and clears the diary from
+  memory.
+- **Forgetting.** Without the password or the recovery key the diary cannot be
+  recovered.
+- **Limits.** Encryption protects data at rest: a stolen disk, a synced folder,
+  a copied browser profile. It does not protect an unlocked diary from malware
+  or browser extensions running on the same machine. Old unencrypted copies
+  (exports, backups, sync history) are not touched; delete them yourself.
+- **Browser mode.** Web Crypto only exists in secure contexts, so protection
+  needs HTTPS or `localhost`. Over plain HTTP the option is disabled: anyone on
+  the network could inject a script that captures the password. To reach a
+  dev server over HTTPS from other devices, put it behind `tailscale serve`
+  and allow that name: `ICARUS_ALLOWED_HOSTS=.ts.net pnpm dev --host`.
+
 ## Development
 
 Requires Node.js, pnpm, Rust 1.98.1 (pinned in `rust-toolchain.toml`), and the
@@ -77,11 +115,14 @@ The E2E suite drives the real UI in Chromium. It needs the browser once
 against a non-loopback HTTP origin on purpose — browsers only expose
 secure-context APIs like `crypto.randomUUID` over HTTPS or localhost, and the
 browser backend has to keep working on plain-HTTP LAN addresses. Set
-`ICARUS_E2E_HOST` to choose the address the dev server should bind.
+`ICARUS_E2E_HOST` to choose the address the dev server should bind, and
+`ICARUS_E2E_PORT` when another dev server already uses port 1420. The
+encryption flow needs a secure context, so it only runs against a loopback
+host (as CI does, with `ICARUS_E2E_HOST=127.0.0.1`).
 
-The data mapping is implemented in [`src/lib/ical.ts`](src/lib/ical.ts), and
-the pluggable storage backends are in
-[`src/lib/storage/`](src/lib/storage/).
+The data mapping is implemented in [`src/lib/ical.ts`](src/lib/ical.ts), the
+pluggable storage backends are in [`src/lib/storage/`](src/lib/storage/), and
+the encrypted format is in [`src/lib/crypto/`](src/lib/crypto/).
 
 ## Public site
 

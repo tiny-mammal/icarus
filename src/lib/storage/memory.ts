@@ -37,18 +37,22 @@ export function createMemoryBackend(
     async forgetVault() {
       vault = null;
     },
+    async siblingVault() {
+      return MEMORY_VAULT;
+    },
+    async removeSupersededVault() {},
 
     async pickVaultLocation() {
       return MEMORY_VAULT;
     },
-    async pickIcsText() {
-      const picked = await base.pickIcsText();
+    async pickDiaryText() {
+      const picked = await base.pickDiaryText();
       return picked && { text: picked.text, ref: MEMORY_VAULT };
     },
     async readDroppedPath() {
       return null;
     },
-    saveIcsCopy: (contents, defaultName) => base.saveIcsCopy(contents, defaultName),
+    saveBackup: (contents, defaultName) => base.saveBackup(contents, defaultName),
 
     async getItem<T>(store: StoreName, key: string) {
       return (stores.get(id(store, key)) as T | undefined) ?? null;

@@ -5,12 +5,15 @@
  *  - `pnpm dev:seed` → memory only (`./memory.ts`), preloaded with a sample
  *    diary. The mode check is static, so production builds drop it.
  *
- * Consumers import `storage` and stay platform-agnostic.
+ * Every backend is wrapped by `withEncryption`, so diaries can be protected
+ * with a password on any platform. Consumers import `storage` and stay
+ * platform-agnostic.
  */
 import { isTauri } from '@tauri-apps/api/core';
 import { tauriBackend } from './tauri';
 import { webBackend } from './web';
 import { createMemoryBackend } from './memory';
+import { withEncryption, type SecureStorage } from './encrypted';
 import { serializeIcs } from '../ical';
 import { seedEntries } from '../seed';
 import type { StorageBackend } from './types';
@@ -26,13 +29,15 @@ function platformBackend(): StorageBackend {
   return runningUnderTauri() ? tauriBackend : webBackend;
 }
 
-export const storage: StorageBackend =
+export const storage: SecureStorage = withEncryption(
   import.meta.env.MODE === 'seed'
     ? createMemoryBackend(
         serializeIcs(seedEntries(Number(import.meta.env.VITE_SEED_YEARS) || undefined)),
         platformBackend(),
       )
-    : platformBackend();
+    : platformBackend(),
+);
 
 export type { StorageBackend, StoreName, VaultRef } from './types';
-export { vaultFileName } from './types';
+export type { SecureStorage, UnlockSecret, VaultEncryption } from './encrypted';
+export { isDiaryFileName, sameVault, vaultFileName } from './types';

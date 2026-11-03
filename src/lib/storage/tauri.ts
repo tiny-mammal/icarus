@@ -1,4 +1,7 @@
-/** Desktop storage. The selected folder owns the diary, drafts and settings. */
+/**
+ * Desktop storage. The selected folder owns the diary (`diary.ics`, or
+ * `diary.icarus` when encrypted), drafts and settings.
+ */
 import {
   readTextFile,
   writeTextFile,
@@ -9,11 +12,21 @@ import {
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { dirname, join } from '@tauri-apps/api/path';
 import { devError } from '../log';
-import { BackupExistsError } from './errors';
-import type { StorageBackend, StoreName, VaultRef } from './types';
+import { isEncryptedVault } from '../crypto/vault';
+import { BackupExistsError, FolderHasDiaryError } from './errors';
+import {
+  ENCRYPTED_EXTENSION,
+  PLAIN_EXTENSION,
+  type StorageBackend,
+  type StoreName,
+  type VaultRef,
+} from './types';
 
-const ICS_FILTERS = [{ name: 'iCalendar', extensions: ['ics'] }];
-const DIARY_FILE = 'diary.ics';
+const ICS_FILTER = { name: 'iCalendar', extensions: [PLAIN_EXTENSION] };
+const ENCRYPTED_FILTER = { name: 'Encrypted Icarus diary', extensions: [ENCRYPTED_EXTENSION] };
+const DIARY_FILTER = { name: 'Diary', extensions: [PLAIN_EXTENSION, ENCRYPTED_EXTENSION] };
+const PLAIN_DIARY_FILE = `diary.${PLAIN_EXTENSION}`;
+const ENCRYPTED_DIARY_FILE = `diary.${ENCRYPTED_EXTENSION}`;
 const STORE_FILES: Record<StoreName, string> = {
   settings: 'settings.json',
   drafts: 'drafts.json',
@@ -33,23 +46,45 @@ async function pickFolder(): Promise<string | null> {
   return typeof selected === 'string' ? selected : null;
 }
 
-async function fileInFolder(folder: string): Promise<{ kind: 'file'; path: string }> {
-  return { kind: 'file', path: await join(folder, DIARY_FILE) };
+async function fileInFolder(
+  folder: string,
+  encrypted: boolean,
+): Promise<{ kind: 'file'; path: string }> {
+  return {
+    kind: 'file',
+    path: await join(folder, encrypted ? ENCRYPTED_DIARY_FILE : PLAIN_DIARY_FILE),
+  };
+}
+
+/** The diary already in `folder` (encrypted wins), or where a new one goes. */
+async function diaryInFolder(folder: string): Promise<{ kind: 'file'; path: string }> {
+  const encrypted = await fileInFolder(folder, true);
+  return (await exists(encrypted.path)) ? encrypted : fileInFolder(folder, false);
 }
 
 async function destinationForImport(text: string): Promise<{ text: string; ref: VaultRef } | null> {
   const folder = await pickFolder();
   if (!folder) return null;
-  const ref = await fileInFolder(folder);
-  if (await exists(ref.path)) {
-    throw new Error('The selected folder already contains diary.ics');
+  for (const encrypted of [false, true]) {
+    if (await exists((await fileInFolder(folder, encrypted)).path)) {
+      throw new FolderHasDiaryError();
+    }
   }
-  return { text, ref };
+  return { text, ref: await fileInFolder(folder, isEncryptedVault(text)) };
 }
 
 function requireFolder(): string {
   if (!activeFolder) throw new Error('Choose a diary folder first');
   return activeFolder;
+}
+
+/** The vault's path, refusing anything outside the selected folder. */
+async function pathInFolder(ref: VaultRef): Promise<string> {
+  if (ref.kind !== 'file') throw new Error('Desktop requires a file vault');
+  if ((await dirname(ref.path)) !== requireFolder()) {
+    throw new Error('The diary must be inside the selected folder');
+  }
+  return ref.path;
 }
 
 /** Keep the temporary file beside the destination, including on removable media. */
@@ -118,29 +153,35 @@ export const tauriBackend: StorageBackend = {
   },
 
   async writeVault(ref, contents) {
-    if (ref.kind !== 'file') throw new Error('Desktop requires a file vault');
-    if ((await dirname(ref.path)) !== requireFolder()) {
-      throw new Error('The diary must be inside the selected folder');
-    }
-    await writeAtomic(ref.path, contents);
+    await writeAtomic(await pathInFolder(ref), contents);
   },
 
   async forgetVault() {
     // Closing a folder never deletes its files.
   },
 
-  async pickVaultLocation() {
-    const folder = await pickFolder();
-    return folder ? fileInFolder(folder) : null;
+  async siblingVault(ref, encrypted) {
+    if (ref.kind !== 'file') throw new Error('Desktop requires a file vault');
+    return fileInFolder(await dirname(ref.path), encrypted);
   },
 
-  async pickIcsText() {
+  async removeSupersededVault(ref) {
+    const path = await pathInFolder(ref);
+    if (await exists(path)) await remove(path);
+  },
+
+  async pickVaultLocation() {
+    const folder = await pickFolder();
+    return folder ? diaryInFolder(folder) : null;
+  },
+
+  async pickDiaryText() {
     const selected = await open({
       multiple: false,
       directory: false,
       fileAccessMode: 'scoped',
-      filters: ICS_FILTERS,
-      title: 'Import diary (.ics)',
+      filters: [DIARY_FILTER],
+      title: 'Import diary',
     });
     if (typeof selected !== 'string') return null;
     return destinationForImport(await readTextFile(selected));
@@ -150,10 +191,10 @@ export const tauriBackend: StorageBackend = {
     return destinationForImport(await readTextFile(path));
   },
 
-  async saveIcsCopy(contents, defaultName) {
+  async saveBackup(contents, defaultName) {
     const path = await save({
       defaultPath: defaultName,
-      filters: ICS_FILTERS,
+      filters: [defaultName.endsWith(`.${ENCRYPTED_EXTENSION}`) ? ENCRYPTED_FILTER : ICS_FILTER],
       title: 'Export diary',
     });
     if (!path) return false;

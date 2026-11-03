@@ -10,7 +10,9 @@ import os from 'node:os';
  * backend must degrade gracefully. Override the address with `ICARUS_E2E_HOST`
  * when the host to use differs from the one the dev server is bound to.
  */
-const PORT = 1420;
+// Override with `ICARUS_E2E_PORT` when another checkout's dev server owns 1420
+// (otherwise Playwright would silently reuse it and test the wrong code).
+const PORT = Number(process.env.ICARUS_E2E_PORT) || 1420;
 
 function nonLoopbackHost(): string {
   const addresses = Object.values(os.networkInterfaces())

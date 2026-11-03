@@ -2,8 +2,8 @@
  * Global application state, built on Svelte 5 runes. A single instance (`app`)
  * is shared across components. It owns the entries, the current view, the
  * calendar position, and all the side-effecting actions (load / commit /
- * import / export) — each of which keeps the in-memory model and the vault
- * (a `.ics` file on desktop, IndexedDB in the browser) in sync.
+ * import / export / lock) — each of which keeps the in-memory model and the
+ * vault (a file on desktop, IndexedDB in the browser) in sync.
  */
 import type {
   DiaryEntry,
@@ -20,8 +20,23 @@ import {
   persistDrafts,
   upsertDraft,
 } from './drafts';
-import { storage, type VaultRef } from './storage';
-import { BackupExistsError } from './storage/errors';
+import { isDiaryFileName, storage, type UnlockSecret, type VaultRef } from './storage';
+import {
+  BackupExistsError,
+  FolderHasDiaryError,
+  VaultLockedError,
+} from './storage/errors';
+import { PRIVATE_ITEMS } from './storage/types';
+import {
+  CorruptVaultError,
+  WrongSecretError,
+  changePassword,
+  createVaultKeys,
+  encryptionSupported,
+  isEncryptedVault,
+  replaceRecoveryKey,
+  type VaultKeys,
+} from './crypto/vault';
 import {
   getSavedWeekStart,
   getSavedDateFormat,
@@ -31,6 +46,11 @@ import {
   setSavedSpellcheck,
   getSavedSpellWords,
   setSavedSpellWords,
+  getSavedAutoLock,
+  setSavedAutoLock,
+  getSavedLockWhenHidden,
+  setSavedLockWhenHidden,
+  type AutoLockMinutes,
   type WeekStart,
   type DateFormat,
 } from './config';
@@ -45,7 +65,28 @@ import { addUserWord, setUserWords } from './spellcheck';
 import { randomId } from './random';
 import { devError } from './log';
 
-type View = 'welcome' | 'main';
+type View = 'welcome' | 'locked' | 'main';
+
+/** Outcome of a password-gated action, so dialogs can show the right message. */
+export type SecretResult = 'ok' | 'wrong-secret' | 'failed';
+
+/** Rewrapped keys waiting for the user to confirm they saved a recovery key. */
+type PendingKeys =
+  | { kind: 'enable'; keys: VaultKeys }
+  | { kind: 'recovery'; keys: VaultKeys };
+
+export type BackupFormat = 'encrypted' | 'plain';
+
+/**
+ * A new or imported diary waiting for the user to choose whether to protect
+ * it. Nothing is written until they choose, so a diary meant to be encrypted
+ * never touches the disk in plain text.
+ */
+export interface PendingDiary {
+  ref: VaultRef;
+  text: string;
+  source: 'new' | 'import';
+}
 
 function groupByDay(entries: DiaryEntry[]): Map<string, DiaryEntry[]> {
   const map = new Map<string, DiaryEntry[]>();
@@ -63,12 +104,33 @@ let toastSeq = 0;
 class AppStore {
   // --- core reactive state ------------------------------------------------
   entries = $state<DiaryEntry[]>([]);
-  /** Where the diary lives right now (null = blank canvas, memory only). */
+  /** Where the open diary lives (null while on the welcome or lock screen). */
   vault = $state<VaultRef | null>(null);
   /** Which backend this session runs on — drives platform-aware UI copy. */
   readonly storageKind: 'tauri' | 'web' = storage.kind;
   view = $state<View>('welcome');
   ready = $state(false); // finished the initial boot check
+
+  // --- encryption ---------------------------------------------------------
+  /** Whether this context can encrypt at all (secure contexts only). */
+  readonly encryptionSupported = encryptionSupported();
+  /** The open diary is encrypted (and therefore unlocked). */
+  encrypted = $state(false);
+  /** The encrypted diary waiting on the lock screen. */
+  lockedVault = $state<VaultRef | null>(null);
+  /** Minutes of inactivity before locking (0 = never). User preference. */
+  autoLockMinutes = $state<AutoLockMinutes>(15);
+  /** Lock as soon as the window is hidden. User preference. */
+  lockWhenHidden = $state(false);
+  encryptionSetupOpen = $state(false);
+  /** Bumped on every open, so each run of the setup starts from a fresh state. */
+  encryptionSetupRun = $state(0);
+  exportOpen = $state(false);
+  privacyDialog = $state<'password' | 'recovery' | 'disable' | null>(null);
+  /** A new or imported diary waiting on the protection choice. */
+  pendingDiary = $state<PendingDiary | null>(null);
+  // Keys that are only written once the user confirms the recovery key.
+  private pendingKeys: PendingKeys | null = null;
 
   /** `YYYY-MM-DD` of the day pane currently open on the right (or null). */
   selectedKey = $state<string | null>(null);
@@ -160,11 +222,13 @@ class AppStore {
     void this.loadDateFormat();
     void this.loadSpellcheck();
     void this.loadSpellWords();
+    void this.loadLockPreferences();
     try {
       const saved = await storage.getRememberedVault();
       if (saved && (await storage.vaultExists(saved))) {
         const ok = await this.loadVault(saved, { remember: false });
-        if (ok) return;
+        // An encrypted vault stops at the lock screen instead.
+        if (ok || this.view === 'locked') return;
       } else if (saved) {
         // The remembered vault moved or was deleted — forget it gracefully.
         await storage.rememberVault(null);
@@ -191,8 +255,15 @@ class AppStore {
     try {
       const text = await storage.readVault(ref);
       return await this.adoptVault(ref, text, opts.remember !== false);
-    } catch {
-      this.toast('error', 'Could not open that diary.');
+    } catch (err) {
+      if (err instanceof VaultLockedError) {
+        await this.showLockScreen(ref);
+        return false;
+      }
+      devError('loadVault: could not open the diary', err);
+      this.toast('error', err instanceof CorruptVaultError
+        ? 'This encrypted diary is damaged or was modified.'
+        : 'Could not open that diary.');
       return false;
     } finally {
       this.busy = false;
@@ -210,6 +281,7 @@ class AppStore {
     remember: boolean,
     writeCopy = false,
   ): Promise<boolean> {
+    if (isEncryptedVault(text)) return this.adoptEncryptedFile(ref, text);
     const res = parseIcs(text);
     if (!res.ok) {
       this.toast('error', `Couldn't read this file — ${res.error}`);
@@ -229,18 +301,114 @@ class AppStore {
       this.toast('error', 'Could not save the diary in the selected location.');
       return false;
     }
-    this.cancelDraftSave();
-    this.resetEditor();
-    this.entries = res.entries;
-    this.vault = ref;
-    buildSearchIndex(this.entries);
-    this.view = 'main';
-    this.ready = true;
-    if (this.storageKind === 'tauri') await this.loadFolderState();
+    await this.enterVault(ref, res.entries);
     return true;
   }
 
-  private async loadFolderState(): Promise<void> {
+  /** Show `entries` as the diary at `ref`, which is already persisted. */
+  private async enterVault(ref: VaultRef, entries: DiaryEntry[]): Promise<void> {
+    this.cancelDraftSave();
+    this.resetEditor();
+    this.entries = entries;
+    this.vault = ref;
+    this.lockedVault = null;
+    storage.encryption.keepSessionFor(ref);
+    this.encrypted = storage.encryption.isUnlocked(ref);
+    buildSearchIndex(this.entries);
+    this.view = 'main';
+    this.ready = true;
+    await this.loadVaultState();
+  }
+
+  /**
+   * Offer the protection choice for a new or imported plain diary before
+   * anything is written. Encrypted files go straight to the lock screen, and
+   * an encrypted browser diary keeps protecting whatever replaces it.
+   */
+  private async proposeDiary(ref: VaultRef, text: string, source: PendingDiary['source']): Promise<void> {
+    const writeCopy = this.storageKind === 'tauri';
+    if (isEncryptedVault(text) || storage.encryption.isUnlocked(ref)) {
+      await this.adoptVault(ref, text, true, writeCopy);
+      return;
+    }
+    const res = parseIcs(text);
+    if (!res.ok) {
+      this.toast('error', `Couldn't read this file — ${res.error}`);
+      return;
+    }
+    this.settingsOpen = false;
+    this.pendingDiary = { ref, text, source };
+    this.openEncryptionSetup();
+  }
+
+  /** The user chose not to protect the pending diary: save it as plain `.ics`. */
+  async keepPendingDiaryPlain(): Promise<boolean> {
+    const diary = this.pendingDiary;
+    if (!diary) return false;
+    this.busy = true;
+    try {
+      if (!(await this.adoptVault(diary.ref, diary.text, true, this.storageKind === 'tauri'))) {
+        return false;
+      }
+      this.pendingDiary = null;
+      this.encryptionSetupOpen = false;
+      return true;
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** Open the password setup (for the pending diary, or else the open one). */
+  openEncryptionSetup(): void {
+    this.settingsOpen = false;
+    this.encryptionSetupRun++;
+    this.encryptionSetupOpen = true;
+  }
+
+  /** Close the protection choice without creating or importing anything. */
+  cancelPendingDiary(): void {
+    this.pendingDiary = null;
+    this.pendingKeys = null;
+    this.encryptionSetupOpen = false;
+  }
+
+  /** Browser onboarding: start an empty diary in this browser. */
+  async startNewDiary(): Promise<void> {
+    const ref = await storage.pickVaultLocation();
+    if (ref) await this.proposeDiary(ref, serializeIcs([]), 'new');
+  }
+
+  /**
+   * An imported or dropped file that is itself encrypted: store it as-is and
+   * ask for its password. The current diary is closed first.
+   */
+  private async adoptEncryptedFile(ref: VaultRef, text: string): Promise<boolean> {
+    if (!this.encryptionSupported) {
+      this.toast('error', 'Encrypted diaries need HTTPS or the desktop app.');
+      return false;
+    }
+    const previousVault = this.vault;
+    try {
+      await storage.rememberVault(ref);
+      await storage.encryption.storeEncrypted(ref, text);
+    } catch (err) {
+      await storage.rememberVault(previousVault);
+      devError('adoptEncryptedFile: could not store the encrypted diary', err);
+      this.toast('error', err instanceof CorruptVaultError
+        ? 'This encrypted diary is damaged or was modified.'
+        : 'Could not save the diary in the selected location.');
+      return false;
+    }
+    await this.showLockScreen(ref);
+    return true;
+  }
+
+  /**
+   * Reload everything stored beside the diary: drafts, the personal
+   * dictionary and preferences. Private items can only be read once an
+   * encrypted diary is unlocked, and each desktop folder has its own.
+   */
+  private async loadVaultState(): Promise<void> {
     this.drafts = [];
     this.weekStart = 1;
     this.dateFormat = 'auto';
@@ -253,7 +421,248 @@ class AppStore {
       this.loadDateFormat(),
       this.loadSpellcheck(),
       this.loadSpellWords(),
+      this.loadLockPreferences(),
     ]);
+  }
+
+  // --- lock / unlock ------------------------------------------------------
+  /** Drop every trace of diary content from memory. */
+  private clearDiaryFromMemory(): void {
+    this.cancelDraftSave();
+    this.resetEditor();
+    this.entries = [];
+    this.drafts = [];
+    this.spellWords = [];
+    setUserWords([]);
+    buildSearchIndex([]);
+    this.selectedKey = null;
+    this.searchHighlight = '';
+    this.focusEntryUid = null;
+    this.dockExpanded = false;
+    this.readerFullscreen = false;
+    this.settingsOpen = false;
+    this.statsOpen = false;
+    this.exportOpen = false;
+    this.encryptionSetupOpen = false;
+    this.privacyDialog = null;
+    this.pendingKeys = null;
+    this.confirmDeleteId = null;
+    this.confirmDeleteUid = null;
+    this.toasts = [];
+  }
+
+  private async showLockScreen(ref: VaultRef): Promise<void> {
+    storage.encryption.lock();
+    this.clearDiaryFromMemory();
+    this.vault = null;
+    this.encrypted = false;
+    this.lockedVault = ref;
+    this.view = 'locked';
+    this.ready = true;
+    // Preferences stay readable while locked (desktop: from the folder).
+    if (this.storageKind === 'tauri') await this.loadLockPreferences();
+  }
+
+  /**
+   * Lock the open encrypted diary: save the draft (encrypted), forget the key
+   * and clear the diary from memory. Refuses while a write is in flight or if
+   * the draft cannot be saved, so locking never loses work.
+   */
+  async lock(): Promise<boolean> {
+    if (!this.encrypted || !this.vault || this.busy) return false;
+    if (!(await this.flushDraftNow())) return false;
+    await this.showLockScreen(this.vault);
+    return true;
+  }
+
+  /**
+   * Unlock the diary on the lock screen. With a recovery key, `newPassword`
+   * replaces the forgotten password straight away.
+   */
+  async unlock(secret: UnlockSecret, newPassword?: string): Promise<SecretResult> {
+    const ref = this.lockedVault;
+    if (!ref) return 'failed';
+    this.busy = true;
+    try {
+      await storage.encryption.unlock(ref, secret);
+    } catch (err) {
+      if (err instanceof WrongSecretError) return 'wrong-secret';
+      devError('unlock: could not open the keyring', err);
+      this.toast('error', err instanceof CorruptVaultError
+        ? err.message
+        : 'Could not read the diary.');
+      return 'failed';
+    } finally {
+      this.busy = false;
+    }
+    if (!(await this.loadVault(ref, { remember: ref.kind === 'file' }))) {
+      storage.encryption.lock();
+      return 'failed';
+    }
+    if (newPassword !== undefined) {
+      const keys = await changePassword(storage.encryption.currentKeys(), newPassword);
+      if (await this.rekey(keys)) this.toast('success', 'Password changed.');
+    }
+    return 'ok';
+  }
+
+  // --- encryption management ----------------------------------------------
+  /**
+   * Derive keys for `password` and return the new recovery key. Nothing is
+   * written until `confirmEncryption()`, once the user has saved that key.
+   */
+  async prepareEncryption(password: string): Promise<string> {
+    const { keys, recoveryKey } = await createVaultKeys(password);
+    this.pendingKeys = { kind: 'enable', keys };
+    return recoveryKey;
+  }
+
+  /**
+   * Encrypt with the prepared keys: the pending new/imported diary (written
+   * encrypted from the start), or else the open diary.
+   */
+  async confirmEncryption(): Promise<boolean> {
+    const pending = this.pendingKeys;
+    const diary = this.pendingDiary;
+    const ref = diary?.ref ?? this.vault;
+    if (pending?.kind !== 'enable' || !ref) return false;
+    const parsed = diary ? parseIcs(diary.text) : null;
+    if (parsed && !parsed.ok) return false;
+    const entries = parsed?.ok ? parsed.entries : this.entries;
+    if (this.vault && !(await this.flushDraftNow())) return false;
+    const previousVault = this.vault;
+    this.busy = true;
+    try {
+      const encryptedRef = await storage.encryption.enable(ref, serializeIcs(entries), pending.keys);
+      this.pendingKeys = null;
+      if (diary) {
+        this.pendingDiary = null;
+        await this.enterVault(encryptedRef, entries);
+      } else {
+        this.vault = encryptedRef;
+        this.encrypted = true;
+      }
+      return true;
+    } catch (err) {
+      devError('confirmEncryption: could not encrypt the diary', err);
+      if (diary) await storage.rememberVault(previousVault).catch(() => undefined);
+      this.toast('error', diary
+        ? 'Could not save the encrypted diary. Nothing was written.'
+        : 'Could not encrypt the diary. Nothing was changed.');
+      return false;
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /** Forget keys prepared for a setup or recovery-key change that was cancelled. */
+  discardPendingKeys(): void {
+    this.pendingKeys = null;
+  }
+
+  private async checkPassword(password: string): Promise<SecretResult> {
+    try {
+      await storage.encryption.verifyPassword(password);
+      return 'ok';
+    } catch (err) {
+      if (err instanceof WrongSecretError) return 'wrong-secret';
+      devError('checkPassword: could not verify the password', err);
+      return 'failed';
+    }
+  }
+
+  /** Rewrite the open diary under rewrapped keys. Toasts on failure. */
+  private async rekey(keys: VaultKeys): Promise<boolean> {
+    if (!this.vault) return false;
+    this.busy = true;
+    try {
+      await storage.encryption.rekey(this.vault, serializeIcs(this.entries), keys);
+      return true;
+    } catch (err) {
+      devError('rekey: could not rewrite the diary', err);
+      this.toast('error', 'Could not save the diary. The previous password still applies.');
+      return false;
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  async changePassword(current: string, next: string): Promise<SecretResult> {
+    const checked = await this.checkPassword(current);
+    if (checked !== 'ok') return checked;
+    const keys = await changePassword(storage.encryption.currentKeys(), next);
+    return (await this.rekey(keys)) ? 'ok' : 'failed';
+  }
+
+  /**
+   * Generate a replacement recovery key once `password` checks out. Like
+   * setup, it only takes effect with `confirmRecoveryKey()`.
+   */
+  async prepareRecoveryKey(password: string): Promise<{ result: SecretResult; recoveryKey?: string }> {
+    const checked = await this.checkPassword(password);
+    if (checked !== 'ok') return { result: checked };
+    const { keys, recoveryKey } = await replaceRecoveryKey(storage.encryption.currentKeys());
+    this.pendingKeys = { kind: 'recovery', keys };
+    return { result: 'ok', recoveryKey };
+  }
+
+  async confirmRecoveryKey(): Promise<boolean> {
+    const pending = this.pendingKeys;
+    if (pending?.kind !== 'recovery') return false;
+    if (!(await this.rekey(pending.keys))) return false;
+    this.pendingKeys = null;
+    return true;
+  }
+
+  /** Store the open diary unencrypted again, once `password` checks out. */
+  async disableEncryption(password: string): Promise<SecretResult> {
+    const ref = this.vault;
+    if (!ref || !this.encrypted) return 'failed';
+    if (!(await this.flushDraftNow())) return 'failed';
+    this.busy = true;
+    try {
+      this.vault = await storage.encryption.disable(ref, serializeIcs(this.entries), password);
+      this.encrypted = false;
+      return 'ok';
+    } catch (err) {
+      if (err instanceof WrongSecretError) return 'wrong-secret';
+      devError('disableEncryption: could not decrypt the diary', err);
+      this.toast('error', 'Could not remove encryption. The diary is still encrypted.');
+      return 'failed';
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  async loadLockPreferences(): Promise<void> {
+    try {
+      [this.autoLockMinutes, this.lockWhenHidden] = await Promise.all([
+        getSavedAutoLock(),
+        getSavedLockWhenHidden(),
+      ]);
+    } catch (err) {
+      devError('loadLockPreferences: could not read the lock preferences', err);
+    }
+  }
+
+  async setAutoLock(minutes: AutoLockMinutes): Promise<void> {
+    this.autoLockMinutes = minutes;
+    try {
+      await setSavedAutoLock(minutes);
+    } catch (err) {
+      devError('setAutoLock: could not persist the auto-lock preference', err);
+      this.toast('error', 'Could not save settings to the diary folder.');
+    }
+  }
+
+  async setLockWhenHidden(enabled: boolean): Promise<void> {
+    this.lockWhenHidden = enabled;
+    try {
+      await setSavedLockWhenHidden(enabled);
+    } catch (err) {
+      devError('setLockWhenHidden: could not persist the preference', err);
+      this.toast('error', 'Could not save settings to the diary folder.');
+    }
   }
 
   /** Open an existing diary folder, or create diary.ics in an empty one. */
@@ -261,14 +670,11 @@ class AppStore {
     if (this.storageKind !== 'tauri') return;
     try {
       if (this.vault && !(await this.flushDraftNow())) return;
-      const ref = await storage.pickVaultLocation('diary.ics');
+      const ref = await storage.pickVaultLocation();
       if (!ref) return;
-      if (await storage.vaultExists(ref)) {
-        await this.loadVault(ref);
-      } else {
-        await this.adoptVault(ref, serializeIcs([]), true, true);
-      }
       this.settingsOpen = false;
+      if (await storage.vaultExists(ref)) await this.loadVault(ref);
+      else await this.proposeDiary(ref, serializeIcs([]), 'new');
     } catch (err) {
       devError('openVaultFolder: could not open the folder', err);
       this.toast('error', 'Could not open that folder.');
@@ -276,20 +682,21 @@ class AppStore {
   }
 
   /**
-   * Import an `.ics`: pick a file, parse it, and make it the current vault.
-   * On desktop the picked file is copied into a chosen folder. In the browser
-   * its contents are copied into IndexedDB.
+   * Import a diary (`.ics` or an encrypted backup): pick a file, parse it, and
+   * make it the current vault. On desktop the picked file is copied into a
+   * chosen folder. In the browser its contents are copied into IndexedDB; if
+   * the browser diary is encrypted, the imported entries stay encrypted.
    */
   async importVault(): Promise<void> {
     this.settingsOpen = false;
     if (this.vault && !(await this.flushDraftNow())) return;
     this.busy = true;
     try {
-      const picked = await storage.pickIcsText();
-      if (picked) await this.adoptVault(picked.ref, picked.text, true, this.storageKind === 'tauri');
+      const picked = await storage.pickDiaryText();
+      if (picked) await this.proposeDiary(picked.ref, picked.text, 'import');
     } catch (err) {
       devError('importVault: could not import the diary', err);
-      this.toast('error', err instanceof Error && err.message.includes('already contains diary.ics')
+      this.toast('error', err instanceof FolderHasDiaryError
         ? 'That folder already has a diary. Open the folder instead.'
         : 'Could not import that diary.');
     } finally {
@@ -297,19 +704,19 @@ class AppStore {
     }
   }
 
-  /** An `.ics` dropped onto the welcome zone (desktop path drop). */
+  /** A diary dropped onto the welcome zone (desktop path drop). */
   async openDroppedPath(path: string): Promise<void> {
-    if (!path.toLowerCase().endsWith('.ics')) {
-      this.toast('error', 'Please drop an .ics file.');
+    if (!isDiaryFileName(path)) {
+      this.toast('error', 'Please drop an .ics or .icarus file.');
       return;
     }
     this.busy = true;
     try {
       if (this.vault && !(await this.flushDraftNow())) return;
       const picked = await storage.readDroppedPath(path);
-      if (picked) await this.adoptVault(picked.ref, picked.text, true, true);
+      if (picked) await this.proposeDiary(picked.ref, picked.text, 'import');
     } catch (err) {
-      this.toast('error', err instanceof Error && err.message.includes('already contains diary.ics')
+      this.toast('error', err instanceof FolderHasDiaryError
         ? 'That folder already has a diary. Open the folder instead.'
         : 'Could not open that file.');
     } finally {
@@ -317,16 +724,16 @@ class AppStore {
     }
   }
 
-  /** An `.ics` dropped onto the welcome zone in a browser (File object). */
+  /** A diary dropped onto the welcome zone in a browser (File object). */
   async openDroppedFile(file: File): Promise<void> {
-    if (!file.name.toLowerCase().endsWith('.ics')) {
-      this.toast('error', 'Please drop an .ics file.');
+    if (!isDiaryFileName(file.name)) {
+      this.toast('error', 'Please drop an .ics or .icarus file.');
       return;
     }
     this.busy = true;
     try {
       if (this.vault && !(await this.flushDraftNow())) return;
-      await this.adoptVault({ kind: 'browser' }, await file.text(), true);
+      await this.proposeDiary({ kind: 'browser' }, await file.text(), 'import');
     } catch {
       this.toast('error', 'Could not open that file.');
     } finally {
@@ -334,19 +741,12 @@ class AppStore {
     }
   }
 
-  /** "Skip for now" — enter the app with an empty, in-memory canvas. */
-  skipToBlank(): void {
-    buildSearchIndex(this.entries);
-    this.view = 'main';
-    this.ready = true;
-  }
 
   // --- writing ------------------------------------------------------------
   /**
    * Commit the current editor contents as a new entry: update memory, rebuild
-   * search, and persist. In blank-canvas mode (no file yet) we prompt for a
-   * save location on the first commit so the work is never silently lost.
-   * On success the backing draft is removed and the editor is cleared.
+   * search, and persist. On success the backing draft is removed and the
+   * editor is cleared.
    */
   async commit(): Promise<void> {
     const title = this.draftTitle.trim();
@@ -394,21 +794,11 @@ class AppStore {
       this.entries = [...this.entries, entry];
       indexAddEntry(entry);
 
-      if (!this.vault) {
-        const created = await this.chooseVaultLocation();
-        if (!created) {
-          this.toast(
-            'info',
-            'Saved in memory only — set a vault file to keep it.',
-          );
-        }
-      } else {
-        if (!(await this.persist())) {
-          this.entries = this.entries.filter((candidate) => candidate.uid !== entry.uid);
-          indexRemoveEntry(entry.uid);
-          await this.flushDraftNow();
-          return;
-        }
+      if (!(await this.persist())) {
+        this.entries = this.entries.filter((candidate) => candidate.uid !== entry.uid);
+        indexRemoveEntry(entry.uid);
+        await this.flushDraftNow();
+        return;
       }
     }
 
@@ -780,62 +1170,49 @@ class AppStore {
     }
   }
 
-  /** Pick a home for a brand-new vault and persist current entries into it. */
-  async chooseVaultLocation(): Promise<boolean> {
-    const ref = await storage.pickVaultLocation('icarus-diary.ics');
-    if (!ref) return false;
-    if (ref.kind === 'file' && await storage.vaultExists(ref)) {
-      this.toast('error', 'That folder already has a diary. Open it instead.');
-      return false;
-    }
-    const previousVault = this.vault;
-    this.vault = ref;
-    await storage.rememberVault(ref);
-    if (await this.persist()) return true;
-    this.vault = previousVault;
-    await storage.rememberVault(previousVault);
-    return false;
-  }
-
   // --- import / export ----------------------------------------------------
 
   /**
    * Forget the current vault: drop the remembered link and the in-memory
    * entries, then return to the Welcome screen. On desktop the `.ics` file on
    * disk is left untouched — only the link is removed. In the browser the
-   * app-owned copy in IndexedDB is deleted.
+   * app-owned copy in IndexedDB is deleted. Also available from the lock
+   * screen, for a diary whose password and recovery key are both lost.
    */
   async forgetVault(): Promise<void> {
     if (this.vault && !(await this.flushDraftNow())) return;
-    const ref = this.vault;
+    const ref = this.vault ?? this.lockedVault;
     if (ref?.kind === 'browser') {
-      await storage.removeItem('drafts', 'drafts');
-      await storage.removeItem('settings', 'spellWords');
+      for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
     }
     if (ref) await storage.forgetVault(ref);
     await storage.rememberVault(null);
-    this.entries = [];
-    this.drafts = [];
-    this.resetEditor();
-    this.spellWords = [];
-    setUserWords([]);
-    buildSearchIndex(this.entries);
+    storage.encryption.keepSessionFor(null);
+    this.clearDiaryFromMemory();
     this.vault = null;
-    this.selectedKey = null;
-    this.settingsOpen = false;
+    this.lockedVault = null;
+    this.encrypted = false;
     this.view = 'welcome';
   }
 
-  /** Export a clean backup copy wherever the user chooses (download on web). */
-  async exportVault(): Promise<void> {
+  /**
+   * Export a backup copy wherever the user chooses (download on web). An
+   * encrypted diary exports encrypted unless the user explicitly asks for a
+   * plain `.ics`.
+   */
+  async exportVault(format: BackupFormat = this.encrypted ? 'encrypted' : 'plain'): Promise<void> {
     this.busy = true;
     try {
-      const saved = await storage.saveIcsCopy(
-        serializeIcs(this.entries),
-        'icarus-diary-backup.ics',
-      );
+      const ics = serializeIcs(this.entries);
+      const saved = format === 'encrypted'
+        ? await storage.saveBackup(
+            await storage.encryption.exportEncrypted(ics),
+            'icarus-diary-backup.icarus',
+          )
+        : await storage.saveBackup(ics, 'icarus-diary-backup.ics');
       if (!saved) return;
-      this.toast('success', 'Backup exported.');
+      this.toast('success', format === 'encrypted' ? 'Encrypted backup exported.' : 'Backup exported.');
+      this.exportOpen = false;
       this.settingsOpen = false;
     } catch (err) {
       this.toast('error', err instanceof BackupExistsError

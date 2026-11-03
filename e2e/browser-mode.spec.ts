@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { Buffer } from 'node:buffer';
+import { importPlainIcs, startPlainDiary } from './helpers';
 
 /**
  * End-to-end coverage for the browser storage backend: the app must detect the
@@ -24,11 +24,6 @@ const IMPORTED_ICS = [
   '',
 ].join('\r\n');
 
-async function enterBlankCanvas(page: Page): Promise<void> {
-  await page.goto('/');
-  await page.getByRole('button', { name: /Skip for now/ }).click();
-  await expect(page.getByRole('button', { name: /Write today/ })).toBeVisible();
-}
 
 async function openDock(page: Page): Promise<void> {
   await page.getByRole('button', { name: /Write today|Continue your draft/ }).click();
@@ -66,7 +61,7 @@ test('detects browser mode and reports the origin context', async ({ page, baseU
 });
 
 test('creates, persists and edits an entry in IndexedDB', async ({ page }) => {
-  await enterBlankCanvas(page);
+  await startPlainDiary(page);
   await writeEntry(page, 'Browser smoke test', 'Written in the browser backend.');
 
   // The vault must come back from IndexedDB, not from memory.
@@ -91,7 +86,7 @@ test('creates, persists and edits an entry in IndexedDB', async ({ page }) => {
 });
 
 test('restores an autosaved draft after a reload', async ({ page }) => {
-  await enterBlankCanvas(page);
+  await startPlainDiary(page);
   await openDock(page);
   await page.getByPlaceholder('Title', { exact: true }).fill('Half-written');
   await page.locator('.ProseMirror').fill('Draft body');
@@ -99,8 +94,6 @@ test('restores an autosaved draft after a reload', async ({ page }) => {
   await expect(page.getByText('Saved to drafts')).toBeVisible();
 
   await page.reload();
-  // A draft alone does not create a vault, so the app opens Welcome first.
-  await page.getByRole('button', { name: /Skip for now/ }).click();
   await page.getByRole('button', { name: /Drafts/ }).click();
   const drafts = page.getByRole('dialog', { name: 'Saved drafts' });
   await expect(drafts.getByText('Half-written')).toBeVisible();
@@ -109,16 +102,7 @@ test('restores an autosaved draft after a reload', async ({ page }) => {
 });
 
 test('imports an .ics file into browser storage', async ({ page }) => {
-  await page.goto('/');
-
-  const chooserPromise = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: /Import a diary/ }).click();
-  const chooser = await chooserPromise;
-  await chooser.setFiles({
-    name: 'imported.ics',
-    mimeType: 'text/calendar',
-    buffer: Buffer.from(IMPORTED_ICS),
-  });
+  await importPlainIcs(page, IMPORTED_ICS, 'imported.ics');
 
   await page.getByPlaceholder('Search entries…').fill('Imported entry');
   await expect(page.getByText('Imported entry').first()).toBeVisible();
@@ -135,7 +119,7 @@ test('exports a downloadable .ics backup', async ({ page }) => {
   await page.addInitScript(() => {
     delete (window as unknown as { showSaveFilePicker?: unknown }).showSaveFilePicker;
   });
-  await enterBlankCanvas(page);
+  await startPlainDiary(page);
   await page.getByRole('button', { name: 'Settings' }).click();
 
   const downloadPromise = page.waitForEvent('download');
@@ -146,7 +130,7 @@ test('exports a downloadable .ics backup', async ({ page }) => {
 });
 
 test('deletes the browser diary after explicit confirmation', async ({ page }) => {
-  await enterBlankCanvas(page);
+  await startPlainDiary(page);
   await writeEntry(page, 'Doomed entry', 'Temporary.');
 
   await page.getByRole('button', { name: 'Settings' }).click();

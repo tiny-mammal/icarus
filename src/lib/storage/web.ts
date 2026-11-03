@@ -1,12 +1,14 @@
 /**
- * Browser backend: the diary lives in IndexedDB, still serialized as `.ics`
- * text. Import reads a File the user picks; export downloads a `.ics` copy (or
- * writes through the File System Access API where available). Drafts and
+ * Browser backend: the diary lives in IndexedDB, serialized as `.ics` text (or
+ * an encrypted container). Import reads a File the user picks; export
+ * downloads a backup (or writes through the File System Access API where
+ * available). Drafts and
  * preferences share the same database, replacing the Tauri store.
  *
  * Everything stays on the machine: no network, no account.
  */
 import { devError } from '../log';
+import { downloadText } from '../download';
 import {
   idbDelete,
   idbGet,
@@ -15,11 +17,34 @@ import {
   idbSet,
   idbSetItem,
 } from './idb';
-import type { StorageBackend, StoreName, VaultRef } from './types';
+import {
+  ENCRYPTED_EXTENSION,
+  PLAIN_EXTENSION,
+  type StorageBackend,
+  type StoreName,
+  type VaultRef,
+} from './types';
 
+// The key predates encryption: the record holds `.ics` or an encrypted container.
 const VAULT_KEY = 'ics';
 const BROWSER_VAULT: VaultRef = { kind: 'browser' };
-const ICS_MIME = 'text/calendar;charset=utf-8';
+
+interface BackupType {
+  description: string;
+  mime: string;
+  extension: string;
+}
+
+const ICS_BACKUP: BackupType = {
+  description: 'iCalendar',
+  mime: 'text/calendar',
+  extension: PLAIN_EXTENSION,
+};
+const ENCRYPTED_BACKUP: BackupType = {
+  description: 'Encrypted Icarus diary',
+  mime: 'application/octet-stream',
+  extension: ENCRYPTED_EXTENSION,
+};
 
 interface SaveFilePickerLike {
   (options?: {
@@ -72,18 +97,6 @@ function pickFile(accept: string): Promise<File | null> {
   });
 }
 
-/** Trigger a plain browser download of the `.ics` content. */
-function downloadIcs(contents: string, name: string): void {
-  const url = URL.createObjectURL(new Blob([contents], { type: ICS_MIME }));
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = name;
-  document.body.appendChild(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
-}
-
 export const webBackend: StorageBackend = {
   kind: 'web',
 
@@ -125,12 +138,20 @@ export const webBackend: StorageBackend = {
     if (ref.kind === 'browser') await idbDelete(VAULT_KEY);
   },
 
+  async siblingVault() {
+    return BROWSER_VAULT;
+  },
+
+  async removeSupersededVault() {
+    // The browser has a single vault slot, rewritten in place.
+  },
+
   async pickVaultLocation() {
     return BROWSER_VAULT;
   },
 
-  async pickIcsText() {
-    const file = await pickFile('.ics,text/calendar');
+  async pickDiaryText() {
+    const file = await pickFile(`.${PLAIN_EXTENSION},.${ENCRYPTED_EXTENSION},text/calendar`);
     if (!file) return null;
     return { text: await file.text(), ref: BROWSER_VAULT };
   },
@@ -140,7 +161,8 @@ export const webBackend: StorageBackend = {
     return null;
   },
 
-  async saveIcsCopy(contents, defaultName) {
+  async saveBackup(contents, defaultName) {
+    const type = defaultName.endsWith(`.${ENCRYPTED_EXTENSION}`) ? ENCRYPTED_BACKUP : ICS_BACKUP;
     const picker = (
       window as unknown as { showSaveFilePicker?: SaveFilePickerLike }
     ).showSaveFilePicker;
@@ -150,8 +172,8 @@ export const webBackend: StorageBackend = {
           suggestedName: defaultName,
           types: [
             {
-              description: 'iCalendar',
-              accept: { 'text/calendar': ['.ics'] },
+              description: type.description,
+              accept: { [type.mime]: [`.${type.extension}`] },
             },
           ],
         });
@@ -162,10 +184,10 @@ export const webBackend: StorageBackend = {
       } catch (err) {
         if ((err as DOMException | null)?.name === 'AbortError') return false;
         // Any other picker failure falls back to a plain download.
-        devError('saveIcsCopy: save picker failed, downloading instead', err);
+        devError('saveBackup: save picker failed, downloading instead', err);
       }
     }
-    downloadIcs(contents, defaultName);
+    downloadText(contents, defaultName, type.mime);
     return true;
   },
 

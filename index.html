@@ -6,6 +6,16 @@
     <meta name="color-scheme" content="dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="description" content="Icarus, a private, open-source diary. Your entries stay on this device." />
+    <!--
+      Defence in depth for browser mode: no third-party code, no network beyond
+      the app's own origin (Vite's HMR socket in development), and WebAssembly
+      only for Argon2. Kept no stricter than site/public/_headers (both apply
+      on icarus.4oli.com) or src-tauri/tauri.conf.json.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost ws: wss:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
     <title>Icarus Diary</title>
   </head>
   <body>

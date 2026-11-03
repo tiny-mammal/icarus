@@ -2,13 +2,14 @@
  * Persistent draft storage through the active backend — a file in the chosen
  * desktop folder, or IndexedDB in the browser. Drafts land in persisted storage
  * rather than volatile memory, which is what lets an unsaved entry survive a
- * crash, a power cut, or quitting the app.
+ * crash, a power cut, or quitting the app. When the diary is encrypted, the
+ * storage layer encrypts drafts too.
  */
 import { storage } from './storage';
+import { DRAFTS_ITEM } from './storage/types';
 import type { StoredDraft } from './types';
 
-const STORE = 'drafts' as const;
-const KEY = 'drafts';
+const { store: STORE, key: KEY } = DRAFTS_ITEM;
 
 /** All saved drafts, or an empty list if none / unavailable. */
 export async function loadDrafts(): Promise<StoredDraft[]> {

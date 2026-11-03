@@ -29,12 +29,20 @@ vi.mock('../src/lib/storage', () => ({
       const path = state.selections.shift();
       return path ? { kind: 'file', path } : null;
     },
-    pickIcsText: async () => {
-      if (state.rejectImport) throw new Error('The selected folder already contains diary.ics');
+    pickDiaryText: async () => {
+      if (state.rejectImport) {
+        const { FolderHasDiaryError } = await import('../src/lib/storage/errors');
+        throw new FolderHasDiaryError();
+      }
       return null;
     },
     readDroppedPath: async () => null,
-    saveIcsCopy: async () => {
+    encryption: {
+      isUnlocked: () => false,
+      keepSessionFor: () => {},
+      lock: () => {},
+    },
+    saveBackup: async () => {
       if (state.rejectExport) {
         const { BackupExistsError } = await import('../src/lib/storage/errors');
         throw new BackupExistsError();
@@ -130,5 +138,19 @@ describe('desktop folder flow', () => {
 
     await app.exportVault();
     expect(app.toasts.at(-1)?.message).toBe('Backup already exists. Choose a new filename.');
+  });
+
+  it('offers protection before creating a diary in an empty folder', async () => {
+    const { app } = await import('../src/lib/store.svelte');
+    state.selections.push('/fresh/diary.ics');
+    await app.init();
+    await app.openVaultFolder();
+
+    expect(app.pendingDiary).toMatchObject({ source: 'new', ref: { path: '/fresh/diary.ics' } });
+    expect(state.files.has('/fresh/diary.ics')).toBe(false);
+
+    expect(await app.keepPendingDiaryPlain()).toBe(true);
+    expect(state.files.get('/fresh/diary.ics')).toBe(serializeIcs([]));
+    expect(app.view).toBe('main');
   });
 });

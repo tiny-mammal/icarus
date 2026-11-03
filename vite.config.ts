@@ -5,6 +5,11 @@ import tailwindcss from '@tailwindcss/vite';
 // Tauri injects this when targeting a physical device on the LAN; otherwise undefined.
 const host = process.env.TAURI_DEV_HOST;
 
+// Extra hostnames the dev server may be reached by, comma-separated — e.g. a
+// `tailscale serve` HTTPS name (`.ts.net`), which gives browser mode the secure
+// context that password protection needs.
+const allowedHosts = process.env.ICARUS_ALLOWED_HOSTS?.split(',').map((h) => h.trim()).filter(Boolean);
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [svelte(), tailwindcss()],
@@ -16,6 +21,7 @@ export default defineConfig({
     port: 1420,
     strictPort: true,
     host: host || false,
+    allowedHosts,
     hmr: host
       ? { protocol: 'ws', host, port: 1421 }
       : undefined,

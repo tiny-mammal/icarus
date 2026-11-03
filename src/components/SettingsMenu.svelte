@@ -5,6 +5,8 @@
   import { vaultFileName } from '../lib/storage';
   import { DATE_FORMATS, longDayLabel, type DateFormat } from '../lib/date';
   import { SOURCE_REPO, openExternal } from '../lib/external';
+  import { AUTO_LOCK_CHOICES } from '../lib/config';
+  import Switch from './Switch.svelte';
 
   // Show only the file name in the chip, but keep the full path as a tooltip.
   const fileName = $derived(vaultFileName(app.vault));
@@ -40,6 +42,19 @@
     await app.forgetVault();
     confirmForget = false;
   }
+
+  function exportBackup() {
+    if (app.encrypted) app.exportOpen = true;
+    else void app.exportVault();
+  }
+
+  /** Open a privacy dialog on top of a closed settings panel. */
+  function openPrivacy(open: () => void) {
+    app.settingsOpen = false;
+    open();
+  }
+
+  const autoLockLabel = (minutes: number) => (minutes === 0 ? 'Never' : `${minutes} min`);
 </script>
 
 {#if app.settingsOpen}
@@ -80,11 +95,9 @@
           <p class="mt-1 truncate text-sm text-text" title={app.vault.path}>{fileName}</p>
           <p class="mt-0.5 truncate text-xs text-muted" title={app.vault.path}>{app.vault.path}</p>
           <p class="mt-1 text-xs text-muted">Drafts and settings are saved beside this file.</p>
-        {:else if isBrowserVault}
+        {:else}
           <p class="mt-1 text-sm text-text">This browser</p>
           <p class="mt-0.5 text-xs text-muted">Stored locally in IndexedDB — export a backup to keep it safe</p>
-        {:else}
-          <p class="mt-1 text-sm text-muted">Blank canvas — not saved yet</p>
         {/if}
         <p class="mt-1 text-xs text-muted">
           {app.entries.length}
@@ -124,16 +137,18 @@
 
         <button
           class="flex w-full items-center gap-3 rounded-lg border border-slate px-3.5 py-3 text-left text-sm text-text transition-colors hover:bg-slate"
-          onclick={() => app.exportVault()}
+          onclick={exportBackup}
           disabled={app.busy}
         >
           <svg class="text-muted" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>
           <span>
             <span class="block font-medium">Export backup</span>
             <span class="block text-xs text-muted">
-              {isBrowserVault
-                ? 'Download a .ics copy you can keep or re-import'
-                : 'Save a copy to any folder or USB drive'}
+              {app.encrypted
+                ? 'Encrypted by default, or a plain .ics'
+                : isBrowserVault
+                  ? 'Download a .ics copy you can keep or re-import'
+                  : 'Save a copy to any folder or USB drive'}
             </span>
           </span>
         </button>
@@ -153,6 +168,93 @@
                 <span class="block font-medium">Close folder</span>
                 <span class="block text-xs text-red-400/70">Leave all files in the chosen folder</span>
               {/if}
+            </span>
+          </button>
+        {/if}
+      </div>
+
+      <!-- Privacy -->
+      <div class="mt-5 border-t border-slate pt-5">
+        <div class="mb-2 flex items-center justify-between">
+          <p class="text-[0.7rem] font-medium uppercase tracking-wider text-muted">Privacy</p>
+          {#if app.encrypted}
+            <span class="flex items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[0.7rem] font-medium text-emerald-300">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+              Encrypted
+            </span>
+          {/if}
+        </div>
+
+        {#if app.encrypted}
+          <div class="space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                class="rounded-lg border border-slate px-3 py-2 text-sm text-text transition-colors hover:bg-slate disabled:opacity-60"
+                onclick={() => app.lock()}
+                disabled={app.busy}
+              >
+                Lock now
+              </button>
+              <button
+                class="rounded-lg border border-slate px-3 py-2 text-sm text-text transition-colors hover:bg-slate"
+                onclick={() => openPrivacy(() => (app.privacyDialog = 'password'))}
+              >
+                Change password
+              </button>
+            </div>
+            <button
+              class="w-full rounded-lg border border-slate px-3 py-2 text-sm text-text transition-colors hover:bg-slate"
+              onclick={() => openPrivacy(() => (app.privacyDialog = 'recovery'))}
+            >
+              New recovery key
+            </button>
+          </div>
+
+          <p class="mb-2 mt-4 text-xs text-muted">Lock after inactivity</p>
+          <div class="grid grid-cols-4 gap-1.5">
+            {#each AUTO_LOCK_CHOICES as minutes (minutes)}
+              <button
+                class="rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors
+                  {app.autoLockMinutes === minutes
+                    ? 'border-faint bg-slate text-text'
+                    : 'border-slate text-muted hover:bg-slate hover:text-text'}"
+                aria-pressed={app.autoLockMinutes === minutes}
+                onclick={() => app.setAutoLock(minutes)}
+              >
+                {autoLockLabel(minutes)}
+              </button>
+            {/each}
+          </div>
+
+          <div class="mt-4 flex items-center justify-between gap-4">
+            <span>
+              <span class="block text-sm text-text">Lock when hidden</span>
+              <span class="block text-xs text-muted">Lock as soon as the window is minimized or switched away</span>
+            </span>
+            <Switch checked={app.lockWhenHidden} label="Lock when hidden" onchange={(on) => app.setLockWhenHidden(on)} />
+          </div>
+
+          <button
+            class="mt-4 text-xs text-muted underline-offset-4 transition-colors hover:text-red-400 hover:underline"
+            onclick={() => openPrivacy(() => (app.privacyDialog = 'disable'))}
+          >
+            Remove encryption…
+          </button>
+        {:else if !app.encryptionSupported}
+          <p class="text-xs leading-relaxed text-muted">
+            Password protection needs a secure connection. Open Icarus over HTTPS (or on localhost),
+            or use the desktop app.
+          </p>
+        {:else}
+          <button
+            class="flex w-full items-center gap-3 rounded-lg border border-slate px-3.5 py-3 text-left text-sm text-text transition-colors hover:bg-slate disabled:opacity-50"
+            onclick={() => app.openEncryptionSetup()}
+            disabled={app.busy}
+          >
+            <svg class="shrink-0 text-muted" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+            <span>
+              <span class="block font-medium">Protect with a password</span>
+              <span class="block text-xs text-muted">Encrypt the diary, drafts and dictionary</span>
             </span>
           </button>
         {/if}
@@ -206,21 +308,7 @@
             <span class="block text-sm text-text">Spell check</span>
             <span class="block text-xs text-muted">Underline misspellings in English</span>
           </span>
-          <button
-            class="relative h-6 w-11 shrink-0 rounded-full border transition-colors
-              {app.spellcheck
-                ? 'border-faint bg-text'
-                : 'border-slate bg-slate-soft hover:bg-slate'}"
-            role="switch"
-            aria-checked={app.spellcheck}
-            aria-label="Spell check"
-            onclick={() => app.setSpellcheck(!app.spellcheck)}
-          >
-            <span
-              class="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full transition-all
-                {app.spellcheck ? 'left-[1.45rem] bg-ink' : 'left-1 bg-muted'}"
-            ></span>
-          </button>
+          <Switch checked={app.spellcheck} label="Spell check" onchange={(on) => app.setSpellcheck(on)} />
         </div>
       </div>
 

@@ -55,7 +55,7 @@ describe('desktop diary folder', () => {
     expect(await tauriBackend.getRememberedVault()).toBeNull();
 
     mocks.selections.push('/usb/Journal');
-    const ref = await tauriBackend.pickVaultLocation('diary.ics');
+    const ref = await tauriBackend.pickVaultLocation();
     expect(ref).toEqual({ kind: 'file', path: '/usb/Journal/diary.ics' });
     await tauriBackend.rememberVault(ref);
     await tauriBackend.writeVault(ref!, 'BEGIN:VCALENDAR');
@@ -103,21 +103,55 @@ describe('desktop diary folder', () => {
     mocks.files.set('/source/old.ics', 'existing diary');
     mocks.files.set('/target/diary.ics', 'keep this diary');
     mocks.selections.push('/source/old.ics', '/target');
-    await expect(tauriBackend.pickIcsText()).rejects.toThrow('already contains');
+    await expect(tauriBackend.pickDiaryText()).rejects.toThrow('already contains');
     expect(mocks.files.get('/target/diary.ics')).toBe('keep this diary');
   });
 
   it('does not overwrite an existing backup during export', async () => {
     mocks.files.set('/backup/previous.ics', 'previous backup');
     mocks.selections.push('/backup/previous.ics');
-    await expect(tauriBackend.saveIcsCopy('new backup', 'backup.ics'))
+    await expect(tauriBackend.saveBackup('new backup', 'backup.ics'))
       .rejects.toThrow('new filename');
     expect(mocks.files.get('/backup/previous.ics')).toBe('previous backup');
   });
 
   it('exports a backup to a fresh filename', async () => {
     mocks.selections.push('/backup/new.ics');
-    await expect(tauriBackend.saveIcsCopy('diary content', 'backup.ics')).resolves.toBe(true);
+    await expect(tauriBackend.saveBackup('diary content', 'backup.ics')).resolves.toBe(true);
     expect(mocks.files.get('/backup/new.ics')).toBe('diary content');
+  });
+
+  it('opens the encrypted diary of a folder in preference to a plain one', async () => {
+    mocks.files.set('/usb/Journal/diary.icarus', '{"format":"icarus-encrypted-diary"}');
+    mocks.selections.push('/usb/Journal');
+    expect(await tauriBackend.pickVaultLocation()).toEqual({
+      kind: 'file',
+      path: '/usb/Journal/diary.icarus',
+    });
+  });
+
+  it('imports an encrypted backup as diary.icarus and refuses folders with any diary', async () => {
+    mocks.files.set('/backup/old.icarus', '{"format":"icarus-encrypted-diary"}');
+    mocks.selections.push('/backup/old.icarus', '/target');
+    expect((await tauriBackend.pickDiaryText())?.ref).toEqual({
+      kind: 'file',
+      path: '/target/diary.icarus',
+    });
+
+    mocks.files.set('/other/diary.icarus', 'existing');
+    mocks.selections.push('/backup/old.icarus', '/other');
+    await expect(tauriBackend.pickDiaryText()).rejects.toThrow('already contains');
+  });
+
+  it('swaps between plain and encrypted siblings inside the selected folder only', async () => {
+    const plain = { kind: 'file' as const, path: '/usb/Journal/diary.ics' };
+    await tauriBackend.rememberVault(plain);
+    const encrypted = await tauriBackend.siblingVault(plain, true);
+    expect(encrypted).toEqual({ kind: 'file', path: '/usb/Journal/diary.icarus' });
+    mocks.files.set(plain.path, 'plain');
+    await tauriBackend.removeSupersededVault(plain);
+    expect(mocks.files.has(plain.path)).toBe(false);
+    await expect(tauriBackend.removeSupersededVault({ kind: 'file', path: '/elsewhere/diary.ics' }))
+      .rejects.toThrow('inside the selected folder');
   });
 });

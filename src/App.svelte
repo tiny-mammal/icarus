@@ -12,6 +12,17 @@
   import DraftDeleteDialog from './components/DraftDeleteDialog.svelte';
   import EntryDeleteDialog from './components/EntryDeleteDialog.svelte';
   import Toasts from './components/Toasts.svelte';
+  import LockScreen from './components/LockScreen.svelte';
+  import EncryptionSetup from './components/EncryptionSetup.svelte';
+  import PrivacyDialog from './components/PrivacyDialog.svelte';
+  import ExportDialog from './components/ExportDialog.svelte';
+  import { watchIdle } from './lib/idle';
+
+  // Auto-lock an encrypted diary after the chosen period of inactivity.
+  $effect(() => {
+    if (!app.encrypted || app.autoLockMinutes === 0) return;
+    return watchIdle(window, app.autoLockMinutes * 60_000, () => void app.lock());
+  });
 
   onMount(() => {
     app.init();
@@ -32,7 +43,10 @@
     // handlers can't await, so they're a best-effort fallback.
     const flush = () => void app.flushDraftNow();
     const onVisibility = () => {
-      if (document.hidden) flush();
+      if (!document.hidden) return;
+      // Locking flushes the draft (encrypted) first.
+      if (app.encrypted && app.lockWhenHidden) void app.lock();
+      else flush();
     };
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', flush);
@@ -80,6 +94,8 @@
   </div>
 {:else if app.view === 'welcome'}
   <Welcome />
+{:else if app.view === 'locked'}
+  <LockScreen />
 {:else}
   <TopBar />
   <!-- Main stage: calendar with the day pane sliding over it. -->
@@ -90,6 +106,14 @@
   <WritingDock />
   <SettingsMenu />
   <StatsModal />
+  {#if app.privacyDialog}<PrivacyDialog />{/if}
+  {#if app.exportOpen}<ExportDialog />{/if}
+{/if}
+
+<!-- Also offered from Welcome and the lock screen, for new and imported diaries. -->
+{#if app.encryptionSetupOpen}
+  <!-- Keyed per run: reopening during the close animation must not reuse its state. -->
+  {#key app.encryptionSetupRun}<EncryptionSetup />{/key}
 {/if}
 
 <DraftDeleteDialog />
