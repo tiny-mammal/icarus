@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Same mark as scripts/gen-icon.mjs (app icon): keep the two in sync. -->
+  <rect width="1024" height="1024" rx="224" fill="#09090b" />
+  <circle cx="512" cy="512" r="330" fill="none" stroke="#fafafa" stroke-width="60" />
+  <circle cx="512" cy="512" r="70" fill="#71717a" />
+</svg>
