@@ -3,6 +3,7 @@
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
   import { vaultFileName } from '../lib/storage';
+  import { DATE_FORMATS, longDayLabel, type DateFormat } from '../lib/date';
 
   // Show only the file name in the chip, but keep the full path as a tooltip.
   const fileName = $derived(vaultFileName(app.vault));
@@ -19,6 +20,20 @@
     { value: 1 as const, label: fmtWeekday.format(new Date(2023, 0, 2)) }, // Monday
     { value: 0 as const, label: fmtWeekday.format(new Date(2023, 0, 1)) }, // Sunday
   ];
+
+  // Each choice previews itself with a fixed sample date so the order is obvious.
+  const FORMAT_NAMES: Record<DateFormat, string> = {
+    auto: 'System',
+    dmy: 'Day first',
+    mdy: 'Month first',
+    iso: 'Year first',
+  };
+  const sampleDay = new Date(2026, 5, 8);
+  const dateFormatOptions = DATE_FORMATS.map((value) => ({
+    value,
+    name: FORMAT_NAMES[value],
+    sample: longDayLabel(sampleDay, value),
+  }));
 
   async function forget() {
     await app.forgetVault();
@@ -157,6 +172,27 @@
                 onclick={() => app.setWeekStart(opt.value)}
               >
                 {opt.label}
+              </button>
+            {/each}
+          </div>
+        </div>
+
+        <div>
+          <p class="mb-2 text-[0.7rem] font-medium uppercase tracking-wider text-muted">
+            Date format
+          </p>
+          <div class="grid grid-cols-1 gap-2" role="group" aria-label="Date format">
+            {#each dateFormatOptions as opt (opt.value)}
+              <button
+                class="flex items-baseline justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition-colors
+                  {app.dateFormat === opt.value
+                    ? 'border-faint bg-slate text-text'
+                    : 'border-slate text-muted hover:bg-slate hover:text-text'}"
+                aria-pressed={app.dateFormat === opt.value}
+                onclick={() => app.setDateFormat(opt.value)}
+              >
+                <span class="font-medium">{opt.name}</span>
+                <span class="truncate text-xs text-muted">{opt.sample}</span>
               </button>
             {/each}
           </div>

@@ -31,7 +31,7 @@
   const grid = $derived(monthGrid(viewMonth, app.weekStart));
 
   // Compact, locale-aware label for the trigger, e.g. "Mon, 8 Jun 2026".
-  const triggerLabel = $derived(shortDayLabel(selected));
+  const triggerLabel = $derived(shortDayLabel(selected, app.dateFormat));
 
   function toggle() {
     // Re-anchor the view on the selected day each time we open.

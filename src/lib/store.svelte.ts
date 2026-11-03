@@ -24,12 +24,15 @@ import { storage, type VaultRef } from './storage';
 import { BackupExistsError } from './storage/errors';
 import {
   getSavedWeekStart,
+  getSavedDateFormat,
+  setSavedDateFormat,
   setSavedWeekStart,
   getSavedSpellcheck,
   setSavedSpellcheck,
   getSavedSpellWords,
   setSavedSpellWords,
   type WeekStart,
+  type DateFormat,
 } from './config';
 import {
   buildSearchIndex,
@@ -87,6 +90,9 @@ class AppStore {
 
   /** First day of the calendar week (0 = Sunday, 1 = Monday). User preference. */
   weekStart = $state<WeekStart>(1);
+
+  /** How day labels are written (system locale by default). User preference. */
+  dateFormat = $state<DateFormat>('auto');
 
   /** Underline misspellings in the writing fields. User preference. */
   spellcheck = $state(true);
@@ -151,6 +157,7 @@ class AppStore {
     }
     void this.loadDraftsFromDisk();
     void this.loadWeekStart();
+    void this.loadDateFormat();
     void this.loadSpellcheck();
     void this.loadSpellWords();
     try {
@@ -236,12 +243,14 @@ class AppStore {
   private async loadFolderState(): Promise<void> {
     this.drafts = [];
     this.weekStart = 1;
+    this.dateFormat = 'auto';
     this.spellcheck = true;
     this.spellWords = [];
     setUserWords([]);
     await Promise.all([
       this.loadDraftsFromDisk(),
       this.loadWeekStart(),
+      this.loadDateFormat(),
       this.loadSpellcheck(),
       this.loadSpellWords(),
     ]);
@@ -474,6 +483,26 @@ class AppStore {
       await setSavedWeekStart(weekStart);
     } catch (err) {
       devError('setWeekStart: could not persist the week-start preference', err);
+      this.toast('error', 'Could not save settings to the diary folder.');
+    }
+  }
+
+  /** Restore the saved date-format preference on boot (defaults to the system locale). */
+  async loadDateFormat(): Promise<void> {
+    try {
+      this.dateFormat = await getSavedDateFormat();
+    } catch (err) {
+      devError('loadDateFormat: could not read the date-format preference', err);
+    }
+  }
+
+  /** Change how day labels are written and persist it. */
+  async setDateFormat(format: DateFormat): Promise<void> {
+    this.dateFormat = format;
+    try {
+      await setSavedDateFormat(format);
+    } catch (err) {
+      devError('setDateFormat: could not persist the date-format preference', err);
       this.toast('error', 'Could not save settings to the diary folder.');
     }
   }

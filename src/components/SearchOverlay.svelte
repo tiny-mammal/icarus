@@ -4,6 +4,7 @@
   import type { DiaryEntry } from '../lib/types';
   import { splitTerms, snippetAround } from '../lib/highlight';
   import { longDayLabel } from '../lib/date';
+  import { app } from '../lib/store.svelte';
   import Highlight from './Highlight.svelte';
 
   let {
@@ -72,7 +73,7 @@
               <span class="line-clamp-2 min-w-0 break-words text-sm font-medium text-text [overflow-wrap:anywhere]">
                 <Highlight text={snippetAround(hit.entry.title, terms, 36)} {terms} />
               </span>
-              <span class="shrink-0 text-[0.7rem] text-muted">{longDayLabel(hit.entry.date)}</span>
+              <span class="shrink-0 text-[0.7rem] text-muted">{longDayLabel(hit.entry.date, app.dateFormat)}</span>
             </span>
             {#if hit.entry.location}
               <span class="line-clamp-2 break-words text-xs text-muted [overflow-wrap:anywhere]">

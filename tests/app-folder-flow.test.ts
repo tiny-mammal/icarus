@@ -78,6 +78,7 @@ describe('desktop folder flow', () => {
       dateKey: '2026-09-25', updatedAt: 1,
     }]);
     state.stores.set('/first/settings/weekStart', 0);
+    state.stores.set('/first/settings/dateFormat', 'iso');
     state.stores.set('/first/settings/spellcheck', false);
     state.selections.push('/first/diary.ics', '/second/diary.ics');
 
@@ -85,12 +86,14 @@ describe('desktop folder flow', () => {
     await app.openVaultFolder();
     expect(app.drafts).toHaveLength(1);
     expect(app.weekStart).toBe(0);
+    expect(app.dateFormat).toBe('iso');
     expect(app.spellcheck).toBe(false);
 
     await app.openVaultFolder();
     expect(app.vault).toEqual({ kind: 'file', path: '/second/diary.ics' });
     expect(app.drafts).toEqual([]);
     expect(app.weekStart).toBe(1);
+    expect(app.dateFormat).toBe('auto');
     expect(app.spellcheck).toBe(true);
   });
 

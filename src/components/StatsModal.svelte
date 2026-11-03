@@ -23,7 +23,7 @@
 
   // --- period selector ----------------------------------------------------
   let period = $state<StatsPeriod>('all');
-  const stats = $derived(computeStats(app.entries, period));
+  const stats = $derived(computeStats(app.entries, period, new Date(), app.dateFormat));
   const periodLabel = $derived(
     STATS_PERIODS.find((p) => p.value === period)?.label ?? '',
   );
@@ -330,7 +330,7 @@
               Best day
             </p>
             <p class="mt-1 truncate text-sm font-semibold tracking-tight text-text">
-              {stats.bestDay ? shortDayLabel(stats.bestDay.date) : '—'}
+              {stats.bestDay ? shortDayLabel(stats.bestDay.date, app.dateFormat) : '—'}
             </p>
             <p class="mt-0.5 truncate text-[0.7rem] text-muted">
               {stats.bestDay
@@ -502,7 +502,7 @@
                     </span>
                     <span class="min-w-0 flex-1">
                       <span class="flex items-baseline justify-between gap-3">
-                        <span class="truncate text-sm text-text">{shortDayLabel(day.date)}</span>
+                        <span class="truncate text-sm text-text">{shortDayLabel(day.date, app.dateFormat)}</span>
                         <span class="shrink-0 text-xs tabular-nums text-muted">
                           {numberFmt.format(day.chars)}
                         </span>

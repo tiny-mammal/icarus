@@ -134,7 +134,7 @@
   // count and the titles, so the grid reads as
   // "Monday 8 June 2026, 2 entries: Morning run, Dinner with Ana".
   function dayLabel(d: Date): string {
-    const base = longDayLabel(d);
+    const base = longDayLabel(d, app.dateFormat);
     const entries = entriesOn(d);
     const n = entries.length;
     if (n === 0) return base;

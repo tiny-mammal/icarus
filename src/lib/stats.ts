@@ -4,7 +4,7 @@
  * can be unit-tested and the modal only has to worry about presentation.
  */
 import type { DiaryEntry } from './types';
-import { dateKey, keyToDate, longDayLabel, monthLabel } from './date';
+import { dateKey, keyToDate, longDayLabel, monthLabel, type DateFormat } from './date';
 import { isInvalidDate } from './ical';
 
 /** The time windows the statistics modal can show. */
@@ -181,14 +181,14 @@ function shortLabel(date: Date, unit: BucketUnit): string {
   return String(date.getFullYear());
 }
 
-function fullLabel(date: Date, unit: BucketUnit): string {
-  if (unit === 'day') return longDayLabel(date);
+function fullLabel(date: Date, unit: BucketUnit, format: DateFormat): string {
+  if (unit === 'day') return longDayLabel(date, format);
   if (unit === 'month') return monthLabel(date);
   return String(date.getFullYear());
 }
 
 /** Every bucket of the range, empty ones included, in chronological order. */
-function listBuckets(range: StatsRange): StatsBucket[] {
+function listBuckets(range: StatsRange, format: DateFormat): StatsBucket[] {
   const buckets: StatsBucket[] = [];
   for (
     let cursor = range.start;
@@ -198,7 +198,7 @@ function listBuckets(range: StatsRange): StatsBucket[] {
     buckets.push({
       key: bucketKey(cursor, range.unit),
       label: shortLabel(cursor, range.unit),
-      fullLabel: fullLabel(cursor, range.unit),
+      fullLabel: fullLabel(cursor, range.unit, format),
       chars: 0,
       entries: 0,
     });
@@ -211,9 +211,10 @@ export function computeStats(
   entries: readonly DiaryEntry[],
   period: StatsPeriod,
   now: Date = new Date(),
+  format: DateFormat = 'auto',
 ): DiaryStats {
   const range = periodRange(period, entries, now);
-  const buckets = range ? listBuckets(range) : [];
+  const buckets = range ? listBuckets(range, format) : [];
   const byKey = new Map(buckets.map((bucket) => [bucket.key, bucket]));
   const days = new Map<string, DayStat>();
 

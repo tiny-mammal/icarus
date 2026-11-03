@@ -81,7 +81,7 @@
                 <p class="truncate text-xs text-muted">{preview(draft.content)}</p>
               {/if}
               <p class="mt-0.5 text-[0.7rem] text-muted">
-                {longDayLabel(keyToDate(draft.dateKey))}
+                {longDayLabel(keyToDate(draft.dateKey), app.dateFormat)}
               </p>
             </button>
             <button

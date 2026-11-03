@@ -4,9 +4,9 @@
  * here — the diary itself lives in the vault.
  */
 import { storage } from './storage';
-import type { WeekStart } from './date';
+import { parseDateFormat, type DateFormat, type WeekStart } from './date';
 
-export type { WeekStart };
+export type { DateFormat, WeekStart };
 
 const STORE = 'settings' as const;
 
@@ -43,4 +43,13 @@ export async function getSavedSpellWords(): Promise<string[]> {
 
 export async function setSavedSpellWords(words: string[]): Promise<void> {
   await storage.setItem(STORE, 'spellWords', words);
+}
+
+/** How day labels are written throughout the app (defaults to the system locale). */
+export async function getSavedDateFormat(): Promise<DateFormat> {
+  return parseDateFormat(await storage.getItem<DateFormat>(STORE, 'dateFormat'));
+}
+
+export async function setSavedDateFormat(format: DateFormat): Promise<void> {
+  await storage.setItem(STORE, 'dateFormat', format);
 }

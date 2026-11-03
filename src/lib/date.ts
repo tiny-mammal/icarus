@@ -53,33 +53,61 @@ export function monthLabel(d: Date): string {
   return fmtMonthYear.format(d);
 }
 
+/**
+ * How day labels are written. `auto` follows the system locale; the others
+ * force a field order while keeping month and weekday names localised.
+ */
+export type DateFormat = 'auto' | 'dmy' | 'mdy' | 'iso';
+
+export const DATE_FORMATS: readonly DateFormat[] = ['auto', 'dmy', 'mdy', 'iso'];
+
+/** Narrow an untrusted stored value to a known format, defaulting to `auto`. */
+export function parseDateFormat(value: unknown): DateFormat {
+  return DATE_FORMATS.includes(value as DateFormat) ? (value as DateFormat) : 'auto';
+}
+
+type DayLabelStyle = 'long' | 'short' | 'compact';
+
+const DAY_LABEL_OPTIONS: Record<DayLabelStyle, Intl.DateTimeFormatOptions> = {
+  long: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+  short: { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' },
+  compact: { day: 'numeric', month: 'short', year: 'numeric' },
+};
+
+/** Format a day in the requested style and user-chosen field order. */
+function formatDay(d: Date, style: DayLabelStyle, format: DateFormat): string {
+  const options = DAY_LABEL_OPTIONS[style];
+  if (format === 'auto') return d.toLocaleDateString(undefined, options);
+
+  const part = (type: 'weekday' | 'day' | 'month' | 'year') =>
+    new Intl.DateTimeFormat(undefined, { [type]: options[type] })
+      .formatToParts(d)
+      .find((p) => p.type === type)?.value ?? '';
+  const weekday = options.weekday ? part('weekday') : '';
+  const day = part('day');
+  const month = part('month');
+  const year = part('year');
+
+  let body: string;
+  if (format === 'iso') body = dateKey(d);
+  else if (format === 'mdy') body = `${month} ${day}, ${year}`;
+  else body = `${day} ${month} ${year}`;
+  return weekday ? `${weekday}, ${body}` : body;
+}
+
 /** Long, readable label for a specific day, e.g. "Monday, 8 June 2026". */
-export function longDayLabel(d: Date): string {
-  return d.toLocaleDateString(undefined, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+export function longDayLabel(d: Date, format: DateFormat = 'auto'): string {
+  return formatDay(d, 'long', format);
 }
 
 /** Compact label for a specific day, e.g. "Thu, Sep 24, 2026". */
-export function shortDayLabel(d: Date): string {
-  return d.toLocaleDateString(undefined, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+export function shortDayLabel(d: Date, format: DateFormat = 'auto'): string {
+  return formatDay(d, 'short', format);
 }
 
 /** Tightest day label, for narrow screens, e.g. "Sep 24, 2026". */
-export function compactDayLabel(d: Date): string {
-  return d.toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
+export function compactDayLabel(d: Date, format: DateFormat = 'auto'): string {
+  return formatDay(d, 'compact', format);
 }
 
 /** Localised short month names (Jan…Dec), for the header month/year picker. */

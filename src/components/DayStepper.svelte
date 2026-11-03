@@ -9,7 +9,7 @@
   function hint(dir: 'Previous' | 'Next', key: string | null): string {
     if (!key) return `No ${dir === 'Previous' ? 'earlier' : 'later'} entries`;
     const arrow = dir === 'Previous' ? '←' : '→';
-    return `${dir} day (${arrow}) · ${shortDayLabel(keyToDate(key))}`;
+    return `${dir} day (${arrow}) · ${shortDayLabel(keyToDate(key), app.dateFormat)}`;
   }
 </script>
 
@@ -27,8 +27,8 @@
     class="truncate font-semibold tracking-tight text-text tabular-nums {compact ? 'text-sm' : 'text-base'}"
   >
     <!-- Narrow screens get the short form so the header's actions fit. -->
-    <span class="sm:hidden">{compactDayLabel(date)}</span>
-    <span class="hidden sm:inline">{longDayLabel(date)}</span>
+    <span class="sm:hidden">{compactDayLabel(date, app.dateFormat)}</span>
+    <span class="hidden sm:inline">{longDayLabel(date, app.dateFormat)}</span>
   </h2>
   <button
     class="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"

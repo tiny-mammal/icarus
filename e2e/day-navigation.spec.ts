@@ -124,3 +124,31 @@ test('narrow screens show the short day label so header actions fit', async ({ p
   await page.waitForTimeout(350); // let the pane slide in for the screenshot
   await page.screenshot({ path: 'test-results/day-pane-mobile.png' });
 });
+
+test('date format preference rewrites day labels and survives a reload', async ({ page }) => {
+  await importDiary(page);
+  await openFromSearch(page, 'Midsummer');
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const settings = page.getByRole('dialog');
+  await settings.getByRole('button', { name: /Year first/ }).click();
+  await expect(settings.getByRole('button', { name: /Year first/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.waitForTimeout(250); // let the dialog transition settle for the screenshot
+  await page.screenshot({ path: 'test-results/date-format-settings.png' });
+
+  await settings.getByRole('button', { name: 'Close' }).click();
+  await expect(settings).toBeHidden();
+  await expect(heading(page)).toContainText('2026-06-20');
+  await page.waitForTimeout(350); // let the backdrop fade out for the screenshot
+  await page.screenshot({ path: 'test-results/date-format-iso.png' });
+
+  // The choice is persisted with the other preferences.
+  await page.reload();
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(
+    page.getByRole('dialog').getByRole('button', { name: /Year first/ }),
+  ).toHaveAttribute('aria-pressed', 'true');
+});

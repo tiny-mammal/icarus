@@ -3,12 +3,14 @@ import {
   addMonths,
   adjacentKey,
   dateKey,
+  compactDayLabel,
   isSameDay,
   keyToDate,
   longDayLabel,
   monthGrid,
   monthLabel,
   monthShortLabels,
+  parseDateFormat,
   startOfMonth,
   weekdayLabels,
 } from '../src/lib/date';
@@ -192,5 +194,27 @@ describe('adjacentKey', () => {
     expect(adjacentKey(keys, '2024-01-05', -1)).toBeNull();
     expect(adjacentKey(keys, '2026-09-25', 1)).toBeNull();
     expect(adjacentKey([], '2026-09-25', 1)).toBeNull();
+  });
+});
+
+describe('date formats', () => {
+  const day = new Date(2026, 5, 8); // Monday, 8 June 2026
+
+  it('orders fields as requested while keeping the weekday', () => {
+    const dmy = longDayLabel(day, 'dmy');
+    expect(dmy).toMatch(/^[^,]+, 8 \S+ 2026$/);
+    expect(longDayLabel(day, 'mdy')).toMatch(/^[^,]+, \S+ 8, 2026$/);
+    expect(longDayLabel(day, 'iso')).toMatch(/^[^,]+, 2026-06-08$/);
+  });
+
+  it('omits the weekday from the compact label', () => {
+    expect(compactDayLabel(day, 'iso')).toBe('2026-06-08');
+    expect(compactDayLabel(day, 'dmy')).toMatch(/^8 \S+ 2026$/);
+  });
+
+  it('falls back to auto for unknown stored values', () => {
+    expect(parseDateFormat('nope')).toBe('auto');
+    expect(parseDateFormat(undefined)).toBe('auto');
+    expect(parseDateFormat('mdy')).toBe('mdy');
   });
 });
