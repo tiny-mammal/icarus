@@ -1,3 +1,6 @@
+packages:
+  - .
+
 # pnpm 11+ reads settings from here (the old `pnpm` field in package.json is
 # ignored). `allowBuilds` replaces the removed `onlyBuiltDependencies`.
 allowBuilds:
