@@ -5,6 +5,7 @@
   import DraftsMenu from './DraftsMenu.svelte';
   import DatePicker from './DatePicker.svelte';
   import RichEditor from './RichEditor.svelte';
+  import { dateKey } from '../lib/date';
 
   let saving = $state(false);
 
@@ -29,6 +30,14 @@
       app.draftContent.trim() ||
       app.draftLocation.trim()
     ),
+  );
+
+  // Entries written for another day (e.g. from the day pane) shouldn't be
+  // invited as "today's" chapter.
+  const bodyPlaceholder = $derived(
+    app.draftDateKey === dateKey(new Date())
+      ? "Write today's chapter… Markdown is welcome."
+      : 'Write this day’s chapter… Markdown is welcome.',
   );
 
   // Autosave: whenever the editor fields change, schedule a debounced write to
@@ -116,7 +125,7 @@
           <!-- Body — Notion-style live Markdown formatting -->
           <RichEditor
             class="mt-4 min-h-0 w-full flex-1 cursor-text overflow-y-auto pr-4"
-            placeholder="Write today's chapter… Markdown is welcome."
+            placeholder={bodyPlaceholder}
             bind:value={app.draftContent}
           />
 

@@ -432,6 +432,19 @@ class AppStore {
     this.dockExpanded = true;
   }
 
+  /**
+   * Open the writing dock on a fresh entry dated `key`. Work already in the
+   * dock is stashed to the drafts list first, so nothing in progress is lost.
+   */
+  async composeFor(key: string): Promise<void> {
+    if (this.hasEditorContent() && !(await this.flushDraftNow())) return;
+    this.cancelDraftSave();
+    this.resetEditor();
+    this.draftDateKey = key;
+    this.readerFullscreen = false;
+    this.dockExpanded = true;
+  }
+
   // --- drafts -------------------------------------------------------------
   /** Pull persisted drafts into memory after the folder is selected. */
   async loadDraftsFromDisk(): Promise<void> {

@@ -73,6 +73,15 @@ export function shortDayLabel(d: Date): string {
   });
 }
 
+/** Tightest day label, for narrow screens, e.g. "Sep 24, 2026". */
+export function compactDayLabel(d: Date): string {
+  return d.toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 /** Localised short month names (Jan…Dec), for the header month/year picker. */
 export function monthShortLabels(): string[] {
   return Array.from({ length: 12 }, (_, m) =>

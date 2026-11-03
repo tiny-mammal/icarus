@@ -90,3 +90,37 @@ test('steps between days with entries and between entries of a day', async ({ pa
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('heading', { name: 'Midsummer' }).last()).toBeVisible();
 });
+
+test('writes a new entry on the open day, including empty days', async ({ page }) => {
+  await importDiary(page);
+  await openFromSearch(page, 'Midsummer');
+
+  // A day with entries offers "+" in the header to add another one.
+  await page.waitForTimeout(350); // let the pane slide in for the screenshot
+  await page.screenshot({ path: 'test-results/day-compose-header.png' });
+  await page.getByRole('button', { name: 'New entry on this day' }).click();
+  await expect(page.getByRole('button', { name: /^Sat, .*20.*2026$/ })).toBeVisible();
+  await page.keyboard.press('Escape'); // collapse the dock
+  await page.keyboard.press('Escape'); // close the day pane
+
+  // An empty day offers the same action from its empty state.
+  await page.getByRole('button', { name: /^Tuesday, June 16/ }).click();
+  await expect(page.getByText('No entries on this day yet.')).toBeVisible();
+  await page.waitForTimeout(350); // let the pane slide in for the screenshot
+  await page.screenshot({ path: 'test-results/day-compose-empty.png' });
+  await page.getByRole('button', { name: 'Write an entry for this day' }).click();
+  await expect(page.getByRole('button', { name: /^Tue, .*16.*2026$/ })).toBeVisible();
+  await page.waitForTimeout(350); // let the dock slide up for the screenshot
+  await page.screenshot({ path: 'test-results/day-compose-dock.png' });
+});
+
+test('narrow screens show the short day label so header actions fit', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await importDiary(page);
+  await openFromSearch(page, 'Midsummer');
+
+  await expect(heading(page).getByText(/^(Jun 20|20 Jun), 2026$/)).toBeVisible();
+  await expect(heading(page).getByText(/^Saturday/)).toBeHidden();
+  await page.waitForTimeout(350); // let the pane slide in for the screenshot
+  await page.screenshot({ path: 'test-results/day-pane-mobile.png' });
+});

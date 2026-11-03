@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
-  import { keyToDate, longDayLabel, shortDayLabel } from '../lib/date';
+  import { compactDayLabel, keyToDate, longDayLabel, shortDayLabel } from '../lib/date';
 
   // The open day's label flanked by arrows that jump to the previous/next day
   // with entries. Shared by the side pane and the full-screen reader.
@@ -26,7 +26,9 @@
   <h2
     class="truncate font-semibold tracking-tight text-text tabular-nums {compact ? 'text-sm' : 'text-base'}"
   >
-    {longDayLabel(date)}
+    <!-- Narrow screens get the short form so the header's actions fit. -->
+    <span class="sm:hidden">{compactDayLabel(date)}</span>
+    <span class="hidden sm:inline">{longDayLabel(date)}</span>
   </h2>
   <button
     class="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"

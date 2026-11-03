@@ -61,15 +61,25 @@
     );
   }
 
+  function composeHere() {
+    if (app.selectedKey) void app.composeFor(app.selectedKey);
+  }
+
   // Reader shortcuts: ←/→ step between days with entries, Shift+←/→ between
-  // the entries of the open day. Inert while typing or another overlay is up.
+  // the entries of the open day, N writes a new entry on the open day. Inert
+  // while typing or another overlay is up.
   function onKeydown(e: KeyboardEvent) {
     if (!app.selectedKey || e.defaultPrevented) return;
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     if (app.dockExpanded || app.settingsOpen) return;
     if (app.confirmDeleteUid || app.confirmDeleteId) return;
     if (isEditable(e.target)) return;
+    if ((e.key === 'n' || e.key === 'N') && !e.shiftKey) {
+      e.preventDefault();
+      composeHere();
+      return;
+    }
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     const dir = e.key === 'ArrowLeft' ? -1 : 1;
     if (e.shiftKey) page = Math.min(Math.max(safePage + dir, 0), Math.max(0, count - 1));
     else app.stepDay(dir);
@@ -93,7 +103,7 @@
     class="absolute right-0 top-0 z-40 flex h-full w-full max-w-xl flex-col border-l border-slate bg-surface shadow-2xl shadow-black/40"
     transition:fly={{ x: 480, duration: 320, easing: cubicOut }}
   >
-    <header class="flex items-center justify-between gap-3 border-b border-slate py-5 pr-7 pl-5">
+    <header class="flex items-center justify-between gap-2 border-b border-slate py-5 pr-4 pl-3 sm:gap-3 sm:pr-7 sm:pl-5">
       <div class="min-w-0">
         <DayStepper date={dayDate} />
         {#if terms.length}
@@ -108,6 +118,14 @@
         {/if}
       </div>
       <div class="flex shrink-0 items-center gap-1">
+        <button
+          class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
+          aria-label="New entry on this day"
+          title="New entry on this day (N)"
+          onclick={composeHere}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
         {#if entry}
           <button
             class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
@@ -154,6 +172,13 @@
       {#if !entry}
         <div class="flex h-full flex-col items-center justify-center text-center text-muted">
           <p class="text-sm">No entries on this day yet.</p>
+          <button
+            class="mt-4 flex items-center gap-2 rounded-lg border border-slate px-3.5 py-2 text-sm text-text transition-colors hover:bg-slate"
+            onclick={composeHere}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            Write an entry for this day
+          </button>
         </div>
       {:else}
         {#key entry.uid}
