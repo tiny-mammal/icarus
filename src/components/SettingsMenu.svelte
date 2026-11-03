@@ -4,6 +4,7 @@
   import { app } from '../lib/store.svelte';
   import { vaultFileName } from '../lib/storage';
   import { DATE_FORMATS, longDayLabel, type DateFormat } from '../lib/date';
+  import { SOURCE_REPO, openExternal } from '../lib/external';
 
   // Show only the file name in the chip, but keep the full path as a tooltip.
   const fileName = $derived(vaultFileName(app.vault));
@@ -50,13 +51,15 @@
   >
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
-      class="max-h-[calc(100vh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-slate bg-surface p-6 shadow-2xl shadow-black/50"
+      class="w-full max-w-lg overflow-hidden rounded-2xl border border-slate bg-surface shadow-2xl shadow-black/50"
       transition:scale={{ duration: 200, start: 0.96, easing: cubicOut }}
       onclick={(e) => e.stopPropagation()}
       role="dialog"
       aria-modal="true"
       tabindex="-1"
     >
+     <!-- The scroller is inset from the frame so its scrollbar stays clear of the rounded corners. -->
+     <div class="my-3 max-h-[calc(100vh-2rem-1.5rem-2px)] overflow-y-auto px-6 py-3">
       <div class="mb-5 flex items-center justify-between">
         <h2 class="text-base font-semibold tracking-tight text-text">Diary storage</h2>
         <button
@@ -220,6 +223,24 @@
           </button>
         </div>
       </div>
+
+      <!-- Source code -->
+      <div class="mt-5 flex justify-center border-t border-slate pt-4">
+        <a
+          class="inline-flex items-center gap-2 rounded-md px-2 py-1 text-xs text-muted transition-colors hover:text-text"
+          href={SOURCE_REPO.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onclick={(e) => {
+            e.preventDefault();
+            void openExternal(SOURCE_REPO.url);
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.04-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.42-2.69 5.39-5.25 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+          {SOURCE_REPO.label}
+        </a>
+      </div>
+     </div>
     </div>
   </div>
 
