@@ -25,23 +25,36 @@ test.beforeAll(async () => {
   if (!device) throw new Error('No Android device or emulator is connected');
 });
 
-/** Cold-start the app and return the page of its new process's WebView. */
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** The page of `webview`, or null if it doesn't attach within `ms`. */
+async function attach(webview: AndroidWebView, ms: number): Promise<Page | null> {
+  const page = await Promise.race([webview.page().catch(() => null), sleep(ms).then(() => null)]);
+  return page && !page.isClosed() ? page : null;
+}
+
+/**
+ * Cold-start the app and return the page of its new process's WebView.
+ *
+ * Right after a cold start (especially after `pm clear`), Playwright can list
+ * a WebView whose page never attaches, or the previous process's WebView. So
+ * keep retrying until the WebView of the running process yields a live page.
+ */
 async function launchApp(): Promise<Page> {
   adb('shell', 'am', 'force-stop', APP_ID);
   adb('shell', 'am', 'start', '-W', '-n', `${APP_ID}/.MainActivity`);
-  let pid = 0;
-  await expect.poll(() => (pid = Number(adb('shell', 'pidof', APP_ID)) || 0), { timeout: 30_000 }).toBeGreaterThan(0);
-  // The previous process's WebView can linger in Playwright's list for a
-  // moment after force-stop, so wait for the one that belongs to this pid.
-  let webview: AndroidWebView | undefined;
-  await expect
-    .poll(() => (webview = device.webViews().find((view) => view.pkg() === APP_ID && view.pid() === pid)), {
-      timeout: 60_000,
-    })
-    .toBeTruthy();
-  const page = await webview!.page();
-  await page.waitForLoadState('domcontentloaded');
-  return page;
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    const pid = Number(adb('shell', 'pidof', APP_ID)) || 0;
+    const webview = device.webViews().find((view) => view.pkg() === APP_ID && view.pid() === pid);
+    const page = pid && webview ? await attach(webview, 15_000) : null;
+    if (page) {
+      await page.waitForLoadState('domcontentloaded');
+      return page;
+    }
+    await sleep(1_000);
+  }
+  throw new Error(`The ${APP_ID} WebView never attached`);
 }
 
 async function screenshot(name: string): Promise<void> {
