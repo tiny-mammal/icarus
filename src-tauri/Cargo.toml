@@ -6,7 +6,7 @@ authors = ["Icarus"]
 edition = "2021"
 rust-version = "1.98.1"
 license = "GPL-3.0-or-later"
-repository = "https://github.com/martinezharo/icarus"
+repository = "https://github.com/tiny-mammal/icarus"
 
 # The Tauri build pipeline compiles the app's Rust into both a shared library
 # (for mobile, unused here) and a binary, so we expose the lib explicitly.

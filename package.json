@@ -63,6 +63,6 @@
   "homepage": "https://icarus.4oli.com",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/martinezharo/icarus.git"
+    "url": "git+https://github.com/tiny-mammal/icarus.git"
   }
 }

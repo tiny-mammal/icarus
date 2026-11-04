@@ -1,6 +1,6 @@
 # Icarus
 
-Icarus is a free, open-source diary app for keeping a private diary over many years. It is licensed under the GNU General Public License v3, and the source code is at https://github.com/martinezharo/icarus.
+Icarus is a free, open-source diary app for keeping a private diary over many years. It is licensed under the GNU General Public License v3, and the source code is at https://github.com/tiny-mammal/icarus.
 
 - Home page: https://icarus.4oli.com/
 - Web app: https://icarus.4oli.com/app/

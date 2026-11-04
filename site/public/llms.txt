@@ -13,8 +13,8 @@ Icarus runs as a desktop app for Windows, macOS and Linux, and as a web app in t
 
 ## Source
 
-- [Source code](https://github.com/martinezharo/icarus): Canonical repository.
-- [README](https://raw.githubusercontent.com/martinezharo/icarus/main/README.md): Features, storage behavior, and development setup.
+- [Source code](https://github.com/tiny-mammal/icarus): Canonical repository.
+- [README](https://raw.githubusercontent.com/tiny-mammal/icarus/main/README.md): Features, storage behavior, and development setup.
 
 ## Optional
 
