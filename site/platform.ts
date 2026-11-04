@@ -22,6 +22,8 @@ export function detectPlatform(nav: Navigator = navigator): PlatformId | null {
   if (source.includes('mac') && nav.maxTouchPoints > 1) return null;
   if (source.includes('win')) return 'windows';
   if (source.includes('mac')) return 'macos';
+  // ChromeOS and the BSDs also report X11 but can't run these Linux builds.
+  if (/cros|bsd/.test(source)) return null;
   if (source.includes('linux') || source.includes('x11')) return 'linux';
   return null;
 }

@@ -10,6 +10,9 @@
  *     their public file names.
  *   node scripts/release-assets.ts manifest <dir> <out-file>
  *     Hash every collected file and write the `latest.json` manifest.
+ *   node scripts/release-assets.ts check-latest <published-manifest>
+ *     Fail if the published release is newer than this one, so a late or
+ *     re-run older release never takes over `latest.json`.
  *
  * The asset list itself lives in `site/releases.ts`, shared with the site.
  */
@@ -19,6 +22,7 @@ import { join } from 'node:path';
 import {
   ASSETS,
   assetFileName,
+  isReleaseManifest,
   releasePrefix,
   type PlatformId,
   type ReleaseManifest,
@@ -82,6 +86,27 @@ function manifest(dir: string, outFile: string): void {
   console.log(JSON.stringify(result, null, 2));
 }
 
+/** Compare `major.minor.patch`; pre-release suffixes are ignored. */
+function compareVersions(a: string, b: string): number {
+  const parts = (version: string) => version.split('-')[0].split('.').map(Number);
+  const [left, right] = [parts(a), parts(b)];
+  for (let i = 0; i < 3; i++) {
+    const diff = (left[i] ?? 0) - (right[i] ?? 0);
+    if (diff) return diff;
+  }
+  return 0;
+}
+
+function checkLatest(publishedFile: string): void {
+  const published: unknown = JSON.parse(readFileSync(publishedFile, 'utf8'));
+  if (!isReleaseManifest(published)) fail(`${publishedFile} is not a release manifest`);
+  const current = appVersion();
+  if (compareVersions(published.version, current) > 0) {
+    fail(`Version ${published.version} is already published; refusing to replace it with ${current}.`);
+  }
+  console.log(`Publishing ${current} over ${published.version}.`);
+}
+
 const [command, ...args] = process.argv.slice(2);
 switch (command) {
   case 'version':
@@ -95,6 +120,10 @@ switch (command) {
     if (args.length !== 2) fail('Usage: manifest <dir> <out-file>');
     manifest(args[0], args[1]);
     break;
+  case 'check-latest':
+    if (args.length !== 1) fail('Usage: check-latest <published-manifest>');
+    checkLatest(args[0]);
+    break;
   default:
-    fail('Usage: release-assets.ts <version|collect|manifest> ...');
+    fail('Usage: release-assets.ts <version|collect|manifest|check-latest> ...');
 }

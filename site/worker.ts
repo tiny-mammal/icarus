@@ -107,12 +107,21 @@ async function serveDownload(request: Request, env: Env, id: string): Promise<Re
   }
 
   // Passing the request headers lets R2 answer `Range`, so interrupted
-  // downloads can resume.
-  const object = await env.RELEASES.get(asset.key, { range: request.headers });
+  // downloads can resume. R2 ignores `If-Range`, though: when a resumed
+  // download started on an earlier release, send the whole current file
+  // instead of splicing two releases together.
+  let rangeHeaders: Headers | undefined = request.headers;
+  const ifRange = request.headers.get('If-Range');
+  if (ifRange !== null && request.headers.has('Range')) {
+    const current = await env.RELEASES.head(asset.key);
+    if (!current) return notFound();
+    if (ifRange !== current.httpEtag) rangeHeaders = undefined;
+  }
+  const object = await env.RELEASES.get(asset.key, rangeHeaders && { range: rangeHeaders });
   if (!object) return notFound();
   headers.set('ETag', object.httpEtag);
   const range = object.range;
-  if (range && request.headers.has('Range')) {
+  if (range && rangeHeaders?.has('Range')) {
     const offset = range.offset ?? (range.suffix !== undefined ? object.size - range.suffix : 0);
     const length = range.length ?? object.size - offset;
     headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${object.size}`);

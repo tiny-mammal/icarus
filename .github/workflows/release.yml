@@ -45,7 +45,11 @@ jobs:
       - id: version
         env:
           TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-        run: echo "version=$(node scripts/release-assets.ts version $TAG)" >> "$GITHUB_OUTPUT"
+        # A separate assignment, so a tag that doesn't match package.json fails
+        # the step instead of being swallowed by `echo`.
+        run: |
+          version=$(node scripts/release-assets.ts version $TAG)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
   desktop:
     needs: version
@@ -107,6 +111,11 @@ jobs:
     needs: [version, desktop]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
+    # One publish at a time across all tags, so two releases can't race for
+    # latest.json.
+    concurrency:
+      group: release-publish
+      cancel-in-progress: false
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -128,6 +137,13 @@ jobs:
           path: release-assets
           merge-multiple: true
       - run: node scripts/release-assets.ts manifest release-assets latest.json
+      - name: Refuse to replace a newer release
+        run: |
+          if pnpm exec wrangler r2 object get "$BUCKET/latest.json" --file current.json --remote; then
+            node scripts/release-assets.ts check-latest current.json
+          else
+            echo "No published release yet."
+          fi
       - name: Upload builds
         run: |
           for file in release-assets/*; do
