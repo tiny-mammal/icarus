@@ -67,8 +67,10 @@ jobs:
             runner: windows-2022
             target: x86_64-pc-windows-msvc
             bundles: nsis,msi
+          # GitHub's hosted macOS runners kept cancelling jobs for lack of
+          # capacity; Blacksmith's Apple Silicon runners are available.
           - platform: macos
-            runner: macos-15
+            runner: blacksmith-6vcpu-macos-15
             target: universal-apple-darwin
             rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
             bundles: dmg
