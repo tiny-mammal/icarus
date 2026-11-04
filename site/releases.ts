@@ -60,7 +60,8 @@ export function assetPath(id: string, version?: string): string {
   return version ? `/download/${id}?version=${encodeURIComponent(version)}` : `/download/${id}`;
 }
 
-const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+/** SemVer, with optional pre-release and build metadata. */
+const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 
 /** Where a given release keeps asset `id`, or null for an unknown id or version. */
 export function releasedAsset(id: string, version: string): { key: string; name: string } | null {

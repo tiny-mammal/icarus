@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compareVersions } from '../site/releases';
+import { assetPath, compareVersions, releasedAsset } from '../site/releases';
 
 describe('release version precedence', () => {
   it('orders versions by SemVer, including pre-releases', () => {
@@ -9,5 +9,13 @@ describe('release version precedence', () => {
       expect(compareVersions(ordered[i + 1], ordered[i])).toBeGreaterThan(0);
     }
     expect(compareVersions('1.0.0+build.5', '1.0.0')).toBe(0);
+  });
+
+  it('pins any SemVer release, including build metadata, and nothing else', () => {
+    expect(releasedAsset('linux-deb', '1.0.0+build.5')?.key).toBe('v1.0.0+build.5/Icarus-Diary-1.0.0+build.5-linux-x86_64.deb');
+    expect(releasedAsset('linux-deb', '1.0.0-rc.1')).not.toBeNull();
+    expect(assetPath('linux-deb', '1.0.0+build.5')).toBe('/download/linux-deb?version=1.0.0%2Bbuild.5');
+    for (const bad of ['../1.0.0', '1.0', '1.0.0/x', '']) expect(releasedAsset('linux-deb', bad)).toBeNull();
+    expect(releasedAsset('nope', '1.0.0')).toBeNull();
   });
 });
