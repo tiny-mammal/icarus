@@ -177,8 +177,57 @@
       .filter((d) => d.entries.length > 0),
   );
 
-  // Titles shown inside a day cell before collapsing the rest into "+N more".
-  const MAX_CELL_TITLES = 3;
+  // --- day cell titles -----------------------------------------------------
+  // How many entry titles fit in a day cell depends on the cell height, which
+  // varies with the window size. All cells share one height (grid-rows-6), so
+  // a single measurement sizes every cell. Each chip and the "+N more" line
+  // have a fixed height (see CHIP_* below) so whole lines are shown or hidden
+  // instead of being clipped halfway.
+  const CHIP_REM = 1.125; // h-[1.125rem] on each title chip
+  const CHIP_GAP_REM = 0.125; // gap-0.5 between lines
+  const MORE_REM = 0.875; // h-[0.875rem] on the "+N more" line
+  const LIST_OFFSET_REM = 0.25; // mt-1 above the list
+
+  // Available height (px) for the title list inside a day cell.
+  let titleSpace = $state(0);
+  let remPx = $state(16);
+
+  function measureTitleSpace(): void {
+    const cell = gridEl?.querySelector<HTMLElement>('[data-daykey]');
+    // Measure the day number, not its column: the dots below it only show when
+    // titles do not, so including them would make the measurement oscillate.
+    const dayNumber = cell?.querySelector<HTMLElement>('[data-day-number]');
+    if (!cell || !dayNumber) return;
+    const style = getComputedStyle(cell);
+    remPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    titleSpace =
+      cell.clientHeight -
+      parseFloat(style.paddingTop) -
+      parseFloat(style.paddingBottom) -
+      dayNumber.offsetHeight -
+      LIST_OFFSET_REM * remPx;
+  }
+
+  // Re-measure whenever the current grid is replaced (month change) or resized.
+  $effect(() => {
+    if (!gridEl) return;
+    measureTitleSpace();
+    const ro = new ResizeObserver(measureTitleSpace);
+    ro.observe(gridEl);
+    return () => ro.disconnect();
+  });
+
+  // How many title chips fit in `space` px after `reservedRem` is taken by
+  // other lines (chips are separated by CHIP_GAP_REM).
+  function linesThatFit(space: number, reservedRem: number): number {
+    const line = (CHIP_REM + CHIP_GAP_REM) * remPx;
+    return Math.max(0, Math.floor((space - reservedRem * remPx + CHIP_GAP_REM * remPx) / line));
+  }
+  // Titles shown with no overflow line, and titles shown next to "+N more".
+  const fitAll = $derived(linesThatFit(titleSpace, 0));
+  const fitWithMore = $derived(linesThatFit(titleSpace, MORE_REM + CHIP_GAP_REM));
+  // Cells too short for even one title fall back to the dots used on phones.
+  const showTitles = $derived(fitAll >= 1);
 
   function entriesOn(d: Date): DiaryEntry[] {
     return app.entriesByDay.get(dateKey(d)) ?? [];
@@ -186,11 +235,11 @@
   function entryTitle(e: DiaryEntry): string {
     return e.title.trim() || 'Untitled';
   }
-  // When a day overflows, one title slot is traded for the "+N more" line so
-  // the cell never grows past MAX_CELL_TITLES lines.
+  // When a day overflows, title slots are traded for the "+N more" line so
+  // the list never grows past the cell.
   function visibleTitles(entries: DiaryEntry[]): DiaryEntry[] {
-    if (entries.length <= MAX_CELL_TITLES) return entries;
-    return entries.slice(0, MAX_CELL_TITLES - 1);
+    if (entries.length <= fitAll) return entries;
+    return entries.slice(0, fitWithMore);
   }
   function inCurrentMonth(d: Date): boolean {
     return d.getMonth() === app.currentMonth.getMonth();
@@ -240,6 +289,7 @@
       >
         <div class="flex w-7 flex-col items-center gap-1">
           <span
+            data-day-number
             class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm tabular-nums transition-colors
               {isSameDay(day, today)
                 ? 'bg-text font-semibold text-ink'
@@ -248,9 +298,9 @@
             {day.getDate()}
           </span>
 
-          <!-- Narrow screens: no room for titles, keep up to three dots -->
+          <!-- Narrow or short cells: no room for titles, keep up to three dots -->
           {#if count > 0}
-            <span class="flex items-center gap-1 sm:hidden">
+            <span class="flex items-center gap-1 {showTitles ? 'sm:hidden' : ''}">
               {#each Array(Math.min(count, 3)) as _, i (i)}
                 <span class="h-1.5 w-1.5 rounded-full bg-muted"></span>
               {/each}
@@ -259,19 +309,19 @@
         </div>
 
         <!-- Wider screens: entry titles, one line each, overflow as "+N more" -->
-        {#if count > 0}
+        {#if count > 0 && showTitles}
           <ul class="mt-1 hidden min-h-0 min-w-0 flex-col gap-0.5 overflow-hidden sm:flex" aria-hidden="true">
             {#each shown as entry (entry.uid)}
               <li
-                class="truncate rounded-md bg-slate px-1.5 py-0.5 text-[0.7rem] leading-tight text-text/80 transition-colors group-hover:text-text"
+                class="h-[1.125rem] shrink-0 truncate rounded-md bg-slate px-1.5 text-[0.7rem] leading-[1.125rem] text-text/80 transition-colors group-hover:text-text"
                 title={entryTitle(entry)}
               >
                 {entryTitle(entry)}
               </li>
             {/each}
             {#if count > shown.length}
-              <li class="px-1.5 text-[0.65rem] font-medium leading-tight text-muted">
-                +{count - shown.length} more
+              <li class="h-[0.875rem] shrink-0 px-1.5 text-[0.65rem] font-medium leading-[0.875rem] text-muted">
+                {shown.length ? `+${count - shown.length} more` : `${count} entries`}
               </li>
             {/if}
           </ul>
