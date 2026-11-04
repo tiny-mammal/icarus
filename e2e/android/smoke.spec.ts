@@ -42,9 +42,14 @@ async function attach(webview: AndroidWebView, ms: number): Promise<Page | null>
  */
 async function launchApp(): Promise<Page> {
   adb('shell', 'am', 'force-stop', APP_ID);
-  adb('shell', 'am', 'start', '-W', '-n', `${APP_ID}/.MainActivity`);
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
+    // Relaunch while the app isn't in the foreground: a freshly booted
+    // emulator can ignore a launch until its setup completes.
+    const resumed = adb('shell', 'dumpsys', 'activity', 'activities')
+      .split('\n')
+      .some((line) => line.includes('ResumedActivity') && line.includes(APP_ID));
+    if (!resumed) adb('shell', 'am', 'start', '-W', '-n', `${APP_ID}/.MainActivity`);
     const pid = Number(adb('shell', 'pidof', APP_ID)) || 0;
     const webview = device.webViews().find((view) => view.pkg() === APP_ID && view.pid() === pid);
     const page = pid && webview ? await attach(webview, 15_000) : null;

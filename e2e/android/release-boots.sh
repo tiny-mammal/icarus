@@ -16,9 +16,14 @@ fi
 
 adb uninstall "$APP_ID" > /dev/null 2>&1 || true
 adb install "$APK"
-adb shell am start -W -n "$APP_ID/.MainActivity"
 
+# A freshly booted emulator can still be finishing its setup and ignore a
+# launch ("user setup not complete"), so start the app again until it's in
+# the foreground.
 for _ in $(seq 1 30); do
+  if ! adb shell dumpsys activity activities | grep -q "ResumedActivity.*$APP_ID"; then
+    adb shell am start -W -n "$APP_ID/.MainActivity" > /dev/null
+  fi
   adb shell uiautomator dump /sdcard/window.xml > /dev/null 2>&1 || true
   if adb shell cat /sdcard/window.xml 2>/dev/null | grep -q 'Start a new diary'; then
     echo "The release APK shows the welcome screen."
