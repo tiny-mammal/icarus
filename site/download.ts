@@ -3,7 +3,7 @@
  * version, file sizes and checksums from the release manifest. The links work
  * without this script: the Worker always serves the latest build.
  */
-import { ASSETS, MANIFEST_PATH, isReleaseManifest, type ReleaseManifest } from './releases';
+import { ASSETS, MANIFEST_PATH, assetPath, isReleaseManifest, type ReleaseManifest } from './releases';
 import { detectPlatform } from './platform';
 
 const platform = detectPlatform();
@@ -26,7 +26,11 @@ function formatDate(iso: string): string {
 function showRelease(manifest: ReleaseManifest): void {
   if (status) status.textContent = `Version ${manifest.version}, released ${formatDate(manifest.published)}`;
   for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-asset]')) {
-    const asset = manifest.assets[link.dataset.asset ?? ''];
+    const id = link.dataset.asset ?? '';
+    const asset = manifest.assets[id];
+    // Download the release whose sizes and checksums this page shows, even
+    // if a newer one is published while the page is open.
+    if (asset) link.href = assetPath(id, manifest.version);
     const size = link.querySelector('[data-asset-size]');
     if (asset && size) size.textContent = `· ${formatSize(asset.size)}`;
   }

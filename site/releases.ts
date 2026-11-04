@@ -51,8 +51,23 @@ export interface ReleaseManifest {
 export const MANIFEST_KEY = 'latest.json';
 export const MANIFEST_PATH = `/download/${MANIFEST_KEY}`;
 
-export function assetPath(id: string): string {
-  return `/download/${id}`;
+/**
+ * Public URL of an asset. Without a version it is the latest build; with one
+ * it stays on that release, so a page that shows a release's checksums
+ * downloads exactly those files even if a newer release lands meanwhile.
+ */
+export function assetPath(id: string, version?: string): string {
+  return version ? `/download/${id}?version=${encodeURIComponent(version)}` : `/download/${id}`;
+}
+
+const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+
+/** Where a given release keeps asset `id`, or null for an unknown id or version. */
+export function releasedAsset(id: string, version: string): { key: string; name: string } | null {
+  const spec = ASSETS.find((asset) => asset.id === id);
+  if (!spec || !VERSION_PATTERN.test(version)) return null;
+  const name = assetFileName(spec, version);
+  return { key: releasePrefix(version) + name, name };
 }
 
 /** Folder in the bucket that holds one release. */

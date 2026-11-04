@@ -3,10 +3,11 @@
  * only runs for `/` and `/download/*` (see `run_worker_first` in
  * `wrangler.jsonc`):
  *  - `/` serves `index.md` to agents that ask for Markdown.
- *  - `/download/<asset>` streams the latest build of that asset from R2, and
- *    `/download/latest.json` describes the current release.
+ *  - `/download/<asset>` streams the latest build of that asset from R2
+ *    (`?version=` pins an earlier release), and `/download/latest.json`
+ *    describes the current release.
  */
-import { MANIFEST_KEY, isReleaseManifest, type ReleaseManifest } from './releases';
+import { MANIFEST_KEY, isReleaseManifest, releasedAsset, type ReleaseManifest } from './releases';
 
 /** The slice of the R2 binding this Worker uses. */
 interface R2Object {
@@ -33,6 +34,8 @@ interface Env {
 const DOWNLOAD_PREFIX = '/download/';
 /** `/download/<id>` moves to a new file on every release; recheck it soon. */
 const LATEST_CACHE = 'public, max-age=300';
+/** Published releases never change (see `check-latest` in the workflow). */
+const PINNED_CACHE = 'public, max-age=31536000, immutable';
 
 /** True when the client ranks `text/markdown` above `text/html`. */
 function prefersMarkdown(accept: string): boolean {
@@ -73,7 +76,12 @@ function notFound(message = 'No release is available yet.'): Response {
   });
 }
 
-async function serveDownload(request: Request, env: Env, id: string): Promise<Response> {
+async function serveDownload(
+  request: Request,
+  env: Env,
+  id: string,
+  version: string | null,
+): Promise<Response> {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     return new Response(null, { status: 405, headers: { Allow: 'GET, HEAD' } });
   }
@@ -86,17 +94,24 @@ async function serveDownload(request: Request, env: Env, id: string): Promise<Re
     });
   }
 
-  const asset = Object.hasOwn(manifest.assets, id) ? manifest.assets[id] : undefined;
+  const pinned = version !== null && version !== manifest.version;
+  // A pinned earlier release is located by name; only the current manifest
+  // carries checksums.
+  const asset: { key: string; name: string; sha256?: string } | null | undefined = pinned
+    ? releasedAsset(id, version)
+    : Object.hasOwn(manifest.assets, id) ? manifest.assets[id] : undefined;
   if (!asset) return notFound('There is no such download.');
 
   const headers = new Headers({
     'Content-Type': 'application/octet-stream',
     'Content-Disposition': `attachment; filename="${asset.name}"`,
-    'Cache-Control': LATEST_CACHE,
+    'Cache-Control': version !== null ? PINNED_CACHE : LATEST_CACHE,
     'Accept-Ranges': 'bytes',
-    // Lets download managers and curl users check the file they received.
-    'Repr-Digest': `sha-256=:${hexToBase64(asset.sha256)}:`,
   });
+  if (asset.sha256) {
+    // Lets download managers and curl users check the file they received.
+    headers.set('Repr-Digest', `sha-256=:${hexToBase64(asset.sha256)}:`);
+  }
 
   if (request.method === 'HEAD') {
     const object = await env.RELEASES.head(asset.key);
@@ -145,7 +160,9 @@ export default {
     }
     if (url.pathname.startsWith(DOWNLOAD_PREFIX)) {
       const id = url.pathname.slice(DOWNLOAD_PREFIX.length);
-      if (id && !id.includes('/')) return serveDownload(request, env, id);
+      if (id && !id.includes('/')) {
+        return serveDownload(request, env, id, url.searchParams.get('version'));
+      }
     }
     return env.ASSETS.fetch(request);
   },
