@@ -18,3 +18,7 @@ keystore.properties
 
 /.tauri
 /tauri.settings.gradle
+# Release signing keys (CI decodes one here; local copies stay out of git).
+*.p12
+*.jks
+*.keystore
