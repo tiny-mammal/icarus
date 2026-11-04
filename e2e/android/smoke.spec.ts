@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { _android as android, expect, test, type AndroidDevice, type Page } from '@playwright/test';
+import { _android as android, expect, test, type AndroidDevice, type AndroidWebView, type Page } from '@playwright/test';
 
 /**
  * Smoke test for the Android app, run by `.github/workflows/release.yml` on an
@@ -25,11 +25,21 @@ test.beforeAll(async () => {
   if (!device) throw new Error('No Android device or emulator is connected');
 });
 
+/** Cold-start the app and return the page of its new process's WebView. */
 async function launchApp(): Promise<Page> {
   adb('shell', 'am', 'force-stop', APP_ID);
   adb('shell', 'am', 'start', '-W', '-n', `${APP_ID}/.MainActivity`);
-  const webview = await device.webView({ pkg: APP_ID }, { timeout: 60_000 });
-  const page = await webview.page();
+  let pid = 0;
+  await expect.poll(() => (pid = Number(adb('shell', 'pidof', APP_ID)) || 0), { timeout: 30_000 }).toBeGreaterThan(0);
+  // The previous process's WebView can linger in Playwright's list for a
+  // moment after force-stop, so wait for the one that belongs to this pid.
+  let webview: AndroidWebView | undefined;
+  await expect
+    .poll(() => (webview = device.webViews().find((view) => view.pkg() === APP_ID && view.pid() === pid)), {
+      timeout: 60_000,
+    })
+    .toBeTruthy();
+  const page = await webview!.page();
   await page.waitForLoadState('domcontentloaded');
   return page;
 }
