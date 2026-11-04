@@ -81,6 +81,31 @@ export function assetFileName(spec: AssetSpec, version: string): string {
   return `Icarus-Diary-${version}-${spec.platform}-${arch}.${spec.extension}`;
 }
 
+/** Compare two versions by SemVer precedence (build metadata is ignored). */
+export function compareVersions(a: string, b: string): number {
+  const split = (version: string) => {
+    const [core, ...pre] = version.split('+')[0].split('-');
+    return { core: core.split('.').map(Number), pre: pre.join('-') };
+  };
+  const [left, right] = [split(a), split(b)];
+  for (let i = 0; i < 3; i++) {
+    const diff = (left.core[i] ?? 0) - (right.core[i] ?? 0);
+    if (diff) return diff;
+  }
+  // A pre-release sorts before its final release: 1.0.0-rc.1 < 1.0.0.
+  if (!left.pre || !right.pre) return (left.pre ? -1 : 0) - (right.pre ? -1 : 0);
+  const [lp, rp] = [left.pre.split('.'), right.pre.split('.')];
+  for (let i = 0; i < Math.min(lp.length, rp.length); i++) {
+    const [l, r] = [lp[i], rp[i]];
+    if (l === r) continue;
+    const [ln, rn] = [/^\d+$/.test(l), /^\d+$/.test(r)];
+    if (ln && rn) return Number(l) - Number(r);
+    if (ln !== rn) return ln ? -1 : 1; // Numeric identifiers sort first.
+    return l < r ? -1 : 1;
+  }
+  return lp.length - rp.length;
+}
+
 export function isReleaseManifest(value: unknown): value is ReleaseManifest {
   if (!value || typeof value !== 'object') return false;
   const manifest = value as Partial<ReleaseManifest>;

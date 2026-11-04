@@ -24,6 +24,7 @@ import { join } from 'node:path';
 import {
   ASSETS,
   assetFileName,
+  compareVersions,
   isReleaseManifest,
   releasePrefix,
   type PlatformId,
@@ -86,17 +87,6 @@ function manifest(dir: string, outFile: string): void {
   const result: ReleaseManifest = { version: current, published: new Date().toISOString(), assets };
   writeFileSync(outFile, `${JSON.stringify(result, null, 2)}\n`);
   console.log(JSON.stringify(result, null, 2));
-}
-
-/** Compare `major.minor.patch`; pre-release suffixes are ignored. */
-function compareVersions(a: string, b: string): number {
-  const parts = (version: string) => version.split('-')[0].split('.').map(Number);
-  const [left, right] = [parts(a), parts(b)];
-  for (let i = 0; i < 3; i++) {
-    const diff = (left[i] ?? 0) - (right[i] ?? 0);
-    if (diff) return diff;
-  }
-  return 0;
 }
 
 function checkLatest(publishedFile: string): void {
