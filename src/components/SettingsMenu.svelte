@@ -69,7 +69,7 @@
         <p class="mt-0.5 truncate text-xs text-muted" title={app.vault.path}>{app.vault.path}</p>
         <p class="mt-1 text-xs text-muted">Drafts and settings are saved beside this file.</p>
       {:else}
-        <p class="mt-1 text-sm text-text first-letter:uppercase">{app.appPlace}</p>
+        <p class="mt-1 text-sm text-text">{app.appPlace.charAt(0).toUpperCase() + app.appPlace.slice(1)}</p>
         <p class="mt-0.5 text-xs text-muted">
           {app.storageKind === 'device'
             ? 'Stored privately inside the app. Uninstalling it erases the diary, so export a backup to keep it safe'
