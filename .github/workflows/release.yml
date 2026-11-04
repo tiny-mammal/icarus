@@ -137,7 +137,9 @@ jobs:
           path: release-assets
           merge-multiple: true
       - run: node scripts/release-assets.ts manifest release-assets latest.json
-      - name: Refuse to replace a newer release
+      # Published versions are immutable, so the live manifest never points at
+      # files that are being overwritten.
+      - name: Refuse to republish or replace a newer release
         run: |
           if pnpm exec wrangler r2 object get "$BUCKET/latest.json" --file current.json --remote; then
             node scripts/release-assets.ts check-latest current.json

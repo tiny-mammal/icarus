@@ -157,7 +157,9 @@ git tag v0.2.0 && git push origin v0.2.0
 
 Windows, macOS (universal) and Linux build on their own runners. The publish
 job uploads them to R2 under `v<version>/`. It then rewrites `latest.json`, so
-the download page switches to the new release at once. The workflow needs the
+the download page switches to the new release at once. A published version is never
+rebuilt in place: the workflow refuses a version that is not newer than the
+published one, so ship fixes as a new version. The workflow needs the
 repository secrets `CLOUDFLARE_API_TOKEN` (R2 edit permission) and
 `CLOUDFLARE_ACCOUNT_ID`.
 

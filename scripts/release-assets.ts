@@ -11,8 +11,10 @@
  *   node scripts/release-assets.ts manifest <dir> <out-file>
  *     Hash every collected file and write the `latest.json` manifest.
  *   node scripts/release-assets.ts check-latest <published-manifest>
- *     Fail if the published release is newer than this one, so a late or
- *     re-run older release never takes over `latest.json`.
+ *     Fail unless this release is newer than the published one. Published
+ *     releases are immutable: a late or re-run older release never takes over
+ *     `latest.json`, and a re-run never overwrites files the live manifest
+ *     points at. Ship a fix as a new version.
  *
  * The asset list itself lives in `site/releases.ts`, shared with the site.
  */
@@ -101,8 +103,8 @@ function checkLatest(publishedFile: string): void {
   const published: unknown = JSON.parse(readFileSync(publishedFile, 'utf8'));
   if (!isReleaseManifest(published)) fail(`${publishedFile} is not a release manifest`);
   const current = appVersion();
-  if (compareVersions(published.version, current) > 0) {
-    fail(`Version ${published.version} is already published; refusing to replace it with ${current}.`);
+  if (compareVersions(current, published.version) <= 0) {
+    fail(`Version ${published.version} is already published and releases are immutable. Bump package.json past it to publish ${current}'s changes.`);
   }
   console.log(`Publishing ${current} over ${published.version}.`);
 }
