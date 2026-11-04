@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   files: new Map<string, string>(),
   dirs: new Set<string>(),
   selections: [] as (string | null)[],
+  openOptions: [] as unknown[],
 }));
 
 vi.mock('@tauri-apps/api/path', () => ({
@@ -14,7 +15,10 @@ vi.mock('@tauri-apps/api/path', () => ({
 }));
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
-  open: async () => mocks.selections.shift() ?? null,
+  open: async (options: unknown) => {
+    mocks.openOptions.push(options);
+    return mocks.selections.shift() ?? null;
+  },
   save: async () => mocks.selections.shift() ?? null,
 }));
 
@@ -83,6 +87,8 @@ describe('Android private storage', () => {
     mocks.files.set('content://downloads/old.ics', 'BEGIN:VCALENDAR\nOLD');
     mocks.selections.push('content://downloads/old.ics');
     expect(await deviceBackend.pickDiaryText()).toEqual({ text: 'BEGIN:VCALENDAR\nOLD', ref: APP });
+    // Android's picker would drop the `.icarus` extension and hide encrypted backups.
+    expect(mocks.openOptions.at(-1)).toMatchObject({ filters: undefined });
 
     mocks.selections.push('content://documents/backup.ics');
     expect(await deviceBackend.saveBackup('BACKUP', 'icarus-diary-backup.ics')).toBe(true);

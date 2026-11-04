@@ -79,7 +79,7 @@ export const deviceBackend: StorageBackend = {
   },
 
   async pickDiaryText() {
-    const text = await pickDiaryFileText();
+    const text = await pickDiaryFileText(false);
     return text === null ? null : { text, ref: APP_VAULT };
   },
 

@@ -90,13 +90,20 @@ const ICS_FILTER = { name: 'iCalendar', extensions: [PLAIN_EXTENSION] };
 const ENCRYPTED_FILTER = { name: 'Encrypted Icarus diary', extensions: [ENCRYPTED_EXTENSION] };
 const DIARY_FILTER = { name: 'Diary', extensions: [PLAIN_EXTENSION, ENCRYPTED_EXTENSION] };
 
-/** Ask for a diary file to import and read it. Null when cancelled. */
-export async function pickDiaryFileText(): Promise<string | null> {
+/**
+ * Ask for a diary file to import and read it. Null when cancelled.
+ *
+ * `filterByExtension` is for desktop pickers. Android's picker filters by MIME
+ * type and drops extensions it can't map, so `.icarus` (encrypted backups)
+ * would become unselectable. There any file can be picked, and the import
+ * itself rejects contents that aren't a diary.
+ */
+export async function pickDiaryFileText(filterByExtension: boolean): Promise<string | null> {
   const selected = await open({
     multiple: false,
     directory: false,
     fileAccessMode: 'scoped',
-    filters: [DIARY_FILTER],
+    filters: filterByExtension ? [DIARY_FILTER] : undefined,
     title: 'Import diary',
   });
   return typeof selected === 'string' ? readTextFile(selected) : null;

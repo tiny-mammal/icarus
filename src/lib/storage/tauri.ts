@@ -117,7 +117,7 @@ export const tauriBackend: StorageBackend = {
   },
 
   async pickDiaryText() {
-    const text = await pickDiaryFileText();
+    const text = await pickDiaryFileText(true);
     return text === null ? null : destinationForImport(text);
   },
 
