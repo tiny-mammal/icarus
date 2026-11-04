@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download Icarus for Windows, macOS and Linux</title>
+    <meta
+      name="description"
+      content="Download the free Icarus diary app for Windows, macOS and Linux. Your diary stays on your device, encrypted with your password."
+    />
+    <link rel="canonical" href="https://icarus.4oli.com/download" />
+    <meta name="robots" content="index, follow" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#09090b" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Icarus" />
+    <meta property="og:url" content="https://icarus.4oli.com/download" />
+    <meta property="og:title" content="Download Icarus" />
+    <meta property="og:description" content="A free, private diary app for Windows, macOS and Linux." />
+    <meta property="og:image" content="https://icarus.4oli.com/og-image.png" />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./download.ts"></script>
+  </head>
+  <body class="relative min-h-screen bg-ink text-text">
+    <a
+      href="#main"
+      class="sr-only rounded-lg bg-text px-3 py-2 text-sm font-medium text-ink focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50"
+      >Skip to content</a
+    >
+
+    <header class="absolute inset-x-0 top-0 z-20">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <a href="/" class="flex items-center gap-2 text-sm font-semibold tracking-tight text-text" aria-label="Icarus home">
+          <span class="grid h-6 w-6 place-items-center rounded-full border border-faint" aria-hidden="true">
+            <span class="h-1.5 w-1.5 rounded-full bg-muted"></span>
+          </span>
+          Icarus
+        </a>
+        <nav class="flex items-center gap-1 text-sm" aria-label="Primary">
+          <a href="/app/" class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text">Web app</a>
+          <a
+            href="https://github.com/tiny-mammal/icarus"
+            rel="noopener"
+            class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text"
+            >GitHub</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="vignette relative overflow-hidden px-4 pb-4 pt-34 sm:px-6 sm:pt-42" aria-labelledby="download-title">
+        <div class="relative mx-auto flex max-w-2xl flex-col items-center text-center">
+          <h1 id="download-title" class="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Download Icarus</h1>
+          <p class="mt-5 max-w-xl text-base leading-relaxed text-balance text-muted">
+            Free for Windows, macOS and Linux. Your diary stays on your computer, in a folder you choose.
+          </p>
+          <p class="mt-4 min-h-4 text-xs text-muted" data-release-status aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="mx-auto mt-12 max-w-5xl px-4 sm:px-6" aria-label="Platforms">
+        <ul class="grid gap-4 md:grid-cols-3" data-platforms>
+          <li id="windows" class="flex scroll-mt-20 flex-col rounded-2xl border border-slate bg-surface p-6" data-platform="windows">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-base font-semibold tracking-tight">Windows</h2>
+              <span class="hidden rounded-full border border-faint px-2 py-0.5 text-[11px] text-muted" data-detected>Your system</span>
+            </div>
+            <p class="mt-1 text-xs text-muted">Windows 10 and 11, 64-bit</p>
+            <a href="/download/windows-setup" class="btn btn-primary mt-6" data-asset="windows-setup" download>
+              Download installer <span class="text-xs opacity-60" data-asset-size></span>
+            </a>
+            <a href="/download/windows-msi" class="mt-3 text-center text-xs text-muted underline-offset-4 hover:text-text hover:underline" data-asset="windows-msi" download>
+              MSI package <span data-asset-size></span>
+            </a>
+            <div class="mt-6 border-t border-slate pt-5 text-sm leading-relaxed text-muted">
+              <h3 class="text-xs font-medium tracking-wide text-text uppercase">First launch</h3>
+              <p class="mt-2">
+                The installer isn't signed yet, so Windows may say it <q>protected your PC</q>. Choose
+                <span class="text-text">More info</span>, then <span class="text-text">Run anyway</span>.
+              </p>
+            </div>
+          </li>
+
+          <li id="macos" class="flex scroll-mt-20 flex-col rounded-2xl border border-slate bg-surface p-6" data-platform="macos">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-base font-semibold tracking-tight">macOS</h2>
+              <span class="hidden rounded-full border border-faint px-2 py-0.5 text-[11px] text-muted" data-detected>Your system</span>
+            </div>
+            <p class="mt-1 text-xs text-muted">macOS 11 or later, Apple silicon and Intel</p>
+            <a href="/download/macos-dmg" class="btn btn-primary mt-6" data-asset="macos-dmg" download>
+              Download disk image <span class="text-xs opacity-60" data-asset-size></span>
+            </a>
+            <div class="mt-6 border-t border-slate pt-5 text-sm leading-relaxed text-muted">
+              <h3 class="text-xs font-medium tracking-wide text-text uppercase">First launch</h3>
+              <ol class="mt-2 list-decimal space-y-1.5 pl-4">
+                <li>Open the disk image and drag Icarus to <span class="text-text">Applications</span>.</li>
+                <li>Open Icarus. macOS stops it because the app isn't notarized by Apple yet.</li>
+                <li>
+                  Go to <span class="text-text">System Settings → Privacy &amp; Security</span>, scroll down and choose
+                  <span class="text-text">Open Anyway</span>.
+                </li>
+              </ol>
+            </div>
+          </li>
+
+          <li id="linux" class="flex scroll-mt-20 flex-col rounded-2xl border border-slate bg-surface p-6" data-platform="linux">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-base font-semibold tracking-tight">Linux</h2>
+              <span class="hidden rounded-full border border-faint px-2 py-0.5 text-[11px] text-muted" data-detected>Your system</span>
+            </div>
+            <p class="mt-1 text-xs text-muted">64-bit x86</p>
+            <a href="/download/linux-appimage" class="btn btn-primary mt-6" data-asset="linux-appimage" download>
+              Download AppImage <span class="text-xs opacity-60" data-asset-size></span>
+            </a>
+            <div class="mt-3 flex justify-center gap-4 text-xs text-muted">
+              <a href="/download/linux-deb" class="underline-offset-4 hover:text-text hover:underline" data-asset="linux-deb" download>.deb <span data-asset-size></span></a>
+              <a href="/download/linux-rpm" class="underline-offset-4 hover:text-text hover:underline" data-asset="linux-rpm" download>.rpm <span data-asset-size></span></a>
+            </div>
+            <div class="mt-6 border-t border-slate pt-5 text-sm leading-relaxed text-muted">
+              <h3 class="text-xs font-medium tracking-wide text-text uppercase">First launch</h3>
+              <p class="mt-2">
+                Make the AppImage executable from its file properties, or run
+                <code class="rounded bg-slate px-1 py-0.5 font-mono text-xs text-text">chmod +x Icarus-Diary-*.AppImage</code>.
+                The <span class="text-text">.deb</span> and <span class="text-text">.rpm</span> packages install
+                through your package manager.
+              </p>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="mx-auto mt-16 max-w-2xl px-4 sm:px-6" aria-labelledby="checksums-title">
+        <details class="group border-y border-slate">
+          <summary class="flex cursor-pointer items-center justify-between gap-4 py-5 text-sm font-medium text-text">
+            <span id="checksums-title">Verify your download (SHA-256)</span>
+            <svg class="faq-chevron shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </summary>
+          <div class="pb-5 text-sm leading-relaxed text-muted">
+            <p>The builds aren't signed yet. Compare the checksum of the file you downloaded with this list.</p>
+            <dl class="mt-4 space-y-3" data-checksums></dl>
+          </div>
+        </details>
+        <p class="mt-8 text-center text-sm text-muted">
+          Prefer not to install anything?
+          <a href="/app/" class="text-text underline underline-offset-4">Open the web app</a>.
+        </p>
+      </section>
+    </main>
+
+    <footer class="mt-24 border-t border-slate sm:mt-32">
+      <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <p>
+          Icarus is free software, licensed under the
+          <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="noopener license" class="underline underline-offset-4 hover:text-text">GNU GPL v3</a>.
+        </p>
+        <a href="https://github.com/tiny-mammal/icarus" rel="noopener" class="hover:text-text">Source code</a>
+      </div>
+    </footer>
+  </body>
+</html>

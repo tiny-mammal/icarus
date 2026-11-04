@@ -57,6 +57,7 @@ export default defineConfig({
       input: {
         index: root + 'index.html',
         404: root + '404.html',
+        download: root + 'download.html',
       },
     },
   },

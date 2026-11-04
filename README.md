@@ -138,8 +138,36 @@ pnpm preview:web     # build and serve the deployment locally with Wrangler
 pnpm deploy:web      # build and deploy to icarus.4oli.com
 ```
 
+`/download` lists the desktop builds. The Worker streams `/download/<asset>`
+from the `icarus-releases` R2 bucket, using `latest.json` in that bucket to
+find the current release. The asset list is shared in `site/releases.ts`.
+
 `site/public/_headers` sets the security headers, including a strict
 Content-Security-Policy for the app that keeps every request on the same origin.
+
+## Releases
+
+Desktop builds come from `.github/workflows/release.yml`. To publish one, set
+the new version in `package.json` (Tauri reads it from there), merge it, then
+push a matching tag:
+
+```bash
+git tag v0.2.0 && git push origin v0.2.0
+```
+
+Windows, macOS (universal) and Linux build on their own runners. The publish
+job uploads them to R2 under `v<version>/`. It then rewrites `latest.json`, so
+the download page switches to the new release at once. A published version is never
+rebuilt in place: the workflow refuses a version that is not newer than the
+published one, so ship fixes as a new version. The workflow needs the
+repository secrets `CLOUDFLARE_API_TOKEN` (R2 edit permission) and
+`CLOUDFLARE_ACCOUNT_ID`.
+
+Builds are not code-signed yet. The macOS app is only ad-hoc signed, so
+Gatekeeper asks users to allow it in **Privacy & Security**. Windows
+SmartScreen warns once. The download page explains both. To remove the
+warnings later, add an Apple Developer ID and notarization to the macOS job,
+and Azure Trusted Signing (or another certificate) to the Windows job.
 
 ## License
 

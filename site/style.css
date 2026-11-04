@@ -6,6 +6,8 @@
 @import 'tailwindcss' source(none);
 @source './index.html';
 @source './404.html';
+@source './download.html';
+@source './download.ts';
 
 @import '../src/styles/theme.css';
 
@@ -97,44 +99,6 @@
   /* The app screenshot dissolves into the page instead of ending on a hard edge. */
   .shot-fade {
     mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
-  }
-
-  /* Download dialog: the same scale-and-fade the app's dialogs use. */
-  .download-dialog {
-    opacity: 0;
-    transform: scale(0.96);
-    transition:
-      opacity 140ms ease,
-      transform 180ms var(--ease-glide),
-      overlay 180ms allow-discrete,
-      display 180ms allow-discrete;
-  }
-  .download-dialog[open] {
-    opacity: 1;
-    transform: scale(1);
-  }
-  @starting-style {
-    .download-dialog[open] {
-      opacity: 0;
-      transform: scale(0.96);
-    }
-  }
-  .download-dialog::backdrop {
-    background: color-mix(in oklab, var(--color-ink) 70%, transparent);
-    backdrop-filter: blur(4px);
-    opacity: 0;
-    transition:
-      opacity 140ms ease,
-      overlay 140ms allow-discrete,
-      display 140ms allow-discrete;
-  }
-  .download-dialog[open]::backdrop {
-    opacity: 1;
-  }
-  @starting-style {
-    .download-dialog[open]::backdrop {
-      opacity: 0;
-    }
   }
 
   .faq-chevron {

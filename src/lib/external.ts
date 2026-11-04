@@ -1,7 +1,7 @@
 import { openUrl } from '@tauri-apps/plugin-opener';
 
 /** Public home of the project, linked from the settings dialog. */
-export const SOURCE_REPO = { label: 'martinezharo/icarus', url: 'https://github.com/martinezharo/icarus' };
+export const SOURCE_REPO = { label: 'tiny-mammal/icarus', url: 'https://github.com/tiny-mammal/icarus' };
 
 /**
  * Open an external URL in the system browser via Tauri's opener plugin (the

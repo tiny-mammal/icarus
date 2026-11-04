@@ -12,8 +12,16 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
-    // Only the home page needs the Worker (Markdown negotiation for agents).
-    "run_worker_first": ["/"]
+    // The home page (Markdown negotiation for agents) and the desktop builds
+    // stored in R2 need the Worker; everything else is a plain asset.
+    "run_worker_first": ["/", "/download/*"]
+  },
+  // Desktop builds, uploaded by .github/workflows/release.yml.
+  "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "icarus-releases" }],
+  // Branch previews (Workers Builds runs `wrangler preview` off main) get an
+  // empty bucket of their own, so they never read the published builds.
+  "previews": {
+    "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "icarus-releases-preview" }]
   },
   // No logs or analytics: the site has nothing to learn about its visitors.
   "observability": { "enabled": false },
