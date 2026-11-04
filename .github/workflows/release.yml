@@ -229,7 +229,10 @@ jobs:
           emulator-boot-timeout: 900
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          # The shared emulator sometimes raises "System UI isn't responding",
+          # which covers the app; hide such system dialogs for the checks.
           script: |
+            adb shell settings put global hide_error_dialogs 1
             e2e/android/release-boots.sh "$(ls "$APK_ROOT"/universal/release/*.apk)"
             adb install -r "$APK_ROOT/universal/debug/app-universal-debug.apk"
             pnpm exec playwright test --config playwright.android.config.ts
