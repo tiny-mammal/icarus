@@ -192,9 +192,12 @@ jobs:
           certs=$("$APKSIGNER" verify --print-certs "$APK_ROOT/universal/release/"*.apk)
           echo "$certs"
           # A valid signature isn't enough: it must be the project key, or
-          # installed apps can't update to this release.
-          if ! grep -qx "Signer #1 certificate SHA-256 digest: $ANDROID_CERT_SHA256" <<< "$certs"; then
-            echo "::error::The APK isn't signed with the project key ($ANDROID_CERT_SHA256)"
+          # installed apps can't update to this release. Compare every signer's
+          # digest, whatever label this apksigner version prints before it
+          # ("Signer #1", "V2 Signer", ...).
+          digests=$(grep -oE 'certificate SHA-256 digest: [0-9a-f]{64}' <<< "$certs" | awk '{print $NF}' | sort -u)
+          if [ "$digests" != "$ANDROID_CERT_SHA256" ]; then
+            echo "::error::The APK must be signed only with the project key ($ANDROID_CERT_SHA256), got: $digests"
             exit 1
           fi
       - if: github.ref_type == 'tag'
