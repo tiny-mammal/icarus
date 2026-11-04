@@ -4,7 +4,7 @@ Icarus is a free, open-source diary app for keeping a private diary over many ye
 
 - Home page: https://icarus.4oli.com/
 - Web app: https://icarus.4oli.com/app/
-- Desktop app: Windows, macOS and Linux
+- Desktop app for Windows, macOS and Linux: https://icarus.4oli.com/download
 
 ## What it does
 

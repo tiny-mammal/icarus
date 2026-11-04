@@ -8,6 +8,7 @@ Icarus runs as a desktop app for Windows, macOS and Linux, and as a web app in t
 
 - [Icarus overview](https://icarus.4oli.com/index.md): Concise product facts, privacy model, and suitable use cases, in Markdown.
 - [Icarus home page](https://icarus.4oli.com/): Product page with download and web app links.
+- [Download Icarus](https://icarus.4oli.com/download): Desktop builds for Windows, macOS and Linux, with first-launch steps and SHA-256 checksums.
 - [Icarus web app](https://icarus.4oli.com/app/): The diary in the browser. Data stays in that browser.
 
 ## Source

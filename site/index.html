@@ -69,6 +69,7 @@
             "applicationCategory": "LifestyleApplication",
             "applicationSubCategory": "Diary",
             "operatingSystem": "Windows, macOS, Linux, Web browser",
+            "downloadUrl": "https://icarus.4oli.com/download",
             "isAccessibleForFree": true,
             "license": "https://www.gnu.org/licenses/gpl-3.0.html",
             "screenshot": "https://icarus.4oli.com/app-calendar.webp",
@@ -154,6 +155,7 @@
           Icarus
         </a>
         <nav class="flex items-center gap-1 text-sm" aria-label="Primary">
+          <a href="/download" class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text">Download</a>
           <a href="/app/" class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text">Web app</a>
           <a
             href="https://github.com/martinezharo/icarus"
@@ -182,10 +184,10 @@
             and return to any day in an instant.
           </p>
           <div class="mt-10 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
-            <button type="button" class="btn btn-primary" data-download aria-haspopup="dialog" aria-controls="download-dialog">
+            <a href="/download" class="btn btn-primary" data-download>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-              Download for desktop
-            </button>
+              <span data-download-label>Download</span>
+            </a>
             <a href="/app/" class="btn btn-secondary">Open the web app</a>
           </div>
           <p class="mt-4 text-xs text-muted">For Windows, macOS and Linux, or right in your browser.</p>
@@ -294,10 +296,10 @@
         </div>
         <h2 id="closing-title" class="text-2xl font-semibold tracking-tight sm:text-3xl">Write today's chapter</h2>
         <div class="mt-8 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
-          <button type="button" class="btn btn-primary" data-download aria-haspopup="dialog" aria-controls="download-dialog">
+          <a href="/download" class="btn btn-primary" data-download>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
-            Download for desktop
-          </button>
+            <span data-download-label>Download</span>
+          </a>
           <a href="/app/" class="btn btn-secondary">Open the web app</a>
         </div>
       </section>
@@ -312,22 +314,5 @@
         <a href="https://github.com/martinezharo/icarus" rel="noopener" class="hover:text-text">Source code</a>
       </div>
     </footer>
-    <dialog
-      id="download-dialog"
-      class="download-dialog m-auto w-[calc(100%-2rem)] max-w-xs rounded-2xl border border-slate bg-surface p-6 text-text shadow-2xl shadow-black/50"
-      aria-labelledby="download-dialog-title"
-    >
-      <div class="mb-4 grid h-10 w-10 place-items-center rounded-full border border-faint" aria-hidden="true">
-        <span class="h-2 w-2 rounded-full bg-muted"></span>
-      </div>
-      <h2 id="download-dialog-title" class="text-base font-semibold tracking-tight">Coming soon</h2>
-      <p class="mt-2 text-sm leading-relaxed text-muted">The desktop app isn't ready yet. Until then, you can write in the web app.</p>
-      <div class="mt-6 flex justify-end gap-2">
-        <button type="button" class="rounded-lg px-3.5 py-2 text-sm text-muted transition-colors hover:bg-slate hover:text-text" data-close>
-          Close
-        </button>
-        <a href="/app/" class="rounded-lg bg-text px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:bg-text/90">Open the web app</a>
-      </div>
-    </dialog>
   </body>
 </html>

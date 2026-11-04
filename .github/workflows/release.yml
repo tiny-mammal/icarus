@@ -1,0 +1,148 @@
+name: Release
+
+# Push a `v<version>` tag that matches package.json to publish a release:
+#   git tag v0.2.0 && git push origin v0.2.0
+# Each platform builds on its own runner, then `publish` uploads every file to
+# the R2 bucket served at https://icarus.4oli.com/download and switches
+# `latest.json` to the new version last, so visitors never see a partial
+# release. Builds are unsigned for now (see README → Releases).
+#
+# Pull requests that touch the packaging run the builds without publishing.
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - scripts/release-assets.ts
+      - site/releases.ts
+      - src-tauri/tauri.conf.json
+      - src-tauri/Cargo.toml
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  RUST_TOOLCHAIN: 1.98.1
+  PNPM_VERSION: 12.4.1
+  NODE_VERSION: 24
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - id: version
+        env:
+          TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: echo "version=$(node scripts/release-assets.ts version $TAG)" >> "$GITHUB_OUTPUT"
+
+  desktop:
+    needs: version
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # The oldest supported runner keeps the Linux builds compatible with
+          # older glibc versions.
+          - platform: linux
+            runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: appimage,deb,rpm
+          - platform: windows
+            runner: windows-2022
+            target: x86_64-pc-windows-msvc
+            bundles: nsis,msi
+          - platform: macos
+            runner: macos-15
+            target: universal-apple-darwin
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+            bundles: dmg
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: ${{ matrix.rust-targets || matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: release-${{ matrix.target }}
+      - if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf rpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm tauri build --ci --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+      - run: node scripts/release-assets.ts collect "src-tauri/target/${{ matrix.target }}/release/bundle" ${{ matrix.platform }} release-assets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.platform }}
+          path: release-assets/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [version, desktop]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      BUCKET: icarus-releases
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+      - run: node scripts/release-assets.ts manifest release-assets latest.json
+      - name: Upload builds
+        run: |
+          for file in release-assets/*; do
+            pnpm exec wrangler r2 object put "$BUCKET/v$VERSION/$(basename "$file")" \
+              --file "$file" --content-type application/octet-stream --remote
+          done
+      - name: Point latest.json at this release
+        run: |
+          pnpm exec wrangler r2 object put "$BUCKET/latest.json" \
+            --file latest.json --content-type application/json --remote
+      - run: |
+          {
+            echo "### Icarus Diary $VERSION published"
+            echo
+            echo '```json'
+            cat latest.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

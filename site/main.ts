@@ -1,19 +1,16 @@
 /**
- * The download buttons open a "coming soon" dialog until desktop builds are
- * published. A native <dialog> gives focus trapping, Escape to close and the
- * inert background for free.
+ * The download buttons link to the download page, which lists every platform.
+ * Name the visitor's system on them when it can be told, and point at its
+ * section of that page.
  */
-const dialog = document.getElementById('download-dialog') as HTMLDialogElement | null;
+import { PLATFORM_NAMES, detectPlatform } from './platform';
 
-if (dialog) {
-  for (const button of document.querySelectorAll<HTMLButtonElement>('[data-download]')) {
-    button.addEventListener('click', () => dialog.showModal());
+const platform = detectPlatform();
+
+if (platform) {
+  for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-download]')) {
+    link.href = `/download#${platform}`;
+    const label = link.querySelector('[data-download-label]');
+    if (label) label.textContent = `Download for ${PLATFORM_NAMES[platform]}`;
   }
-  for (const button of dialog.querySelectorAll<HTMLButtonElement>('[data-close]')) {
-    button.addEventListener('click', () => dialog.close());
-  }
-  // A click that lands on the dialog element itself hit the backdrop.
-  dialog.addEventListener('click', (event) => {
-    if (event.target === dialog) dialog.close();
-  });
 }

@@ -1,11 +1,38 @@
 /**
- * Edge entry for icarus.4oli.com. Every file is a static asset; this Worker
- * only runs for `/` (see `run_worker_first` in `wrangler.jsonc`) so agents that
- * ask for Markdown get the same page as `index.md`.
+ * Edge entry for icarus.4oli.com. Every page is a static asset; this Worker
+ * only runs for `/` and `/download/*` (see `run_worker_first` in
+ * `wrangler.jsonc`):
+ *  - `/` serves `index.md` to agents that ask for Markdown.
+ *  - `/download/<asset>` streams the latest build of that asset from R2, and
+ *    `/download/latest.json` describes the current release.
  */
+import { MANIFEST_KEY, isReleaseManifest, type ReleaseManifest } from './releases';
+
+/** The slice of the R2 binding this Worker uses. */
+interface R2Object {
+  size: number;
+  httpEtag: string;
+  range?: { offset?: number; length?: number; suffix?: number };
+}
+
+interface R2ObjectBody extends R2Object {
+  body: ReadableStream;
+  json<T>(): Promise<T>;
+}
+
+interface R2Bucket {
+  get(key: string, options?: { range?: Headers }): Promise<R2ObjectBody | null>;
+  head(key: string): Promise<R2Object | null>;
+}
+
 interface Env {
   ASSETS: { fetch(input: Request | URL | string, init?: RequestInit): Promise<Response> };
+  RELEASES: R2Bucket;
 }
+
+const DOWNLOAD_PREFIX = '/download/';
+/** `/download/<id>` moves to a new file on every release; recheck it soon. */
+const LATEST_CACHE = 'public, max-age=300';
 
 /** True when the client ranks `text/markdown` above `text/html`. */
 function prefersMarkdown(accept: string): boolean {
@@ -22,16 +49,94 @@ function prefersMarkdown(accept: string): boolean {
   return markdown > 0 && markdown >= quality('text/html');
 }
 
+async function markdownHome(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const markdown = await env.ASSETS.fetch(new URL('/index.md', url));
+  const response = new Response(markdown.body, markdown);
+  response.headers.set('Content-Type', 'text/markdown; charset=utf-8');
+  response.headers.set('Vary', 'Accept');
+  response.headers.set('Content-Location', '/index.md');
+  return response;
+}
+
+async function readManifest(env: Env): Promise<ReleaseManifest | null> {
+  const object = await env.RELEASES.get(MANIFEST_KEY);
+  if (!object) return null;
+  const manifest: unknown = await object.json();
+  return isReleaseManifest(manifest) ? manifest : null;
+}
+
+function notFound(message = 'No release is available yet.'): Response {
+  return new Response(message, {
+    status: 404,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+  });
+}
+
+async function serveDownload(request: Request, env: Env, id: string): Promise<Response> {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return new Response(null, { status: 405, headers: { Allow: 'GET, HEAD' } });
+  }
+  const manifest = await readManifest(env);
+  if (!manifest) return notFound();
+
+  if (id === MANIFEST_KEY) {
+    return new Response(request.method === 'HEAD' ? null : JSON.stringify(manifest), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': LATEST_CACHE },
+    });
+  }
+
+  const asset = Object.hasOwn(manifest.assets, id) ? manifest.assets[id] : undefined;
+  if (!asset) return notFound('There is no such download.');
+
+  const headers = new Headers({
+    'Content-Type': 'application/octet-stream',
+    'Content-Disposition': `attachment; filename="${asset.name}"`,
+    'Cache-Control': LATEST_CACHE,
+    'Accept-Ranges': 'bytes',
+    // Lets download managers and curl users check the file they received.
+    'Repr-Digest': `sha-256=:${hexToBase64(asset.sha256)}:`,
+  });
+
+  if (request.method === 'HEAD') {
+    const object = await env.RELEASES.head(asset.key);
+    if (!object) return notFound();
+    headers.set('Content-Length', String(object.size));
+    headers.set('ETag', object.httpEtag);
+    return new Response(null, { headers });
+  }
+
+  // Passing the request headers lets R2 answer `Range`, so interrupted
+  // downloads can resume.
+  const object = await env.RELEASES.get(asset.key, { range: request.headers });
+  if (!object) return notFound();
+  headers.set('ETag', object.httpEtag);
+  const range = object.range;
+  if (range && request.headers.has('Range')) {
+    const offset = range.offset ?? (range.suffix !== undefined ? object.size - range.suffix : 0);
+    const length = range.length ?? object.size - offset;
+    headers.set('Content-Range', `bytes ${offset}-${offset + length - 1}/${object.size}`);
+    headers.set('Content-Length', String(length));
+    return new Response(object.body, { status: 206, headers });
+  }
+  headers.set('Content-Length', String(object.size));
+  return new Response(object.body, { headers });
+}
+
+function hexToBase64(hex: string): string {
+  const bytes = hex.match(/.{2}/g)?.map((byte) => Number.parseInt(byte, 16)) ?? [];
+  return btoa(String.fromCharCode(...bytes));
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/' && prefersMarkdown(request.headers.get('Accept') ?? '')) {
-      const markdown = await env.ASSETS.fetch(new URL('/index.md', url));
-      const response = new Response(markdown.body, markdown);
-      response.headers.set('Content-Type', 'text/markdown; charset=utf-8');
-      response.headers.set('Vary', 'Accept');
-      response.headers.set('Content-Location', '/index.md');
-      return response;
+      return markdownHome(request, env);
+    }
+    if (url.pathname.startsWith(DOWNLOAD_PREFIX)) {
+      const id = url.pathname.slice(DOWNLOAD_PREFIX.length);
+      if (id && !id.includes('/')) return serveDownload(request, env, id);
     }
     return env.ASSETS.fetch(request);
   },
