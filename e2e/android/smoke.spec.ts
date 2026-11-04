@@ -1,45 +1,35 @@
 import { execFileSync } from 'node:child_process';
-import { chromium, expect, test, type Browser, type Page } from '@playwright/test';
+import { _android as android, expect, test, type AndroidDevice, type Page } from '@playwright/test';
 
 /**
  * Smoke test for the Android app, run by `.github/workflows/release.yml` on an
  * emulator with a debug APK installed. Playwright drives the real app through
- * the WebView's DevTools socket (debug builds expose it), so this covers the
- * device storage backend, the app's private files and a cold restart.
+ * the WebView's DevTools socket (debug builds expose it) with its Android
+ * support, so this covers the device storage backend, the app's private
+ * files and a cold restart.
  *
  * Locally: boot an emulator, `adb install` a debug APK, then
  * `pnpm exec playwright test --config playwright.android.config.ts`.
  */
 
 const APP_ID = 'com.icarus.diary';
-const CDP_PORT = 9222;
 
 function adb(...args: string[]): string {
   return execFileSync('adb', args, { encoding: 'utf8' }).trim();
 }
 
-let browser: Browser | null = null;
+let device: AndroidDevice;
+
+test.beforeAll(async () => {
+  [device] = await android.devices();
+  if (!device) throw new Error('No Android device or emulator is connected');
+});
 
 async function launchApp(): Promise<Page> {
-  await browser?.close().catch(() => undefined);
   adb('shell', 'am', 'force-stop', APP_ID);
   adb('shell', 'am', 'start', '-W', '-n', `${APP_ID}/.MainActivity`);
-
-  let pid = '';
-  await expect.poll(() => (pid = adb('shell', 'pidof', APP_ID)), { timeout: 30_000 }).not.toBe('');
-  adb('forward', `tcp:${CDP_PORT}`, `localabstract:webview_devtools_remote_${pid}`);
-
-  await expect
-    .poll(async () => {
-      try {
-        browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`);
-        return browser.contexts().flatMap((context) => context.pages()).length;
-      } catch {
-        return 0;
-      }
-    }, { timeout: 60_000 })
-    .toBeGreaterThan(0);
-  const page = browser!.contexts().flatMap((context) => context.pages())[0];
+  const webview = await device.webView({ pkg: APP_ID }, { timeout: 60_000 });
+  const page = await webview.page();
   await page.waitForLoadState('domcontentloaded');
   return page;
 }
@@ -59,7 +49,7 @@ function privateFiles(): string[] {
 test.describe.configure({ mode: 'serial' });
 
 test.afterAll(async () => {
-  await browser?.close().catch(() => undefined);
+  await device?.close();
 });
 
 test('starts on the welcome screen with the device storage backend', async () => {
