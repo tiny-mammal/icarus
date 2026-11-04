@@ -18,6 +18,11 @@
   },
   // Desktop builds, uploaded by .github/workflows/release.yml.
   "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "icarus-releases" }],
+  // Branch previews (Workers Builds runs `wrangler preview` off main) get an
+  // empty bucket of their own, so they never read the published builds.
+  "previews": {
+    "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "icarus-releases-preview" }]
+  },
   // No logs or analytics: the site has nothing to learn about its visitors.
   "observability": { "enabled": false },
   "workers_dev": false,
