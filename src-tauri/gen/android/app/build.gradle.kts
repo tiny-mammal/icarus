@@ -10,7 +10,10 @@ plugins {
 /**
  * Release signing key, kept out of the repository. CI writes
  * `keystore.properties` (storeFile, storePassword, keyAlias, keyPassword) from
- * secrets; without it, release builds come out unsigned.
+ * secrets on tag builds. Without it (local builds, pull requests), release
+ * builds are signed with the debug key so they still install for testing; the
+ * release workflow refuses to publish anything not signed with the project
+ * certificate.
  */
 val keystoreProperties = Properties().apply {
     val propFile = rootProject.file("keystore.properties")
@@ -61,7 +64,7 @@ android {
             }
         }
         getByName("release") {
-            signingConfigs.findByName("release")?.let { signingConfig = it }
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             optimization {
                enable = true
             }

@@ -162,19 +162,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Releases must be signed with the project key: Android only installs an
-      # update signed with the same key as the installed app.
+      # update signed with the same key as the installed app. Only tag builds
+      # get the key; pull requests never see it and sign with the debug key.
       - name: Load the signing key
+        if: github.ref_type == 'tag'
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
-            if [ "$GITHUB_REF_TYPE" = tag ]; then
-              echo "::error::ANDROID_KEYSTORE_BASE64 is not set; refusing to publish an unsigned APK"
-              exit 1
-            fi
-            echo "No signing key on this run: the release APK stays unsigned."
-            exit 0
+            echo "::error::ANDROID_KEYSTORE_BASE64 is not set; refusing to publish an APK without the project key"
+            exit 1
           fi
           cd src-tauri/gen/android
           echo "$KEYSTORE_BASE64" | base64 --decode > release.p12

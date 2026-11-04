@@ -9,11 +9,6 @@ set -euo pipefail
 APK="$1"
 APP_ID=com.icarus.diary
 
-if [[ "$APK" == *unsigned* ]]; then
-  echo "Skipping: $APK is unsigned and can't be installed."
-  exit 0
-fi
-
 adb uninstall "$APP_ID" > /dev/null 2>&1 || true
 adb install "$APK"
 
