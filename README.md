@@ -191,7 +191,8 @@ secrets `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` (alias
 `icarus`). Android only installs an update signed with the same key. If the key
 is lost, users must uninstall the app, and lose its diary, before installing a
 newer one. Keep an offline copy of it. A tag build refuses to publish an
-unsigned APK. Locally, `src-tauri/gen/android/keystore.properties` (ignored by
+APK that isn't signed with that key: the workflow pins its certificate
+(`ANDROID_CERT_SHA256`), so update both together if the key ever changes. Locally, `src-tauri/gen/android/keystore.properties` (ignored by
 git) points Gradle at the key.
 
 The desktop builds are not code-signed yet. The macOS app is only ad-hoc signed, so

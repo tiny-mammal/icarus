@@ -38,6 +38,8 @@ env:
   ANDROID_NDK: 27.2.12479018
   # The emulator API for the smoke test; 34 boots more reliably on hosted runners.
   ANDROID_API: 34
+  # SHA-256 of the project's APK signing certificate (see README → Releases).
+  ANDROID_CERT_SHA256: 97f51af72e78130c742553eebf84081325f3883a274c7988126cf9b352478d68
 
 jobs:
   version:
@@ -189,7 +191,14 @@ jobs:
         if: github.ref_type == 'tag'
         run: |
           APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
-          "$APKSIGNER" verify --print-certs "$APK_ROOT/universal/release/"*.apk
+          certs=$("$APKSIGNER" verify --print-certs "$APK_ROOT/universal/release/"*.apk)
+          echo "$certs"
+          # A valid signature isn't enough: it must be the project key, or
+          # installed apps can't update to this release.
+          if ! grep -qx "Signer #1 certificate SHA-256 digest: $ANDROID_CERT_SHA256" <<< "$certs"; then
+            echo "::error::The APK isn't signed with the project key ($ANDROID_CERT_SHA256)"
+            exit 1
+          fi
       - if: github.ref_type == 'tag'
         run: node scripts/release-assets.ts collect "$APK_ROOT" android release-assets
       - if: github.ref_type == 'tag'
