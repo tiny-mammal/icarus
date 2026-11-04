@@ -27,7 +27,7 @@ import {
 
 // The key predates encryption: the record holds `.ics` or an encrypted container.
 const VAULT_KEY = 'ics';
-const BROWSER_VAULT: VaultRef = { kind: 'browser' };
+const BROWSER_VAULT: VaultRef = { kind: 'app' };
 
 interface BackupType {
   description: string;
@@ -98,7 +98,7 @@ function pickFile(accept: string): Promise<File | null> {
 }
 
 export const webBackend: StorageBackend = {
-  kind: 'web',
+  kind: 'browser',
 
   async getRememberedVault() {
     return (await idbGet<string>(VAULT_KEY)) === undefined ? null : BROWSER_VAULT;
@@ -111,12 +111,12 @@ export const webBackend: StorageBackend = {
 
   async vaultExists(ref) {
     return (
-      ref.kind === 'browser' && (await idbGet<string>(VAULT_KEY)) !== undefined
+      ref.kind === 'app' && (await idbGet<string>(VAULT_KEY)) !== undefined
     );
   },
 
   async readVault(ref) {
-    if (ref.kind !== 'browser') {
+    if (ref.kind !== 'app') {
       throw new Error('Browser backend expects a browser vault');
     }
     const contents = await idbGet<string>(VAULT_KEY);
@@ -127,7 +127,7 @@ export const webBackend: StorageBackend = {
   },
 
   async writeVault(ref, contents) {
-    if (ref.kind !== 'browser') {
+    if (ref.kind !== 'app') {
       throw new Error('Browser backend expects a browser vault');
     }
     await idbSet(VAULT_KEY, contents);
@@ -135,7 +135,7 @@ export const webBackend: StorageBackend = {
   },
 
   async forgetVault(ref) {
-    if (ref.kind === 'browser') await idbDelete(VAULT_KEY);
+    if (ref.kind === 'app') await idbDelete(VAULT_KEY);
   },
 
   async siblingVault() {

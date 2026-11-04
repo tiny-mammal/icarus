@@ -7,7 +7,7 @@
  */
 import type { StorageBackend, StoreName, VaultRef } from './types';
 
-const MEMORY_VAULT: VaultRef = { kind: 'browser' };
+const MEMORY_VAULT: VaultRef = { kind: 'app' };
 
 export function createMemoryBackend(
   initialIcs: string | null,

@@ -9,7 +9,7 @@
 
   // The two runtimes expose drops differently: Tauri delivers OS paths through
   // webview events, a plain browser delivers File objects through HTML5 DnD.
-  const isDesktop = app.storageKind === 'tauri';
+  const isDesktop = app.storageKind === 'folder';
 
   function onDragOver(e: DragEvent) {
     e.preventDefault();
@@ -111,7 +111,9 @@
       <span class="text-xs text-muted">
         {isDesktop
           ? 'Choose the file, then its new data folder'
-          : 'Drag & drop a file here, or click to browse'}
+          : app.storageKind === 'device'
+            ? 'Tap to choose a .ics or .icarus file'
+            : 'Drag & drop a file here, or click to browse'}
       </span>
     </button>
 

@@ -23,7 +23,7 @@ beforeEach(async () => {
   vi.resetModules();
   const { withEncryption } = await import('../src/lib/storage/encrypted');
   const { createMemoryBackend } = await import('../src/lib/storage/memory');
-  const base = { kind: 'web' } as unknown as import('../src/lib/storage/types').StorageBackend;
+  const base = { kind: 'browser' } as unknown as import('../src/lib/storage/types').StorageBackend;
   backend.storage = withEncryption(
     createMemoryBackend(
       serializeIcs([{ uid: 'e1', title: 'First entry', content: 'Original text', date: new Date(2026, 9, 1) }]),

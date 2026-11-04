@@ -4,7 +4,10 @@ node_modules/
 # Build output
 dist/
 src-tauri/target/
-src-tauri/gen/
+# Tauri regenerates its schemas; the Android project is checked in.
+src-tauri/gen/schemas/
+# Gradle needs its wrapper jar, which global *.jar rules would otherwise hide.
+!src-tauri/gen/android/gradle/wrapper/gradle-wrapper.jar
 
 # Generated app icons (regenerate with `npm run icon`)
 app-icon.png

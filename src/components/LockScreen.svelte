@@ -20,7 +20,7 @@
   let working = $state(false);
   let confirmForget = $state(false);
 
-  const isDesktop = app.storageKind === 'tauri';
+  const isDesktop = app.storageKind === 'folder';
   const fileName = $derived(vaultFileName(app.lockedVault));
   const canSubmit = $derived(
     mode === 'password' ? password.length > 0 : recoveryKey.trim().length > 0 && newPasswordValid,
@@ -143,7 +143,7 @@
     oncancel={() => (confirmForget = false)}
     z="z-[65]"
   >
-    The encrypted diary and its drafts will be permanently erased from this browser. Only do this
+    The encrypted diary and its drafts will be permanently erased from {app.appPlace}. Only do this
     if the password and recovery key are lost. This can't be undone.
   </ConfirmDialog>
 {/if}

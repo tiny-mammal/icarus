@@ -18,8 +18,8 @@
   // Captured once: the pending diary is consumed when it is saved.
   const source = app.pendingDiary?.source ?? 'settings';
   const onboarding = source !== 'settings';
-  const isDesktop = app.storageKind === 'tauri';
-  const where = isDesktop ? 'this folder' : 'this browser';
+  const isDesktop = app.storageKind === 'folder';
+  const where = isDesktop ? 'this folder' : app.appPlace;
 
   let step = $state<Step>(onboarding ? 'choice' : 'password');
   let choice = $state<'encrypt' | 'plain'>(app.encryptionSupported ? 'encrypt' : 'plain');
@@ -184,7 +184,7 @@
             <span class="block text-sm font-medium text-text">Don't encrypt</span>
             <span class="mt-1 block text-[0.8rem] leading-relaxed text-muted">
               Opens without a password{isDesktop ? ', and the file stays a standard .ics' : ''}.
-              Anyone with access to {isDesktop ? 'the folder' : 'this browser profile'} can read it.
+              Anyone with access to {isDesktop ? 'the folder' : app.appPlace} can read it.
             </span>
           </span>
           {@render radioDot(choice === 'plain')}

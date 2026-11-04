@@ -26,7 +26,7 @@ import {
   FolderHasDiaryError,
   VaultLockedError,
 } from './storage/errors';
-import { PRIVATE_ITEMS } from './storage/types';
+import { PRIVATE_ITEMS, appPlaceName, type StorageKind } from './storage/types';
 import {
   CorruptVaultError,
   WrongSecretError,
@@ -107,7 +107,9 @@ class AppStore {
   /** Where the open diary lives (null while on the welcome or lock screen). */
   vault = $state<VaultRef | null>(null);
   /** Which backend this session runs on — drives platform-aware UI copy. */
-  readonly storageKind: 'tauri' | 'web' = storage.kind;
+  readonly storageKind: StorageKind = storage.kind;
+  /** "this browser" or "this device": where an app-owned diary is kept. */
+  readonly appPlace: string = appPlaceName(storage.kind);
   view = $state<View>('welcome');
   ready = $state(false); // finished the initial boot check
 
@@ -218,7 +220,7 @@ class AppStore {
   // --- boot ---------------------------------------------------------------
   /** Desktop asks for a folder; browser reopens its IndexedDB vault. */
   async init(): Promise<void> {
-    if (this.storageKind === 'tauri') {
+    if (this.storageKind === 'folder') {
       // The desktop session has no host-side remembered path or settings.
       // Pick the data folder before reading any persisted state.
       this.ready = true;
@@ -300,7 +302,7 @@ class AppStore {
       if (remember) await storage.rememberVault(ref);
       if (writeCopy) {
         await storage.writeVault(ref, text);
-      } else if (remember && ref.kind === 'browser') {
+      } else if (remember && ref.kind === 'app') {
         await storage.writeVault(ref, serializeIcs(res.entries));
       }
     } catch (err) {
@@ -334,7 +336,7 @@ class AppStore {
    * an encrypted browser diary keeps protecting whatever replaces it.
    */
   private async proposeDiary(ref: VaultRef, text: string, source: PendingDiary['source']): Promise<void> {
-    const writeCopy = this.storageKind === 'tauri';
+    const writeCopy = this.storageKind === 'folder';
     if (isEncryptedVault(text) || storage.encryption.isUnlocked(ref)) {
       await this.adoptVault(ref, text, true, writeCopy);
       return;
@@ -355,7 +357,7 @@ class AppStore {
     if (!diary) return false;
     this.busy = true;
     try {
-      if (!(await this.adoptVault(diary.ref, diary.text, true, this.storageKind === 'tauri'))) {
+      if (!(await this.adoptVault(diary.ref, diary.text, true, this.storageKind === 'folder'))) {
         return false;
       }
       this.pendingDiary = null;
@@ -380,7 +382,7 @@ class AppStore {
     this.encryptionSetupOpen = false;
   }
 
-  /** Browser onboarding: start an empty diary in this browser. */
+  /** App-owned onboarding: start an empty diary in this browser or device. */
   async startNewDiary(): Promise<void> {
     const ref = await storage.pickVaultLocation();
     if (ref) await this.proposeDiary(ref, serializeIcs([]), 'new');
@@ -468,7 +470,7 @@ class AppStore {
     this.view = 'locked';
     this.ready = true;
     // Preferences stay readable while locked (desktop: from the folder).
-    if (this.storageKind === 'tauri') await this.loadLockPreferences();
+    if (this.storageKind === 'folder') await this.loadLockPreferences();
   }
 
   /**
@@ -675,7 +677,7 @@ class AppStore {
 
   /** Open an existing diary folder, or create diary.ics in an empty one. */
   async openVaultFolder(): Promise<void> {
-    if (this.storageKind !== 'tauri') return;
+    if (this.storageKind !== 'folder') return;
     try {
       if (this.vault && !(await this.flushDraftNow())) return;
       const ref = await storage.pickVaultLocation();
@@ -741,7 +743,7 @@ class AppStore {
     this.busy = true;
     try {
       if (this.vault && !(await this.flushDraftNow())) return;
-      await this.proposeDiary({ kind: 'browser' }, await file.text(), 'import');
+      await this.proposeDiary({ kind: 'app' }, await file.text(), 'import');
     } catch {
       this.toast('error', 'Could not open that file.');
     } finally {
@@ -900,7 +902,7 @@ class AppStore {
       this.drafts = await loadDrafts();
     } catch (err) {
       devError('loadDraftsFromDisk: could not read persisted drafts', err);
-      if (this.storageKind === 'tauri') {
+      if (this.storageKind === 'folder') {
         this.toast('error', 'Could not read drafts from the diary folder.');
       }
     }
@@ -1228,7 +1230,7 @@ class AppStore {
       await storage.writeVault(vault, serializeIcs(this.entries));
       this.toast(
         'success',
-        vault.kind === 'browser' ? 'Saved in this browser' : 'Saved to vault',
+        vault.kind === 'app' ? `Saved in ${this.appPlace}` : 'Saved to vault',
       );
       return true;
     } catch {
@@ -1251,7 +1253,7 @@ class AppStore {
   async forgetVault(): Promise<void> {
     if (this.vault && !(await this.flushDraftNow())) return;
     const ref = this.vault ?? this.lockedVault;
-    if (ref?.kind === 'browser') {
+    if (ref?.kind === 'app') {
       for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
     }
     if (ref) await storage.forgetVault(ref);

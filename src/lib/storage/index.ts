@@ -1,6 +1,7 @@
 /**
  * Picks the storage backend once, at module load:
  *  - Tauri desktop → a user-selected folder (`./tauri.ts`).
+ *  - Tauri on Android → the app's private storage (`./device.ts`).
  *  - Plain browser → IndexedDB (`./web.ts`), still exportable as `.ics`.
  *  - `pnpm dev:seed` → memory only (`./memory.ts`), preloaded with a sample
  *    diary. The mode check is static, so production builds drop it.
@@ -11,6 +12,7 @@
  */
 import { isTauri } from '@tauri-apps/api/core';
 import { tauriBackend } from './tauri';
+import { deviceBackend } from './device';
 import { webBackend } from './web';
 import { createMemoryBackend } from './memory';
 import { withEncryption, type SecureStorage } from './encrypted';
@@ -26,7 +28,9 @@ function runningUnderTauri(): boolean {
 }
 
 function platformBackend(): StorageBackend {
-  return runningUnderTauri() ? tauriBackend : webBackend;
+  if (!runningUnderTauri()) return webBackend;
+  // The Android WebView always names the OS in its user agent.
+  return /android/i.test(navigator.userAgent) ? deviceBackend : tauriBackend;
 }
 
 export const storage: SecureStorage = withEncryption(

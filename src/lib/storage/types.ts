@@ -2,18 +2,35 @@
  * Platform-agnostic storage contract.
  *
  * The app is backed by `.ics` content either way, but the medium differs:
- * on desktop a user-selected folder owns the diary and settings, while in the
- * browser IndexedDB owns the data. Everything above this layer talks to a
- * `StorageBackend` and never branches on the platform.
+ *  - `folder` (desktop): a user-selected folder owns the diary and settings.
+ *  - `browser`: IndexedDB owns the data.
+ *  - `device` (Android): files in the app's private storage own the data.
+ * The last two hold a single app-owned diary (`{ kind: 'app' }`). Everything
+ * above this layer talks to a `StorageBackend` and never branches on the
+ * platform, only on these storage models.
  *
  * Encryption is layered on top of any backend (`./encrypted.ts`): backends
  * only store opaque text and values, and know nothing about keys.
  */
 
-/** Where the diary currently lives. */
+/**
+ * Where the diary currently lives: a file in a user-selected folder, or the
+ * single diary the app owns (in the browser or the app's private storage).
+ */
 export type VaultRef =
   | { kind: 'file'; path: string }
-  | { kind: 'browser' };
+  | { kind: 'app' };
+
+/** How a backend stores the diary; see the module comment. */
+export type StorageKind = 'folder' | 'browser' | 'device';
+
+/**
+ * How UI copy names the place that holds an app-owned diary, as in
+ * "stored in this browser". Folder backends name the folder instead.
+ */
+export function appPlaceName(kind: StorageKind): string {
+  return kind === 'device' ? 'this device' : 'this browser';
+}
 
 /** Key-value namespaces for folder JSON files or browser IndexedDB stores. */
 export type StoreName = 'settings' | 'drafts';
@@ -41,7 +58,7 @@ export function isPrivateItem(store: StoreName, key: string): boolean {
 }
 
 export interface StorageBackend {
-  readonly kind: 'tauri' | 'web';
+  readonly kind: StorageKind;
 
   // --- vault lifecycle ----------------------------------------------------
   /** The vault available on boot, or null until a desktop folder is chosen. */
