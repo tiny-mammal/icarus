@@ -79,48 +79,6 @@ export function trapFocus(node: HTMLElement, onClose?: () => void) {
   };
 }
 
-interface VerticalDragParams {
-  /** Fired when the gesture resolves past the threshold. */
-  onResolve: (direction: 'up' | 'down') => void;
-  threshold?: number;
-}
-
-/**
- * Pointer-driven vertical drag, used by the writing dock handle so it can be
- * dragged up to expand / down to collapse (in addition to a plain click).
- */
-export function verticalDrag(node: HTMLElement, params: VerticalDragParams) {
-  let startY = 0;
-  let dragging = false;
-  let p = params;
-
-  const down = (e: PointerEvent) => {
-    dragging = true;
-    startY = e.clientY;
-    node.setPointerCapture(e.pointerId);
-  };
-  const up = (e: PointerEvent) => {
-    if (!dragging) return;
-    dragging = false;
-    const dy = e.clientY - startY;
-    const threshold = p.threshold ?? 48;
-    if (Math.abs(dy) >= threshold) p.onResolve(dy < 0 ? 'up' : 'down');
-  };
-
-  node.addEventListener('pointerdown', down);
-  node.addEventListener('pointerup', up);
-
-  return {
-    update(next: VerticalDragParams) {
-      p = next;
-    },
-    destroy() {
-      node.removeEventListener('pointerdown', down);
-      node.removeEventListener('pointerup', up);
-    },
-  };
-}
-
 /**
  * Toggle native spell-checking on an editable element — or on a container whose
  * editable descendants inherit it. The dictionary language is pinned to

@@ -141,8 +141,8 @@ class AppStore {
   /** UID of the entry to focus inside the opened day (from a search hit). */
   focusEntryUid = $state<string | null>(null);
 
-  /** The writing dock has two states: a collapsed bar, or fullscreen. */
-  dockExpanded = $state(false);
+  /** Whether the writing composer (the entry editor modal) is open. */
+  composerOpen = $state(false);
   /** Shows the currently-read entry full-screen in distraction-free mode. */
   readerFullscreen = $state(false);
   settingsOpen = $state(false);
@@ -163,7 +163,7 @@ class AppStore {
   spellWords = $state<string[]>([]);
 
   // --- draft editor state -------------------------------------------------
-  // The live contents of the writing dock. Kept here (not in the component) so
+  // The live contents of the composer. Kept here (not in the component) so
   // it can be autosaved and swapped between drafts from one place.
   draftId = $state<string | null>(null); // null = a fresh, unsaved draft
   // True only when the editor was loaded from a previously saved draft (not a
@@ -438,7 +438,7 @@ class AppStore {
     this.selectedKey = null;
     this.searchHighlight = '';
     this.focusEntryUid = null;
-    this.dockExpanded = false;
+    this.composerOpen = false;
     this.readerFullscreen = false;
     this.settingsOpen = false;
     this.statsOpen = false;
@@ -809,15 +809,15 @@ class AppStore {
 
     this.selectedKey = targetKey;
     this.currentMonth = startOfMonth(keyToDate(targetKey));
-    this.dockExpanded = false;
+    this.composerOpen = false;
   }
 
   /**
-   * Load an existing committed entry back into the writing dock to revise it.
+   * Load an existing committed entry back into the composer to revise it.
    * On the next commit the entry is updated in place rather than duplicated.
    */
   async editEntry(entry: DiaryEntry): Promise<void> {
-    // Preserve whatever was already in the writing dock before swapping it.
+    // Preserve whatever was already in the composer before swapping it.
     await this.flushDraftNow();
     this.readerFullscreen = false;
     this.editingUid = entry.uid;
@@ -828,12 +828,12 @@ class AppStore {
     this.draftLocation = saved?.location ?? entry.location ?? '';
     this.draftContent = saved?.content ?? entry.content;
     this.draftDateKey = saved?.dateKey ?? dateKey(entry.date);
-    this.dockExpanded = true;
+    this.composerOpen = true;
   }
 
   /**
-   * Open the writing dock on a fresh entry dated `key`. Work already in the
-   * dock is stashed to the drafts list first, so nothing in progress is lost.
+   * Open the composer on a fresh entry dated `key`. Work already in the
+   * composer is stashed to the drafts list first, so nothing in progress is lost.
    */
   async composeFor(key: string): Promise<void> {
     if (this.hasEditorContent() && !(await this.flushDraftNow())) return;
@@ -841,7 +841,7 @@ class AppStore {
     this.resetEditor();
     this.draftDateKey = key;
     this.readerFullscreen = false;
-    this.dockExpanded = true;
+    this.composerOpen = true;
   }
 
   // --- drafts -------------------------------------------------------------
@@ -936,7 +936,8 @@ class AppStore {
     });
   }
 
-  private hasEditorContent(): boolean {
+  /** Whether the editor holds anything worth saving. */
+  hasEditorContent(): boolean {
     return !!(
       this.draftTitle.trim() ||
       this.draftContent.trim() ||
@@ -1037,7 +1038,7 @@ class AppStore {
     this.draftLocation = d.location;
     this.draftContent = d.content;
     this.draftDateKey = d.dateKey;
-    this.dockExpanded = true;
+    this.composerOpen = true;
   }
 
   /** "Save as draft" — stash the current work and start a fresh editor. */
@@ -1224,13 +1225,36 @@ class AppStore {
   }
 
   /**
-   * Collapse the writing dock back to its bar and flush the current snapshot.
-   * The editor state stays loaded so expanding the dock resumes exactly where
-   * the user left off, including while revising a committed entry.
+   * Open the composer on whatever is loaded in the editor: a fresh entry for
+   * today, or the work in progress the user left when they last closed it.
    */
-  collapseDock(): void {
+  openComposer(): void {
+    this.readerFullscreen = false;
+    this.composerOpen = true;
+  }
+
+  /**
+   * Close the composer and flush the current snapshot. The editor state stays
+   * loaded so reopening resumes exactly where the user left off, including
+   * while revising a committed entry.
+   */
+  closeComposer(): void {
     void this.flushDraftNow();
-    this.dockExpanded = false;
+    this.composerOpen = false;
+  }
+
+  /** True while any overlay sits on top of the main view (blocks shortcuts). */
+  get overlayOpen(): boolean {
+    return (
+      this.composerOpen ||
+      this.settingsOpen ||
+      this.statsOpen ||
+      this.exportOpen ||
+      this.encryptionSetupOpen ||
+      this.privacyDialog !== null ||
+      this.confirmDeleteId !== null ||
+      this.confirmDeleteUid !== null
+    );
   }
 
   /** Drop any active search highlight / focus (manual navigation). */

@@ -3,6 +3,7 @@
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
   import { keyToDate } from '../lib/date';
+  import { isPlainShortcut } from '../lib/keyboard';
   import { splitTerms, countMatches } from '../lib/highlight';
   import MarkdownView from './MarkdownView.svelte';
   import Highlight from './Highlight.svelte';
@@ -54,13 +55,6 @@
     }
   }
 
-  function isEditable(el: EventTarget | null): boolean {
-    return (
-      el instanceof HTMLElement &&
-      (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))
-    );
-  }
-
   function composeHere() {
     if (app.selectedKey) void app.composeFor(app.selectedKey);
   }
@@ -69,11 +63,7 @@
   // the entries of the open day, N writes a new entry on the open day. Inert
   // while typing or another overlay is up.
   function onKeydown(e: KeyboardEvent) {
-    if (!app.selectedKey || e.defaultPrevented) return;
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
-    if (app.dockExpanded || app.settingsOpen) return;
-    if (app.confirmDeleteUid || app.confirmDeleteId) return;
-    if (isEditable(e.target)) return;
+    if (!app.selectedKey || app.overlayOpen || !isPlainShortcut(e)) return;
     if ((e.key === 'n' || e.key === 'N') && !e.shiftKey) {
       e.preventDefault();
       composeHere();

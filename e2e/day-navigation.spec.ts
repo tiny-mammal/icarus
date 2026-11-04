@@ -92,7 +92,7 @@ test('writes a new entry on the open day, including empty days', async ({ page }
   await page.screenshot({ path: 'test-results/day-compose-header.png' });
   await page.getByRole('button', { name: 'New entry on this day' }).click();
   await expect(page.getByRole('button', { name: /^Sat, .*20.*2026$/ })).toBeVisible();
-  await page.keyboard.press('Escape'); // collapse the dock
+  await page.keyboard.press('Escape'); // close the composer
   await page.keyboard.press('Escape'); // close the day pane
 
   // An empty day offers the same action from its empty state.
@@ -102,8 +102,8 @@ test('writes a new entry on the open day, including empty days', async ({ page }
   await page.screenshot({ path: 'test-results/day-compose-empty.png' });
   await page.getByRole('button', { name: 'Write an entry for this day' }).click();
   await expect(page.getByRole('button', { name: /^Tue, .*16.*2026$/ })).toBeVisible();
-  await page.waitForTimeout(350); // let the dock slide up for the screenshot
-  await page.screenshot({ path: 'test-results/day-compose-dock.png' });
+  await page.waitForTimeout(350); // let the composer open for the screenshot
+  await page.screenshot({ path: 'test-results/day-compose-composer.png' });
 });
 
 test('narrow screens show the short day label so header actions fit', async ({ page }) => {

@@ -4,6 +4,8 @@
   import { search, type SearchHit } from '../lib/search';
   import type { DiaryEntry } from '../lib/types';
   import SearchOverlay from './SearchOverlay.svelte';
+  import DraftsMenu from './DraftsMenu.svelte';
+  import WriteButton from './WriteButton.svelte';
 
   let query = $state('');
   let focused = $state(false);
@@ -115,6 +117,12 @@
       />
     {/if}
   </div>
+
+  <!-- Writing: saved drafts (only once there are any) and the "write" action -->
+  {#if app.drafts.length > 0}
+    <DraftsMenu placement="bottom" compact />
+  {/if}
+  <WriteButton variant="header" />
 
   <!-- Statistics -->
   <button

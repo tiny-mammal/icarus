@@ -60,7 +60,7 @@ async function choosePassword(page: Page, finish: string): Promise<string> {
 }
 
 async function writeEntry(page: Page, title: string): Promise<void> {
-  await page.getByRole('button', { name: /Write today/ }).click();
+  await page.getByRole('button', { name: /^New entry$/ }).click();
   await page.getByPlaceholder('Title', { exact: true }).fill(title);
   await page.locator('.ProseMirror').fill('Nobody else should read this.');
   await page.getByRole('button', { name: /Commit entry/ }).click();

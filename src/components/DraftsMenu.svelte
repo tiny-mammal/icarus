@@ -6,8 +6,20 @@
   import { keyToDate, longDayLabel } from '../lib/date';
   import { truncateText } from '../lib/text';
 
-  // Anchor the popover to the left or right edge of the trigger button.
-  let { align = 'right' }: { align?: 'left' | 'right' } = $props();
+  // Anchor the popover to the left or right edge of the trigger button, and
+  // open it above (inside the composer's footer) or below (in the top bar).
+  let {
+    align = 'right',
+    placement = 'top',
+    compact = false,
+  }: {
+    align?: 'left' | 'right';
+    placement?: 'top' | 'bottom';
+    /** Hide the "Drafts" label on narrow screens, leaving the icon. */
+    compact?: boolean;
+  } = $props();
+
+  const origin = $derived(`${placement === 'top' ? 'bottom' : 'top'} ${align}`);
 
   let open = $state(false);
 
@@ -39,7 +51,7 @@
     aria-label="Drafts"
   >
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5-.3.3-.5.7-.5 1.1V18c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8c.4 0 .8-.2 1.1-.5.3-.3.5-.7.5-1.1V6.5L15.5 2z"/><path d="M3 7.6v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5H15"/><path d="M15 2v5h5"/></svg>
-    <span>Drafts</span>
+    <span class={compact ? 'hidden sm:inline' : ''}>Drafts</span>
     {#if app.drafts.length > 0}
       <span class="grid h-4 min-w-4 place-items-center rounded-full bg-slate px-1 text-[0.65rem] font-semibold tabular-nums text-text">
         {app.drafts.length}
@@ -49,8 +61,10 @@
 
   {#if open}
     <div
-      class="absolute bottom-full z-50 mb-2 max-h-80 w-80 overflow-y-auto rounded-2xl border border-slate bg-surface p-1.5 shadow-2xl shadow-black/50
-        {align === 'right' ? 'right-0 origin-bottom-right' : 'left-0 origin-bottom-left'}"
+      class="absolute z-50 max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-slate bg-surface p-1.5 shadow-2xl shadow-black/50
+        {placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}
+        {align === 'right' ? 'right-0' : 'left-0'}"
+      style:transform-origin={origin}
       transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
       use:clickOutside={() => (open = false)}
       use:trapFocus={() => (open = false)}

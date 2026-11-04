@@ -5,7 +5,8 @@
   import TopBar from './components/TopBar.svelte';
   import Calendar from './components/Calendar.svelte';
   import DayPane from './components/DayPane.svelte';
-  import WritingDock from './components/WritingDock.svelte';
+  import Composer from './components/Composer.svelte';
+  import WriteButton from './components/WriteButton.svelte';
   import SettingsMenu from './components/SettingsMenu.svelte';
   import StatsModal from './components/StatsModal.svelte';
   import DraftDeleteDialog from './components/DraftDeleteDialog.svelte';
@@ -16,6 +17,7 @@
   import PrivacyDialog from './components/PrivacyDialog.svelte';
   import ExportDialog from './components/ExportDialog.svelte';
   import { watchIdle } from './lib/idle';
+  import { isPlainShortcut } from './lib/keyboard';
   import { dismissBootSplash } from './lib/boot-splash';
 
   // The static splash in index.html covers the app until the first screen is
@@ -33,12 +35,20 @@
   onMount(() => {
     app.init();
 
-    // Global Escape closes the top-most overlay.
+    // Global Escape closes the top-most overlay; N opens the composer from the
+    // calendar (an open day pane handles N itself, dating the entry that day).
     const onKey = (e: KeyboardEvent) => {
+      if ((e.key === 'n' || e.key === 'N') && !e.shiftKey) {
+        if (app.view !== 'main' || app.selectedKey || app.overlayOpen) return;
+        if (!isPlainShortcut(e)) return;
+        e.preventDefault();
+        app.openComposer();
+        return;
+      }
       if (e.key !== 'Escape') return;
       if (app.statsOpen) app.statsOpen = false;
       else if (app.settingsOpen) app.settingsOpen = false;
-      else if (app.dockExpanded) app.collapseDock();
+      else if (app.composerOpen) app.closeComposer();
       else if (app.readerFullscreen) app.readerFullscreen = false;
       else if (app.selectedKey) app.closeDay();
     };
@@ -102,11 +112,12 @@
   {:else}
     <TopBar />
     <!-- Main stage: calendar with the day pane sliding over it. -->
-    <main class="relative min-h-0 flex-1 overflow-hidden pb-16">
+    <main class="relative min-h-0 flex-1 overflow-hidden">
       <Calendar />
       <DayPane />
     </main>
-    <WritingDock />
+    <WriteButton variant="floating" />
+    <Composer />
     <SettingsMenu />
     <StatsModal />
     {#if app.privacyDialog}<PrivacyDialog />{/if}

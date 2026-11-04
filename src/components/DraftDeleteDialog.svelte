@@ -3,8 +3,8 @@
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
 
-  // Rendered at the app root (outside the writing dock) so its `fixed` overlay
-  // centres on the real viewport rather than the dock's blurred container.
+  // Rendered at the app root (outside the composer) so its `fixed` overlay
+  // centres on the real viewport rather than inside the composer card.
   const draft = $derived(
     app.confirmDeleteId
       ? (app.drafts.find((d) => d.id === app.confirmDeleteId) ?? null)

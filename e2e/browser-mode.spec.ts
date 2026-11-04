@@ -25,12 +25,12 @@ const IMPORTED_ICS = [
 ].join('\r\n');
 
 
-async function openDock(page: Page): Promise<void> {
-  await page.getByRole('button', { name: /Write today|Continue your draft/ }).click();
+async function openComposer(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /New entry|Continue draft/ }).click();
 }
 
 async function writeEntry(page: Page, title: string, body: string): Promise<void> {
-  await openDock(page);
+  await openComposer(page);
   await page.getByPlaceholder('Title', { exact: true }).fill(title);
   await page.locator('.ProseMirror').fill(body);
   await page.getByRole('button', { name: /Commit entry/ }).click();
@@ -87,7 +87,7 @@ test('creates, persists and edits an entry in IndexedDB', async ({ page }) => {
 
 test('restores an autosaved draft after a reload', async ({ page }) => {
   await startPlainDiary(page);
-  await openDock(page);
+  await openComposer(page);
   await page.getByPlaceholder('Title', { exact: true }).fill('Half-written');
   await page.locator('.ProseMirror').fill('Draft body');
   await page.getByRole('button', { name: 'Save as draft' }).click();

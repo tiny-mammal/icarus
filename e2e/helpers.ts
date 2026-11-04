@@ -14,7 +14,7 @@ export async function startPlainDiary(page: Page): Promise<void> {
   await page.goto('/');
   await page.getByRole('button', { name: 'Start a new diary' }).click();
   await chooseNoPassword(page, 'Create without password');
-  await expect(page.getByRole('button', { name: /Write today/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^New entry$/ })).toBeVisible();
 }
 
 /** Pick an `.ics` from the Welcome screen; the protection choice opens next. */
