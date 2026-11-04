@@ -5,9 +5,11 @@ name: Release
 # Each platform builds on its own runner, then `publish` uploads every file to
 # the R2 bucket served at https://icarus.4oli.com/download and switches
 # `latest.json` to the new version last, so visitors never see a partial
-# release. Builds are unsigned for now (see README → Releases).
+# release. Desktop builds are unsigned for now; the Android APK is signed with
+# the project's own key (see README → Releases).
 #
-# Pull requests that touch the packaging run the builds without publishing.
+# Pull requests that touch the packaging or the Android app run the builds and
+# the Android smoke test without publishing.
 
 on:
   push:
@@ -17,8 +19,10 @@ on:
       - .github/workflows/release.yml
       - scripts/release-assets.ts
       - site/releases.ts
-      - src-tauri/tauri.conf.json
-      - src-tauri/Cargo.toml
+      - src-tauri/**
+      - src/lib/storage/**
+      - e2e/android/**
+      - playwright.android.config.ts
 
 concurrency:
   group: release-${{ github.ref }}
@@ -31,6 +35,8 @@ env:
   RUST_TOOLCHAIN: 1.98.1
   PNPM_VERSION: 12.4.1
   NODE_VERSION: 24
+  ANDROID_NDK: 27.2.12479018
+  ANDROID_API: 35
 
 jobs:
   version:
@@ -109,8 +115,113 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  android:
+    needs: version
+    runs-on: ubuntu-24.04
+    env:
+      APK_ROOT: src-tauri/gen/android/app/build/outputs/apk
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUST_TOOLCHAIN }}
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: release-android
+      - name: Install the Android NDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$ANDROID_NDK"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK" >> "$GITHUB_ENV"
+      - run: pnpm install --frozen-lockfile
+
+      # Releases must be signed with the project key: Android only installs an
+      # update signed with the same key as the installed app.
+      - name: Load the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            if [ "$GITHUB_REF_TYPE" = tag ]; then
+              echo "::error::ANDROID_KEYSTORE_BASE64 is not set; refusing to publish an unsigned APK"
+              exit 1
+            fi
+            echo "No signing key on this run: the release APK stays unsigned."
+            exit 0
+          fi
+          cd src-tauri/gen/android
+          echo "$KEYSTORE_BASE64" | base64 --decode > release.p12
+          {
+            echo "storeFile=release.p12"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=icarus"
+            echo "keyPassword=$KEYSTORE_PASSWORD"
+          } > keystore.properties
+
+      - name: Build the release APK
+        run: pnpm tauri android build --ci --apk --target aarch64 armv7 x86_64
+      - name: Check the APK signature
+        if: github.ref_type == 'tag'
+        run: |
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner
+          "$APKSIGNER" verify --print-certs "$APK_ROOT/universal/release/"*.apk
+      - if: github.ref_type == 'tag'
+        run: node scripts/release-assets.ts collect "$APK_ROOT" android release-assets
+      - if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-android
+          path: release-assets/
+          if-no-files-found: error
+          retention-days: 7
+
+      # Debug builds expose the WebView to DevTools, which the smoke test uses
+      # to drive the real app on an emulator.
+      - name: Build the debug APK for the smoke test
+        run: pnpm tauri android build --ci --debug --apk --target x86_64
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Smoke test on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.ANDROID_API }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
+          script: |
+            e2e/android/release-boots.sh "$(ls "$APK_ROOT"/universal/release/*.apk)"
+            adb install -r "$APK_ROOT/universal/debug/app-universal-debug.apk"
+            pnpm exec playwright test --config playwright.android.config.ts
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-smoke-report
+          path: |
+            playwright-report/
+            release-welcome.png
+          if-no-files-found: ignore
+          retention-days: 7
+
   publish:
-    needs: [version, desktop]
+    needs: [version, desktop, android]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     # One publish at a time across all tags, so two releases can't race for

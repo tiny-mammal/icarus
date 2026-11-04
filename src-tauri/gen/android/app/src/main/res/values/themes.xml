@@ -1,0 +1,7 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.icarus_diary" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- The app's ink colour, so no white flashes before the WebView paints. -->
+        <item name="android:windowBackground">@color/ink</item>
+    </style>
+</resources>

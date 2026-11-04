@@ -13,18 +13,18 @@ describe('vaultFileName', () => {
   });
 
   it('returns null for browser and blank vaults', () => {
-    expect(vaultFileName({ kind: 'browser' })).toBeNull();
+    expect(vaultFileName({ kind: 'app' })).toBeNull();
     expect(vaultFileName(null)).toBeNull();
   });
 });
 
 describe('createMemoryBackend', () => {
-  const base = { kind: 'web' } as StorageBackend;
+  const base = { kind: 'browser' } as StorageBackend;
 
   it('serves and replaces the preloaded vault in memory', async () => {
     const mem = createMemoryBackend('BEGIN:VCALENDAR', base);
     const ref = await mem.getRememberedVault();
-    expect(ref).toEqual({ kind: 'browser' });
+    expect(ref).toEqual({ kind: 'app' });
     expect(await mem.readVault(ref!)).toBe('BEGIN:VCALENDAR');
     await mem.writeVault(ref!, 'changed');
     expect(await mem.readVault(ref!)).toBe('changed');

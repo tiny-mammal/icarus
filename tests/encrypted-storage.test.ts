@@ -17,7 +17,7 @@ function folderBackend() {
   const id = (store: StoreName, key: string) => `${store}/${key}`;
   const path = (ref: VaultRef) => (ref.kind === 'file' ? ref.path : 'browser');
   const backend: StorageBackend = {
-    kind: 'tauri',
+    kind: 'folder',
     getRememberedVault: async () => null,
     rememberVault: async () => {},
     vaultExists: async (ref) => files.has(path(ref)),
@@ -126,8 +126,8 @@ describe('encrypted storage', () => {
   });
 
   it('encrypts the single browser slot in place', async () => {
-    const storage = withEncryption(createMemoryBackend(ICS, { kind: 'web' } as StorageBackend));
-    const ref: VaultRef = { kind: 'browser' };
+    const storage = withEncryption(createMemoryBackend(ICS, { kind: 'browser' } as StorageBackend));
+    const ref: VaultRef = { kind: 'app' };
     const { keys } = await createVaultKeys(PASSWORD, FAST);
     expect(await storage.encryption.enable(ref, ICS, keys)).toEqual(ref);
     storage.encryption.lock();

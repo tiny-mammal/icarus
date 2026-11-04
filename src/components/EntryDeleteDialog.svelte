@@ -19,8 +19,8 @@
     oncancel={() => app.cancelDeleteEntry()}
   >
     <span class="text-text">{entry.title.trim() || 'Untitled'}</span>
-    will be permanently removed{app.vault?.kind === 'browser'
-      ? ' from this browser'
+    will be permanently removed{app.vault?.kind === 'app'
+      ? ` from ${app.appPlace}`
       : app.vault
         ? ' from your vault'
         : ''}. This can't be undone.

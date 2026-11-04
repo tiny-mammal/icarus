@@ -2,13 +2,13 @@
 
 > Icarus is a free, open-source diary app (GNU GPL v3). Entries can be encrypted with a password, are stored only on the user's device in a standard iCalendar (.ics) file, and can be browsed and searched across many years without delay.
 
-Icarus runs as a desktop app for Windows, macOS and Linux, and as a web app in the browser. There is no account, server-side storage, sync service or tracking: the desktop app saves the diary in a folder the user chooses, and the web app keeps it in the browser's IndexedDB.
+Icarus runs as a desktop app for Windows, macOS and Linux, as an Android app (APK download, not on Google Play), and as a web app in the browser. There is no account, server-side storage, sync service or tracking: the desktop app saves the diary in a folder the user chooses, the Android app keeps it in its private storage, and the web app keeps it in the browser's IndexedDB.
 
 ## Product
 
 - [Icarus overview](https://icarus.4oli.com/index.md): Concise product facts, privacy model, and suitable use cases, in Markdown.
 - [Icarus home page](https://icarus.4oli.com/): Product page with download and web app links.
-- [Download Icarus](https://icarus.4oli.com/download): Desktop builds for Windows, macOS and Linux, with first-launch steps and SHA-256 checksums.
+- [Download Icarus](https://icarus.4oli.com/download): Builds for Windows, macOS, Linux and Android, with first-launch steps and SHA-256 checksums.
 - [Icarus web app](https://icarus.4oli.com/app/): The diary in the browser. Data stays in that browser.
 
 ## Source

@@ -8,6 +8,7 @@ export const PLATFORM_NAMES: Record<PlatformId, string> = {
   windows: 'Windows',
   macos: 'macOS',
   linux: 'Linux',
+  android: 'Android',
 };
 
 interface NavigatorUAData {
@@ -17,8 +18,9 @@ interface NavigatorUAData {
 export function detectPlatform(nav: Navigator = navigator): PlatformId | null {
   const hint = (nav as Navigator & { userAgentData?: NavigatorUAData }).userAgentData?.platform;
   const source = `${hint ?? ''} ${nav.userAgent}`.toLowerCase();
-  // Phones and tablets first: Android reports Linux, iPadOS reports a Mac.
-  if (/android|iphone|ipad|ipod/.test(source)) return null;
+  // Mobile first: Android also reports Linux, and iPadOS reports a Mac.
+  if (source.includes('android')) return 'android';
+  if (/iphone|ipad|ipod/.test(source)) return null;
   if (source.includes('mac') && nav.maxTouchPoints > 1) return null;
   if (source.includes('win')) return 'windows';
   if (source.includes('mac')) return 'macos';

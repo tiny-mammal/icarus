@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Download Icarus for Windows, macOS and Linux</title>
+    <title>Download Icarus for Windows, macOS, Linux and Android</title>
     <meta
       name="description"
-      content="Download the free Icarus diary app for Windows, macOS and Linux. Your diary stays on your device, encrypted with your password."
+      content="Download the free Icarus diary app for Windows, macOS, Linux and Android. Your diary stays on your device, encrypted with your password."
     />
     <link rel="canonical" href="https://icarus.4oli.com/download" />
     <meta name="robots" content="index, follow" />
@@ -19,7 +19,7 @@
     <meta property="og:site_name" content="Icarus" />
     <meta property="og:url" content="https://icarus.4oli.com/download" />
     <meta property="og:title" content="Download Icarus" />
-    <meta property="og:description" content="A free, private diary app for Windows, macOS and Linux." />
+    <meta property="og:description" content="A free, private diary app for Windows, macOS, Linux and Android." />
     <meta property="og:image" content="https://icarus.4oli.com/og-image.png" />
     <link rel="stylesheet" href="./style.css" />
     <script type="module" src="./download.ts"></script>
@@ -56,14 +56,14 @@
         <div class="relative mx-auto flex max-w-2xl flex-col items-center text-center">
           <h1 id="download-title" class="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">Download Icarus</h1>
           <p class="mt-5 max-w-xl text-base leading-relaxed text-balance text-muted">
-            Free for Windows, macOS and Linux. Your diary stays on your computer, in a folder you choose.
+            Free for Windows, macOS, Linux and Android. Your diary stays on your device, and nowhere else.
           </p>
           <p class="mt-4 min-h-4 text-xs text-muted" data-release-status aria-live="polite"></p>
         </div>
       </section>
 
       <section class="mx-auto mt-12 max-w-5xl px-4 sm:px-6" aria-label="Platforms">
-        <ul class="grid gap-4 md:grid-cols-3" data-platforms>
+        <ul class="grid gap-4 md:grid-cols-2" data-platforms>
           <li id="windows" class="flex scroll-mt-20 flex-col rounded-2xl border border-slate bg-surface p-6" data-platform="windows">
             <div class="flex items-center justify-between gap-3">
               <h2 class="text-base font-semibold tracking-tight">Windows</h2>
@@ -127,6 +127,28 @@
                 <code class="rounded bg-slate px-1 py-0.5 font-mono text-xs text-text">chmod +x Icarus-Diary-*.AppImage</code>.
                 The <span class="text-text">.deb</span> and <span class="text-text">.rpm</span> packages install
                 through your package manager.
+              </p>
+            </div>
+          </li>
+
+          <li id="android" class="flex scroll-mt-20 flex-col rounded-2xl border border-slate bg-surface p-6" data-platform="android">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-base font-semibold tracking-tight">Android</h2>
+              <span class="hidden rounded-full border border-faint px-2 py-0.5 text-[11px] text-muted" data-detected>Your system</span>
+            </div>
+            <p class="mt-1 text-xs text-muted">Android 7 or later</p>
+            <a href="/download/android-apk" class="btn btn-primary mt-6" data-asset="android-apk" download>
+              Download APK <span class="text-xs opacity-60" data-asset-size></span>
+            </a>
+            <div class="mt-6 border-t border-slate pt-5 text-sm leading-relaxed text-muted">
+              <h3 class="text-xs font-medium tracking-wide text-text uppercase">First launch</h3>
+              <ol class="mt-2 list-decimal space-y-1.5 pl-4">
+                <li>Open the downloaded file. Icarus isn't on Google Play yet, so Android asks you to allow your browser to install apps.</li>
+                <li>If Play Protect warns about an unknown app, choose <span class="text-text">More details</span>, then <span class="text-text">Install anyway</span>.</li>
+              </ol>
+              <p class="mt-3">
+                Your diary is stored privately inside the app, so uninstalling it erases the diary. Export a backup
+                from Settings before you do.
               </p>
             </div>
           </li>

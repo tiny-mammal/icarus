@@ -22,13 +22,13 @@ async function freshStorage() {
   const { withEncryption } = await import('../src/lib/storage/encrypted');
   const { createMemoryBackend } = await import('../src/lib/storage/memory');
   const base = {
-    kind: 'web',
+    kind: 'browser',
     saveBackup: async (contents: string, name: string) => {
       backup.saved.push({ contents, name });
       return true;
     },
     pickDiaryText: async () => ({
-      ref: { kind: 'browser' },
+      ref: { kind: 'app' },
       text: serializeIcs([{ uid: 'i1', title: 'Imported secret', content: 'Hush', date: new Date(2026, 5, 8) }]),
     }),
   } as unknown as import('../src/lib/storage/types').StorageBackend;
@@ -98,7 +98,7 @@ describe('encrypted diary flow', () => {
     const { app } = await import('../src/lib/store.svelte');
     await app.init();
     expect(app.view).toBe('locked');
-    expect(app.lockedVault).toEqual({ kind: 'browser' });
+    expect(app.lockedVault).toEqual({ kind: 'app' });
     expect(app.entries).toEqual([]);
     expect(await app.unlock({ password: PASSWORD })).toBe('ok');
     expect(app.entries).toHaveLength(1);
@@ -149,19 +149,19 @@ describe('encrypted diary flow', () => {
   it('asks before writing an import, then stores it encrypted from the start', async () => {
     const { app } = await import('../src/lib/store.svelte');
     await app.init();
-    const before = await backup.memory.readVault({ kind: 'browser' });
+    const before = await backup.memory.readVault({ kind: 'app' });
 
     await app.importVault();
     expect(app.pendingDiary?.source).toBe('import');
     expect(app.encryptionSetupOpen).toBe(true);
-    expect(await backup.memory.readVault({ kind: 'browser' })).toBe(before);
+    expect(await backup.memory.readVault({ kind: 'app' })).toBe(before);
 
     await app.prepareEncryption(PASSWORD);
     expect(await app.confirmEncryption()).toBe(true);
     expect(app.pendingDiary).toBeNull();
     expect(app.encrypted).toBe(true);
     expect(app.entries.map((entry) => entry.title)).toEqual(['Imported secret']);
-    expect(await backup.memory.readVault({ kind: 'browser' })).not.toContain('Imported secret');
+    expect(await backup.memory.readVault({ kind: 'app' })).not.toContain('Imported secret');
   });
 
   it('imports in plain text only when the user declines protection', async () => {
@@ -176,7 +176,7 @@ describe('encrypted diary flow', () => {
     expect(await app.keepPendingDiaryPlain()).toBe(true);
     expect(app.encrypted).toBe(false);
     expect(app.encryptionSetupOpen).toBe(false);
-    expect(await backup.memory.readVault({ kind: 'browser' })).toContain('Imported secret');
+    expect(await backup.memory.readVault({ kind: 'app' })).toContain('Imported secret');
   });
 
   it('keeps an encrypted browser diary encrypted when importing into it', async () => {
@@ -185,6 +185,6 @@ describe('encrypted diary flow', () => {
     expect(app.pendingDiary).toBeNull();
     expect(app.encrypted).toBe(true);
     expect(app.entries.map((entry) => entry.title)).toEqual(['Imported secret']);
-    expect(await backup.memory.readVault({ kind: 'browser' })).not.toContain('Imported secret');
+    expect(await backup.memory.readVault({ kind: 'app' })).not.toContain('Imported secret');
   });
 });

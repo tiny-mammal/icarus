@@ -11,8 +11,8 @@
   // Show only the file name in the chip, but keep the full path as a tooltip.
   const fileName = $derived(vaultFileName(app.vault));
 
-  // In the browser the vault is app-owned, so "forget" deletes real data.
-  const isBrowserVault = $derived(app.vault?.kind === 'browser');
+  // An app-owned vault (browser or device) has no other copy: "forget" deletes real data.
+  const isAppVault = $derived(app.vault?.kind === 'app');
 
   // Local confirmation step for the destructive vault action.
   let confirmForget = $state(false);
@@ -62,15 +62,19 @@
     <!-- Current diary location -->
     <div class="mb-5 rounded-lg border border-slate bg-slate-soft px-3.5 py-3">
       <p class="text-[0.7rem] font-medium uppercase tracking-wider text-muted">
-        {isBrowserVault ? 'Current diary' : 'Current folder'}
+        {isAppVault ? 'Current diary' : 'Current folder'}
       </p>
       {#if app.vault?.kind === 'file'}
         <p class="mt-1 truncate text-sm text-text" title={app.vault.path}>{fileName}</p>
         <p class="mt-0.5 truncate text-xs text-muted" title={app.vault.path}>{app.vault.path}</p>
         <p class="mt-1 text-xs text-muted">Drafts and settings are saved beside this file.</p>
       {:else}
-        <p class="mt-1 text-sm text-text">This browser</p>
-        <p class="mt-0.5 text-xs text-muted">Stored locally in IndexedDB — export a backup to keep it safe</p>
+        <p class="mt-1 text-sm text-text first-letter:uppercase">{app.appPlace}</p>
+        <p class="mt-0.5 text-xs text-muted">
+          {app.storageKind === 'device'
+            ? 'Stored privately inside the app. Uninstalling it erases the diary, so export a backup to keep it safe'
+            : 'Stored locally in IndexedDB. Export a backup to keep it safe'}
+        </p>
       {/if}
       <p class="mt-1 text-xs text-muted">
         {app.entries.length}
@@ -80,7 +84,7 @@
 
     <!-- Actions -->
     <div class="space-y-2">
-      {#if app.storageKind === 'tauri'}
+      {#if app.storageKind === 'folder'}
         <button
           class="flex w-full items-center gap-3 rounded-lg border border-slate px-3.5 py-3 text-left text-sm text-text transition-colors hover:bg-slate"
           onclick={() => app.openVaultFolder()}
@@ -101,7 +105,7 @@
         <span>
           <span class="block font-medium">Import .ics</span>
           <span class="block text-xs text-muted">
-            {app.storageKind === 'tauri'
+            {app.storageKind === 'folder'
               ? 'Copy an .ics into a folder you choose'
               : 'Open a different diary file'}
           </span>
@@ -119,7 +123,7 @@
           <span class="block text-xs text-muted">
             {app.encrypted
               ? 'Encrypted by default, or a plain .ics'
-              : isBrowserVault
+              : isAppVault
                 ? 'Download a .ics copy you can keep or re-import'
                 : 'Save a copy to any folder or USB drive'}
           </span>
@@ -134,9 +138,9 @@
         >
           <svg class="text-red-400/80" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><path d="M12 2v10"/></svg>
           <span>
-            {#if isBrowserVault}
+            {#if isAppVault}
               <span class="block font-medium">Delete diary</span>
-              <span class="block text-xs text-red-400/70">Erase it from this browser</span>
+              <span class="block text-xs text-red-400/70">Erase it from {app.appPlace}</span>
             {:else}
               <span class="block font-medium">Close folder</span>
               <span class="block text-xs text-red-400/70">Leave all files in the chosen folder</span>
@@ -305,16 +309,16 @@
 
   {#if confirmForget}
     <ConfirmDialog
-      title={isBrowserVault ? 'Delete this diary?' : 'Close this folder?'}
-      confirmLabel={isBrowserVault ? 'Delete diary' : 'Close folder'}
+      title={isAppVault ? 'Delete this diary?' : 'Close this folder?'}
+      confirmLabel={isAppVault ? 'Delete diary' : 'Close folder'}
       onconfirm={forget}
       oncancel={() => (confirmForget = false)}
       busy={app.busy}
       z="z-[60]"
     >
-      {#if isBrowserVault}
+      {#if isAppVault}
         All <span class="text-text">{app.entries.length}</span>
-        {app.entries.length === 1 ? 'entry' : 'entries'} stored in this browser
+        {app.entries.length === 1 ? 'entry' : 'entries'} stored in {app.appPlace}
         and their drafts will be permanently erased. Export a backup first if you may want them
         back. This can't be undone.
       {:else}

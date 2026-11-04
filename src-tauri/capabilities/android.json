@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "android",
+  "description": "Icarus Diary on Android: the diary, drafts and settings live in the app's private data directory. Imported and exported files still go through the system pickers.",
+  "platforms": ["android"],
+  "windows": ["main"],
+  "permissions": [
+    "fs:allow-mkdir",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/**" }]
+    }
+  ]
+}

@@ -6,8 +6,8 @@
  *     Print the app version from package.json. With a tag, fail unless it
  *     names that version (`v1.2.3`).
  *   node scripts/release-assets.ts collect <bundle-root> <platform> <out-dir>
- *     Copy the platform's bundles out of Tauri's `bundle/` directory under
- *     their public file names.
+ *     Copy the platform's bundles out of Tauri's output directory (`bundle/`,
+ *     or `apk/` for Android) under their public file names.
  *   node scripts/release-assets.ts manifest <dir> <out-file>
  *     Hash every collected file and write the `latest.json` manifest.
  *   node scripts/release-assets.ts check-latest <published-manifest>
@@ -31,7 +31,7 @@ import {
   type ReleaseManifest,
 } from '../site/releases.ts';
 
-const PLATFORMS: readonly PlatformId[] = ['windows', 'macos', 'linux'];
+const PLATFORMS: readonly PlatformId[] = ['windows', 'macos', 'linux', 'android'];
 
 function fail(message: string): never {
   console.error(message);

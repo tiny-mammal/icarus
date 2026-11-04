@@ -102,7 +102,7 @@
         {#if kind === 'disable'}
           <p class="rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 py-2.5 text-sm leading-relaxed text-amber-200/90">
             The diary, drafts and dictionary will be stored unencrypted. Anyone with access to
-            {app.storageKind === 'tauri' ? 'the folder' : 'this browser profile'} will be able to read them.
+            {app.storageKind === 'folder' ? 'the folder' : app.appPlace} will be able to read them.
           </p>
         {:else if kind === 'recovery'}
           <p class="text-sm leading-relaxed text-muted">

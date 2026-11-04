@@ -6,9 +6,9 @@ you choose a data folder. Icarus keeps `diary.ics`, `drafts.json`, and
 does not remember the folder on the host: choose it again after relaunching.
 No account, server, or sync service is required.
 
-The same frontend runs in a plain browser too: the app detects the runtime and
-swaps the storage backend (the selected folder via Tauri, IndexedDB in the
-browser). Browser mode stores a copy of imported diaries in the browser profile;
+The same frontend runs in a plain browser and on Android too: the app detects
+the runtime and swaps the storage backend (the selected folder on desktop, the
+app's private storage on Android, IndexedDB in the browser). Browser mode stores a copy of imported diaries in the browser profile;
 use the desktop app when you want control over the data folder.
 
 Built with Tauri 2, Svelte 5, TypeScript, Vite, and Tailwind CSS.
@@ -51,6 +51,29 @@ diary and drafts, you can remove the legacy files from the application's old
 data directory. Deleting files does not guarantee physical erasure of earlier
 disk contents. The operating system can also write process memory to swap or
 hibernation storage; choosing an external folder does not control that behavior.
+
+## Android
+
+The Android app (`src-tauri/gen/android`) keeps a single diary in its private
+storage, like the browser keeps one in IndexedDB: `diary.vault` holds the
+`.ics` text or the encrypted container, beside `drafts.json` and
+`settings.json`. No other app can read those files. The app opts out of
+Android's cloud backup and device-to-device transfer. Release builds don't
+request the INTERNET permission at all. Import reads a file picked with the
+system picker. Export writes a new document. Uninstalling the app erases the
+diary.
+
+Building it needs JDK 17, the Android SDK and NDK, and the Rust Android
+targets (see the `android` job in `.github/workflows/release.yml`):
+
+```bash
+pnpm tauri android build --debug --apk --target x86_64   # emulator build
+pnpm tauri android build --apk                           # release build
+```
+
+The release job also runs the smoke test (`e2e/android/`) on an emulator. It
+drives the debug app with Playwright over the WebView's DevTools socket, and
+checks that the release APK starts.
 
 ## Password protection
 
@@ -155,7 +178,7 @@ push a matching tag:
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-Windows, macOS (universal) and Linux build on their own runners. The publish
+Windows, macOS (universal), Linux and Android build on their own runners. The publish
 job uploads them to R2 under `v<version>/`. It then rewrites `latest.json`, so
 the download page switches to the new release at once. A published version is never
 rebuilt in place: the workflow refuses a version that is not newer than the
@@ -163,7 +186,15 @@ published one, so ship fixes as a new version. The workflow needs the
 repository secrets `CLOUDFLARE_API_TOKEN` (R2 edit permission) and
 `CLOUDFLARE_ACCOUNT_ID`.
 
-Builds are not code-signed yet. The macOS app is only ad-hoc signed, so
+The APK is signed with the project's own key, stored as the repository
+secrets `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` (alias
+`icarus`). Android only installs an update signed with the same key. If the key
+is lost, users must uninstall the app, and lose its diary, before installing a
+newer one. Keep an offline copy of it. A tag build refuses to publish an
+unsigned APK. Locally, `src-tauri/gen/android/keystore.properties` (ignored by
+git) points Gradle at the key.
+
+The desktop builds are not code-signed yet. The macOS app is only ad-hoc signed, so
 Gatekeeper asks users to allow it in **Privacy & Security**. Windows
 SmartScreen warns once. The download page explains both. To remove the
 warnings later, add an Apple Developer ID and notarization to the macOS job,

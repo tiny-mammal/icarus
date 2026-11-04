@@ -8,7 +8,7 @@
  * The manifest is written last, so a half-uploaded release is never served.
  */
 
-export type PlatformId = 'windows' | 'macos' | 'linux';
+export type PlatformId = 'windows' | 'macos' | 'linux' | 'android';
 
 export interface AssetSpec {
   /** Stable id in the public URL: `/download/<id>`. */
@@ -16,7 +16,10 @@ export interface AssetSpec {
   platform: PlatformId;
   /** Short label for the download button. */
   label: string;
-  /** Directory under `target/<triple>/release/bundle/` that holds the file. */
+  /**
+   * Directory that holds the file, under Tauri's `bundle/` output for desktop
+   * and under `app/build/outputs/apk/` for Android.
+   */
   bundleDir: string;
   /** File extension of the bundled file, without the dot. */
   extension: string;
@@ -30,10 +33,11 @@ export const ASSETS: readonly AssetSpec[] = [
   { id: 'linux-appimage', platform: 'linux', label: 'AppImage', bundleDir: 'appimage', extension: 'AppImage' },
   { id: 'linux-deb', platform: 'linux', label: 'Debian / Ubuntu (.deb)', bundleDir: 'deb', extension: 'deb' },
   { id: 'linux-rpm', platform: 'linux', label: 'Fedora / openSUSE (.rpm)', bundleDir: 'rpm', extension: 'rpm' },
+  { id: 'android-apk', platform: 'android', label: 'APK', bundleDir: 'universal/release', extension: 'apk' },
 ];
 
 export interface ReleaseAsset {
-  /** Object key in the bucket, e.g. `v0.2.0/Icarus-Diary-0.2.0-x86_64.AppImage`. */
+  /** Object key in the bucket, e.g. `v0.2.0/Icarus-Diary-0.2.0-linux-x86_64.AppImage`. */
   key: string;
   /** File name offered to the browser. */
   name: string;
@@ -78,7 +82,7 @@ export function releasePrefix(version: string): string {
 
 /** The file name every build of `spec` is published as. */
 export function assetFileName(spec: AssetSpec, version: string): string {
-  const arch = spec.platform === 'macos' ? 'universal' : 'x86_64';
+  const arch = spec.platform === 'macos' || spec.platform === 'android' ? 'universal' : 'x86_64';
   return `Icarus-Diary-${version}-${spec.platform}-${arch}.${spec.extension}`;
 }
 

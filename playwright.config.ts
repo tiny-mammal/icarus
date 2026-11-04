@@ -29,6 +29,8 @@ const baseURL = `http://${host}:${PORT}`;
 
 export default defineConfig({
   testDir: './e2e',
+  // The Android smoke test drives an emulator instead (playwright.android.config.ts).
+  testIgnore: '**/android/**',
   fullyParallel: false,
   workers: 1,
   timeout: 60_000,

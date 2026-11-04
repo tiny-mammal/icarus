@@ -14,7 +14,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock('../src/lib/storage', () => ({
   storage: {
-    kind: 'tauri',
+    kind: 'folder',
     getRememberedVault: async () => null,
     rememberVault: async (ref: { path: string } | null) => {
       state.activeFolder = ref?.path.slice(0, ref.path.lastIndexOf('/')) ?? '';
