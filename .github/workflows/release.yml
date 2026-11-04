@@ -140,12 +140,17 @@ jobs:
       # Published versions are immutable, so the live manifest never points at
       # files that are being overwritten.
       - name: Refuse to republish or replace a newer release
+        # Only a 404 means "nothing published yet"; any other failure stops the
+        # publish rather than risk replacing a newer release.
         run: |
-          if pnpm exec wrangler r2 object get "$BUCKET/latest.json" --file current.json --remote; then
-            node scripts/release-assets.ts check-latest current.json
-          else
-            echo "No published release yet."
-          fi
+          status=$(curl -sS -o current.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/r2/buckets/$BUCKET/objects/latest.json")
+          case "$status" in
+            200) node scripts/release-assets.ts check-latest current.json ;;
+            404) echo "No published release yet." ;;
+            *) echo "::error::Could not read the published latest.json (HTTP $status)"; cat current.json; exit 1 ;;
+          esac
       - name: Upload builds
         run: |
           for file in release-assets/*; do
