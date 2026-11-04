@@ -7,6 +7,7 @@ import {
   matchCase,
   misspelledRanges,
   shouldCheck,
+  spellingWindow,
 } from '../src/lib/spellcheck';
 
 // A minimal schema (paragraphs with bold/code marks and hard breaks) is enough
@@ -99,5 +100,23 @@ describe('bundled dictionary', () => {
     expect(spell.correct('journal')).toBe(true);
     expect(spell.correct('diery')).toBe(false);
     expect(spell.suggest('diery')).toContain('diary');
+  });
+});
+
+
+describe('spellingWindow', () => {
+  it('limits checking to the word around the edit', () => {
+    const block = para(text('hello diery world'));
+    expect(spellingWindow(block, 8, 9)).toEqual({ from: 6, to: 11 });
+  });
+
+  it('includes both words on either side of a newly inserted space', () => {
+    const block = para(text('hello world'));
+    expect(spellingWindow(block, 5, 6)).toEqual({ from: 0, to: 11 });
+  });
+
+  it('preserves inline positions across hard breaks', () => {
+    const block = para(text('hello'), schema.node('hard_break'), text('diery'));
+    expect(spellingWindow(block, 8, 9)).toEqual({ from: 6, to: 11 });
   });
 });

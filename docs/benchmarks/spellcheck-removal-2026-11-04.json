@@ -1,0 +1,247 @@
+{
+  "browser": "156.0.8078.4",
+  "baselineRef": "75c82009be79c7fe08455f4c51c6cf4745da68a4",
+  "dictionaryMs": 197.5,
+  "cases": [
+    {
+      "variant": "off",
+      "blocks": 1,
+      "charsPerBlock": 300,
+      "slowdown": 1,
+      "refreshMs": 0,
+      "editMs": {
+        "median": 1,
+        "p95": 1.3,
+        "max": 1.3
+      },
+      "underlineMs": 0.8,
+      "removalMs": 0.8,
+      "novelEditMs": {
+        "median": 1,
+        "p95": 1.1,
+        "max": 1.2
+      },
+      "pasteMs": 7.3
+    },
+    {
+      "variant": "baseline",
+      "blocks": 1,
+      "charsPerBlock": 300,
+      "slowdown": 1,
+      "refreshMs": 3.7,
+      "editMs": {
+        "median": 0.3,
+        "p95": 0.5,
+        "max": 0.6
+      },
+      "underlineMs": 186.4,
+      "removalMs": 187.6,
+      "novelEditMs": {
+        "median": 0.4,
+        "p95": 0.5,
+        "max": 0.5
+      },
+      "pasteMs": 1.4
+    },
+    {
+      "variant": "current",
+      "blocks": 1,
+      "charsPerBlock": 300,
+      "slowdown": 1,
+      "refreshMs": 0.3,
+      "editMs": {
+        "median": 0.5,
+        "p95": 0.6,
+        "max": 0.7
+      },
+      "underlineMs": 0.3,
+      "removalMs": 0.3,
+      "novelEditMs": {
+        "median": 0.4,
+        "p95": 0.6,
+        "max": 0.7
+      },
+      "pasteMs": 5
+    },
+    {
+      "variant": "off",
+      "blocks": 100,
+      "charsPerBlock": 300,
+      "slowdown": 1,
+      "refreshMs": 0,
+      "editMs": {
+        "median": 0.7,
+        "p95": 2,
+        "max": 2.2
+      },
+      "underlineMs": 1.4,
+      "removalMs": 1.8,
+      "novelEditMs": {
+        "median": 1.9,
+        "p95": 2,
+        "max": 2.1
+      },
+      "pasteMs": 5.7
+    },
+    {
+      "variant": "baseline",
+      "blocks": 100,
+      "charsPerBlock": 300,
+      "slowdown": 1,
+      "refreshMs": 10.8,
+      "editMs": {
+        "median": 1.9,
+        "p95": 2.1,
+        "max": 2.9
+      },
+      "underlineMs": 195.1,
+      "removalMs": 193.8,
+      "novelEditMs": {
+        "median": 1.9,
+        "p95": 2,
+        "max": 2.2
+      },
+      "pasteMs": 5.6
+    },
+    {
+      "variant": "current",
+      "blocks": 100,
+      "charsPerBlock": 300,
+      "slowdown": 1,
+      "refreshMs": 3.1,
+      "editMs": {
+        "median": 2.1,
+        "p95": 2.3,
+        "max": 2.3
+      },
+      "underlineMs": 1.5,
+      "removalMs": 2.1,
+      "novelEditMs": {
+        "median": 2,
+        "p95": 2.1,
+        "max": 2.1
+      },
+      "pasteMs": 8.8
+    },
+    {
+      "variant": "off",
+      "blocks": 1,
+      "charsPerBlock": 300,
+      "slowdown": 4,
+      "refreshMs": 0,
+      "editMs": {
+        "median": 0.7,
+        "p95": 1.2,
+        "max": 1.3
+      },
+      "underlineMs": 0.1,
+      "removalMs": 1.1,
+      "novelEditMs": {
+        "median": 0.7,
+        "p95": 1.3,
+        "max": 1.3
+      },
+      "pasteMs": 4.8
+    },
+    {
+      "variant": "baseline",
+      "blocks": 1,
+      "charsPerBlock": 300,
+      "slowdown": 4,
+      "refreshMs": 0.8,
+      "editMs": {
+        "median": 1,
+        "p95": 1.5,
+        "max": 1.9
+      },
+      "underlineMs": 186.7,
+      "removalMs": 188.6,
+      "novelEditMs": {
+        "median": 1.2,
+        "p95": 1.5,
+        "max": 1.8
+      },
+      "pasteMs": 5.1
+    },
+    {
+      "variant": "current",
+      "blocks": 1,
+      "charsPerBlock": 300,
+      "slowdown": 4,
+      "refreshMs": 0.8,
+      "editMs": {
+        "median": 1.6,
+        "p95": 3.4,
+        "max": 5.2
+      },
+      "underlineMs": 0.9,
+      "removalMs": 1.9,
+      "novelEditMs": {
+        "median": 1.3,
+        "p95": 2.2,
+        "max": 3.5
+      },
+      "pasteMs": 27.3
+    },
+    {
+      "variant": "off",
+      "blocks": 100,
+      "charsPerBlock": 300,
+      "slowdown": 4,
+      "refreshMs": 0,
+      "editMs": {
+        "median": 2.2,
+        "p95": 4.4,
+        "max": 7.2
+      },
+      "underlineMs": 1,
+      "removalMs": 2.5,
+      "novelEditMs": {
+        "median": 1.8,
+        "p95": 2.4,
+        "max": 2.5
+      },
+      "pasteMs": 7.3
+    },
+    {
+      "variant": "baseline",
+      "blocks": 100,
+      "charsPerBlock": 300,
+      "slowdown": 4,
+      "refreshMs": 13.4,
+      "editMs": {
+        "median": 2.1,
+        "p95": 3,
+        "max": 4.4
+      },
+      "underlineMs": 196,
+      "removalMs": 194.9,
+      "novelEditMs": {
+        "median": 2.1,
+        "p95": 2.9,
+        "max": 4.8
+      },
+      "pasteMs": 5.7
+    },
+    {
+      "variant": "current",
+      "blocks": 100,
+      "charsPerBlock": 300,
+      "slowdown": 4,
+      "refreshMs": 14.5,
+      "editMs": {
+        "median": 2.4,
+        "p95": 3.1,
+        "max": 3.6
+      },
+      "underlineMs": 1.7,
+      "removalMs": 2,
+      "novelEditMs": {
+        "median": 2.5,
+        "p95": 5.5,
+        "max": 5.5
+      },
+      "pasteMs": 17
+    }
+  ]
+}

@@ -4,15 +4,14 @@
  * modified) and reports right-clicks on a flagged word so the UI can open a
  * suggestions menu.
  *
- * Re-checking is debounced after edits, and decorations are merely remapped on
- * each transaction in between, so typing cost stays proportional to the edit,
- * not to the document size.
+ * Edits re-check only the affected words in the same transaction, so
+ * underlines update immediately without checking the whole document.
  */
 import { Extension, type Editor } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { docMisspellings } from './spellcheck';
+import { docMisspellings, misspelledRanges, spellingWindow } from './spellcheck';
 
 /** A right-click on a flagged word. */
 export interface SpellHit {
@@ -37,8 +36,6 @@ interface SpellcheckState {
 
 const spellcheckKey = new PluginKey<SpellcheckState>('icarusSpellcheck');
 const REFRESH = 'icarus:spellcheck-refresh';
-/** Long enough to skip mid-keystroke churn, short enough to feel instant. */
-const RECHECK_DELAY = 180;
 
 function buildDecorations(doc: PMNode): DecorationSet {
   const ranges = docMisspellings(doc).map(({ from, to }) =>
@@ -64,7 +61,7 @@ export const Spellcheck = Extension.create<SpellcheckOptions>({
         state: {
           init: () => ({ decorations: DecorationSet.empty }),
 
-          apply(tr, prev) {
+          apply(tr, prev, oldState) {
             if (tr.getMeta(spellcheckKey) === REFRESH) {
               return {
                 decorations: enabled()
@@ -73,8 +70,40 @@ export const Spellcheck = Extension.create<SpellcheckOptions>({
               };
             }
             if (!tr.docChanged) return prev;
-            // Cheap: keep the old marks aligned until the debounced recheck.
-            return { decorations: prev.decorations.map(tr.mapping, tr.doc) };
+            if (!enabled()) return { decorations: DecorationSet.empty };
+            let decorations = prev.decorations.map(tr.mapping, tr.doc);
+            const from = oldState.doc.content.findDiffStart(tr.doc.content);
+            if (from === null) return { decorations };
+            const end = oldState.doc.content.findDiffEnd(tr.doc.content);
+            // A deletion can put the end before the start. Include both sides
+            // of the boundary so splitting/joining words or blocks is checked.
+            const to = Math.max(from, end?.b ?? from);
+            tr.doc.nodesBetween(from, to, (node, pos) => {
+              if (!node.isTextblock && !node.type.spec.code) return true;
+              const window = node.type.spec.code
+                ? { from: 0, to: node.content.size }
+                : spellingWindow(
+                    node,
+                    Math.max(0, from - pos - 1),
+                    Math.min(node.content.size, to - pos - 1),
+                  );
+              const start = pos + 1 + window.from;
+              const end = pos + 1 + window.to;
+              decorations = decorations.remove(
+                decorations.find(start, end).filter(
+                  (mark) => mark.from < end && mark.to > start,
+                ),
+              );
+              if (!node.type.spec.code) {
+                const block = node.cut(window.from, window.to);
+                const marks = misspelledRanges(block, start).map(({ from, to }) =>
+                  Decoration.inline(from, to, { class: 'spell-misspelled' }),
+                );
+                decorations = decorations.add(tr.doc, marks);
+              }
+              return false;
+            });
+            return { decorations };
           },
         },
 
@@ -84,29 +113,6 @@ export const Spellcheck = Extension.create<SpellcheckOptions>({
               spellcheckKey.getState(state)?.decorations ?? DecorationSet.empty
             );
           },
-        },
-
-        view(view) {
-          let timer: ReturnType<typeof setTimeout> | undefined;
-
-          const schedule = () => {
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-              timer = undefined;
-              view.dispatch(
-                view.state.tr.setMeta(spellcheckKey, REFRESH),
-              );
-            }, RECHECK_DELAY);
-          };
-
-          return {
-            update(_view, prevState) {
-              if (!prevState.doc.eq(view.state.doc)) schedule();
-            },
-            destroy() {
-              clearTimeout(timer);
-            },
-          };
         },
       }),
 

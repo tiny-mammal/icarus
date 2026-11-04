@@ -205,6 +205,22 @@ export function misspelledRanges(
   return ranges;
 }
 
+/**
+ * Expand an edited inline range to whole words, using block-local offsets.
+ * Leaf nodes occupy one position, just like the sentinel used by the checker.
+ * Include both sides of an insertion/deletion so word splits and joins update.
+ */
+export function spellingWindow(block: PMNode, from: number, to: number) {
+  const text = block.textBetween(0, block.content.size, '', '\u0000');
+  // Keep UTF-16 surrogate pairs inside the same window as their neighbours.
+  const wordChar = /[\p{L}'’\-\uD800-\uDFFF]/u;
+  let start = Math.min(block.content.size, Math.max(0, from));
+  let end = Math.max(start, Math.min(block.content.size, to));
+  while (start > 0 && wordChar.test(text[start - 1])) start--;
+  while (end < text.length && wordChar.test(text[end])) end++;
+  return { from: start, to: end };
+}
+
 /** Every misspelled range in a whole document (code blocks are skipped). */
 export function docMisspellings(doc: PMNode): MisspelledRange[] {
   const ranges: MisspelledRange[] = [];
