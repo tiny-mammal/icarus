@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type Plugin } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
+import { preloadFonts } from '../vite/preload-fonts';
 
 /**
  * Build for the public site at icarus.4oli.com.
@@ -44,7 +45,7 @@ function sharedBrandAssets(): Plugin {
 export default defineConfig({
   root,
   publicDir: 'public',
-  plugins: [tailwindcss(), sharedBrandAssets()],
+  plugins: [tailwindcss(), sharedBrandAssets(), preloadFonts()],
   server: { port: 1440, strictPort: true },
   build: {
     outDir: '../dist-web',

@@ -12,9 +12,10 @@
   Cross-Origin-Opener-Policy: same-origin
   X-Frame-Options: DENY
 
-# Landing page: no inline code, nothing from other origins.
+# Landing page: no inline code (except the speculation rules that prerender
+# the web app), nothing from other origins.
 /
-  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'inline-speculation-rules'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   Link: </index.md>; rel="alternate"; type="text/markdown", </llms.txt>; rel="describedby"; type="text/plain"
   Vary: Accept
 

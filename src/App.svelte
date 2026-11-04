@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { fade } from 'svelte/transition';
   import { app } from './lib/store.svelte';
   import Welcome from './components/Welcome.svelte';
   import TopBar from './components/TopBar.svelte';
@@ -17,6 +16,13 @@
   import PrivacyDialog from './components/PrivacyDialog.svelte';
   import ExportDialog from './components/ExportDialog.svelte';
   import { watchIdle } from './lib/idle';
+  import { dismissBootSplash } from './lib/boot-splash';
+
+  // The static splash in index.html covers the app until the first screen is
+  // known; it is fixed-position, so uncovering it never shifts the layout.
+  $effect(() => {
+    if (app.ready) void dismissBootSplash();
+  });
 
   // Auto-lock an encrypted diary after the chosen period of inactivity.
   $effect(() => {
@@ -87,27 +93,25 @@
   });
 </script>
 
-{#if !app.ready}
-  <!-- Quiet boot splash to avoid a flash of the wrong screen. -->
-  <div class="grid h-full place-items-center bg-ink" out:fade={{ duration: 200 }}>
-    <span class="h-2 w-2 animate-ping rounded-full bg-muted"></span>
-  </div>
-{:else if app.view === 'welcome'}
-  <Welcome />
-{:else if app.view === 'locked'}
-  <LockScreen />
-{:else}
-  <TopBar />
-  <!-- Main stage: calendar with the day pane sliding over it. -->
-  <main class="relative min-h-0 flex-1 overflow-hidden pb-16">
-    <Calendar />
-    <DayPane />
-  </main>
-  <WritingDock />
-  <SettingsMenu />
-  <StatsModal />
-  {#if app.privacyDialog}<PrivacyDialog />{/if}
-  {#if app.exportOpen}<ExportDialog />{/if}
+<!-- Nothing renders until boot settles, so the wrong screen never flashes. -->
+{#if app.ready}
+  {#if app.view === 'welcome'}
+    <Welcome />
+  {:else if app.view === 'locked'}
+    <LockScreen />
+  {:else}
+    <TopBar />
+    <!-- Main stage: calendar with the day pane sliding over it. -->
+    <main class="relative min-h-0 flex-1 overflow-hidden pb-16">
+      <Calendar />
+      <DayPane />
+    </main>
+    <WritingDock />
+    <SettingsMenu />
+    <StatsModal />
+    {#if app.privacyDialog}<PrivacyDialog />{/if}
+    {#if app.exportOpen}<ExportDialog />{/if}
+  {/if}
 {/if}
 
 <!-- Also offered from Welcome and the lock screen, for new and imported diaries. -->

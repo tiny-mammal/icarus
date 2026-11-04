@@ -126,6 +126,16 @@
     </script>
     <link rel="stylesheet" href="./style.css" />
     <script type="module" src="./main.ts"></script>
+    <!--
+      Prerender the web app once a visitor shows intent (hover or press on an
+      "Open the web app" link), so it opens instantly. Same origin only, and
+      the app makes no network requests of its own. Browsers without
+      speculation rules ignore this; the CSP allows it via
+      'inline-speculation-rules' (site/public/_headers).
+    -->
+    <script type="speculationrules">
+      { "prerender": [{ "where": { "href_matches": "/app/" }, "eagerness": "moderate" }] }
+    </script>
   </head>
   <body class="relative min-h-screen bg-ink text-text">
     <a

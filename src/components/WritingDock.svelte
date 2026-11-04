@@ -4,8 +4,16 @@
   import { spellCheck, verticalDrag } from '../lib/actions';
   import DraftsMenu from './DraftsMenu.svelte';
   import DatePicker from './DatePicker.svelte';
-  import RichEditor from './RichEditor.svelte';
   import { dateKey } from '../lib/date';
+  import { devError } from '../lib/log';
+
+  // Tiptap/ProseMirror is the heaviest dependency and only shows once the dock
+  // expands, so it lives in its own chunk. Fetching it as soon as the dock
+  // mounts keeps it off the first paint yet ready before anyone can type.
+  let RichEditor = $state<(typeof import('./RichEditor.svelte'))['default'] | null>(null);
+  import('./RichEditor.svelte')
+    .then((module) => (RichEditor = module.default))
+    .catch((err) => devError('WritingDock: could not load the editor', err));
 
   let saving = $state(false);
 
@@ -123,11 +131,16 @@
           </div>
 
           <!-- Body — Notion-style live Markdown formatting -->
-          <RichEditor
-            class="mt-4 min-h-0 w-full flex-1 cursor-text overflow-y-auto pr-4"
-            placeholder={bodyPlaceholder}
-            bind:value={app.draftContent}
-          />
+          {#if RichEditor}
+            <RichEditor
+              class="mt-4 min-h-0 w-full flex-1 cursor-text overflow-y-auto pr-4"
+              placeholder={bodyPlaceholder}
+              bind:value={app.draftContent}
+            />
+          {:else}
+            <!-- Same footprint while the editor chunk loads, so nothing jumps. -->
+            <div class="mt-4 min-h-0 w-full flex-1 pr-4"></div>
+          {/if}
 
           <!-- Actions -->
           <div class="mt-4 flex items-center justify-between gap-3">
