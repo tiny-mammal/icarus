@@ -1,0 +1,195 @@
+<script lang="ts" module>
+  /** Which field takes focus when the editor opens. */
+  /**
+   * Which field takes focus when the editor opens, and where its caret goes:
+   * after the `at`-th visible character (as tapped in the reader), or the end.
+   */
+  export type EditorFocus = {
+    field: 'title' | 'location' | 'body';
+    at: number | 'end';
+  } | null;
+</script>
+
+<script lang="ts">
+  import { app } from '../lib/store.svelte';
+  import { spellCheck } from '../lib/actions';
+  import { dateKey } from '../lib/date';
+  import { devError } from '../lib/log';
+  import { loadRichEditor } from '../lib/editor-loader';
+  import { indexAfterVisible } from '../lib/caret';
+  import DraftsMenu from './DraftsMenu.svelte';
+  import DatePicker from './DatePicker.svelte';
+  import PaneSizeToggle from './PaneSizeToggle.svelte';
+
+  /**
+   * The day pane in writing mode: the entry being written or revised, laid
+   * out like the reader (title, location, body) so switching between the two
+   * feels like the text simply became editable. Work autosaves to drafts;
+   * "Save" commits it to the diary, "Save as draft" parks it for later.
+   */
+  let { focus = null }: { focus?: EditorFocus } = $props();
+
+  let RichEditor = $state<(typeof import('./RichEditor.svelte'))['default'] | null>(null);
+  loadRichEditor()
+    .then((module) => (RichEditor = module.default))
+    .catch((err) => devError('EntryEditor: could not load the editor', err));
+
+  let saving = $state(false);
+  let titleEl = $state<HTMLInputElement | null>(null);
+  let locationEl = $state<HTMLInputElement | null>(null);
+
+  // Applied once, when the editor opens; the pane mounts it per session.
+  // svelte-ignore state_referenced_locally
+  const initial = focus;
+  const bodyFocus = initial?.field === 'body' ? initial.at : null;
+  $effect(() => {
+    const input = initial?.field === 'title' ? titleEl : initial?.field === 'location' ? locationEl : null;
+    if (!input || !initial) return;
+    input.focus();
+    const end = input.value.length;
+    const at = initial.at === 'end' ? end : (indexAfterVisible(input.value, initial.at) ?? end);
+    input.setSelectionRange(at, at);
+  });
+
+  // Entries written for another day shouldn't be invited as "today's" chapter.
+  const bodyPlaceholder = $derived(
+    app.draftDateKey === dateKey(new Date())
+      ? "Write today's chapter… Markdown is welcome."
+      : 'Write this day’s chapter… Markdown is welcome.',
+  );
+
+  // Autosave: whenever a field changes, schedule a debounced write to the
+  // persisted draft store, so an unsaved entry survives a crash, a power cut,
+  // or quitting the app mid-sentence.
+  $effect(() => {
+    void app.draftTitle;
+    void app.draftLocation;
+    void app.draftContent;
+    void app.draftDateKey;
+    app.scheduleDraftSave();
+  });
+
+  async function commit() {
+    saving = true;
+    await app.commit();
+    saving = false;
+  }
+
+  function askDiscard() {
+    if (app.draftId) app.requestDeleteDraft(app.draftId);
+  }
+
+  function onKeydown(e: KeyboardEvent) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      void commit();
+    }
+    // Escape is handled globally (App.svelte): it goes back to reading.
+  }
+</script>
+
+<!-- Keydown is delegated from the fields within (Cmd/Ctrl+Enter). -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<div
+  class="flex min-h-0 flex-1 flex-col"
+  onkeydown={onKeydown}
+  role="form"
+  aria-label={app.editingUid ? 'Edit entry' : 'New entry'}
+>
+  <header
+    class="flex items-center justify-between gap-2 border-b border-slate py-3 pr-2 pl-4 sm:gap-3 sm:py-5 sm:pr-[var(--pane-gutter)] sm:pl-[calc(var(--pane-gutter)-0.25rem)]"
+  >
+    <div class="flex min-w-0 items-center gap-2">
+      <DatePicker bind:value={app.draftDateKey} align="left" />
+      <span class="truncate text-xs font-medium text-muted">
+        {app.editingUid ? 'Editing' : 'New entry'}
+      </span>
+    </div>
+    <div class="flex shrink-0 items-center gap-1">
+      {#if !app.editingUid && app.drafts.length > 0}
+        <DraftsMenu compact />
+      {/if}
+      <PaneSizeToggle />
+      <button
+        class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
+        aria-label="Stop editing"
+        title="Back to reading (Esc) — your work stays in drafts"
+        onclick={() => app.stopEditing()}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Same paddings and type as the reader, so text stays where it was. -->
+  <div class="flex min-h-0 flex-1 flex-col px-5 pt-5 sm:px-[var(--pane-gutter)] sm:pt-6">
+    <input
+      bind:this={titleEl}
+      class="w-full bg-transparent text-xl font-semibold tracking-tight text-text placeholder:text-muted focus:outline-none"
+      placeholder="Title"
+      bind:value={app.draftTitle}
+      use:spellCheck={app.spellcheck}
+    />
+    <input
+      bind:this={locationEl}
+      class="mt-1 w-full bg-transparent text-sm text-muted placeholder:text-muted/70 focus:outline-none"
+      placeholder="Add a location or subtitle"
+      bind:value={app.draftLocation}
+      use:spellCheck={app.spellcheck}
+    />
+
+    {#if RichEditor}
+      <RichEditor
+        class="mt-4 min-h-0 w-full flex-1 cursor-text overflow-y-auto overscroll-contain pb-8"
+        placeholder={bodyPlaceholder}
+        focusAt={bodyFocus}
+        bind:value={app.draftContent}
+      />
+    {:else}
+      <!-- Same footprint while the editor chunk loads, so nothing jumps. -->
+      <div class="mt-4 min-h-0 w-full flex-1"></div>
+    {/if}
+  </div>
+
+  <footer
+    class="flex items-center justify-between gap-3 border-t border-slate px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-[var(--pane-gutter)]"
+  >
+    <div class="min-w-0">
+      {#if app.editingUid}
+        <span class="hidden text-xs text-muted sm:inline">Changes autosave to drafts</span>
+      {:else if app.draftOpened}
+        <button
+          class="rounded-lg px-2.5 py-2 text-xs font-medium text-muted transition-colors hover:bg-red-400/10 hover:text-red-400"
+          onclick={askDiscard}
+        >
+          Discard
+        </button>
+      {/if}
+    </div>
+
+    <div class="flex items-center gap-2">
+      {#if !app.editingUid}
+        <button
+          class="whitespace-nowrap rounded-lg border border-slate px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-slate hover:text-text disabled:opacity-50"
+          onclick={() => app.saveDraftAndReset()}
+          disabled={saving}
+        >
+          Save as draft
+        </button>
+      {/if}
+      <button
+        class="flex items-center gap-2 whitespace-nowrap rounded-lg bg-text px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
+        aria-label="Save entry"
+        title="Save entry (⌘/Ctrl+Enter)"
+        onclick={commit}
+        disabled={saving}
+      >
+        <span>{saving ? 'Saving…' : 'Save'}</span>
+        <span class="hidden items-center gap-1 text-ink/60 sm:flex">
+          <kbd class="font-mono text-xs">⌘/Ctrl</kbd>
+          <kbd class="font-mono text-xs">↵</kbd>
+        </span>
+      </button>
+    </div>
+  </footer>
+</div>

@@ -114,7 +114,7 @@
   title={titles[step]}
   onclose={close}
   locked={working}
-  width={step === 'choice' ? 'max-w-md' : 'max-w-sm'}
+  width={step === 'choice' ? 'sm:max-w-md' : 'sm:max-w-sm'}
 >
   {#if step === 'password' || step === 'recovery'}
     <p class="-mt-2 mb-4 text-xs text-muted">Step {step === 'password' ? 1 : 2} of 2</p>

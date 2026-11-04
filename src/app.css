@@ -9,6 +9,8 @@
   html,
   body {
     height: 100%;
+    /* No pull-to-refresh or rubber-banding of the whole app shell. */
+    overscroll-behavior: none;
   }
 
   body {
@@ -21,12 +23,23 @@
     text-rendering: optimizeLegibility;
     overflow: hidden; /* the app owns its own scroll regions */
     user-select: none; /* desktop-app feel; opt back in for editors/readers */
+    -webkit-tap-highlight-color: transparent;
   }
 
   #app {
+    /* dvh tracks mobile browser toolbars; vh is the fallback. */
     height: 100vh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
+  }
+
+  /* Taps act immediately (no double-tap-to-zoom delay). */
+  button,
+  a,
+  label,
+  [role='button'] {
+    touch-action: manipulation;
   }
 
   /* Inputs / editable regions re-enable selection. */
@@ -188,6 +201,11 @@
   .ProseMirror {
     outline: none;
   }
+  /* The editor wraps list items in paragraphs; keep them as tight as the
+     reader's, so text doesn't shift when switching between the two. */
+  .ProseMirror li > p {
+    margin: 0;
+  }
   /* Placeholder text shown while the editor is empty. */
   .ProseMirror p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
@@ -217,6 +235,28 @@
     text-decoration-color: color-mix(in oklab, #f87171 70%, transparent);
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
+  }
+}
+
+/* The day pane's text gutter, registered so it can be animated (custom
+   properties otherwise jump): it glides between the side pane's fixed padding
+   and the centred column of the full-screen pane. See DayPane.svelte. */
+@property --pane-gutter-raw {
+  syntax: '<length-percentage>';
+  inherits: true;
+  /* Must be computationally independent (no rem/em), or the rule is
+     dropped; the pane always sets the real value. */
+  initial-value: 0px;
+}
+
+/* iOS zooms the page into any focused field under 16px; touch screens get
+   16px small-print fields instead. Unlayered so it beats the text-* utilities. */
+@media (pointer: coarse) {
+  input.text-sm,
+  input.text-xs,
+  textarea.text-sm,
+  textarea.text-xs {
+    font-size: 16px;
   }
 }
 

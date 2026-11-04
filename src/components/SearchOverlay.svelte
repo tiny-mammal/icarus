@@ -48,8 +48,9 @@
   });
 </script>
 
+<!-- Phones: spans the screen under the top bar; wider: hangs from the field. -->
 <div
-  class="absolute left-1/2 top-full z-50 mt-2 w-full -translate-x-1/2 overflow-hidden rounded-xl border border-slate bg-surface shadow-2xl shadow-black/50"
+  class="fixed inset-x-3 top-14 z-50 mt-2 overflow-hidden rounded-xl border border-slate bg-surface shadow-2xl shadow-black/50 sm:absolute sm:inset-x-auto sm:left-1/2 sm:top-full sm:w-full sm:-translate-x-1/2"
   transition:fly={{ y: -6, duration: 150 }}
 >
   {#if hits.length === 0}
@@ -57,23 +58,23 @@
   {:else}
     <ul
       bind:this={listEl}
-      class="max-h-[60vh] overflow-y-auto py-1"
+      class="max-h-[min(60vh,calc(100dvh-6rem))] overflow-y-auto overscroll-contain py-1"
       onscroll={loadMoreIfNeeded}
     >
       {#each hits as hit, i (hit.entry.uid)}
         <li>
           <button
-            class="flex w-full flex-col gap-0.5 px-4 py-2.5 text-left transition-colors
+            class="flex w-full flex-col gap-0.5 px-4 py-3 text-left transition-colors sm:py-2.5
               {i === activeIndex ? 'bg-slate' : 'hover:bg-slate-soft'}"
             data-active={i === activeIndex}
             onmousedown={(e) => e.preventDefault()}
             onclick={() => onselect(hit.entry)}
           >
-            <span class="flex items-start justify-between gap-3">
+            <span class="flex flex-col gap-0.5 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
               <span class="line-clamp-2 min-w-0 break-words text-sm font-medium text-text [overflow-wrap:anywhere]">
                 <Highlight text={snippetAround(hit.entry.title, terms, 36)} {terms} />
               </span>
-              <span class="shrink-0 text-[0.7rem] text-muted">{longDayLabel(hit.entry.date, app.dateFormat)}</span>
+              <span class="shrink-0 text-[0.7rem] text-muted max-sm:order-first">{longDayLabel(hit.entry.date, app.dateFormat)}</span>
             </span>
             {#if hit.entry.location}
               <span class="line-clamp-2 break-words text-xs text-muted [overflow-wrap:anywhere]">

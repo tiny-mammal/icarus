@@ -1,10 +1,11 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { scale } from 'svelte/transition';
+  import { fly, scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
   import { clickOutside, trapFocus } from '../lib/actions';
   import {
+    addMonths,
     dateKey,
     keyToDate,
     isSameDay,
@@ -13,7 +14,11 @@
     monthShortLabels,
     weekdayLabels,
     longDayLabel,
+    weekdayShortLabel,
   } from '../lib/date';
+  import { dragPager, turnPage } from '../lib/gestures';
+  import { truncateText } from '../lib/text';
+  import { viewport } from '../lib/viewport.svelte';
   import type { DiaryEntry } from '../lib/types';
 
   const today = new Date();
@@ -109,6 +114,69 @@
     return pickerYear === today.getFullYear() && month === today.getMonth();
   }
 
+  // --- month paging -------------------------------------------------------
+  // Phones: the previous, current and next months sit side by side on a track
+  // that follows the finger (see `dragPager`), and the arrows slide it too.
+  let trackEl = $state<HTMLElement | null>(null);
+  let paging = false;
+  const panelMonths = $derived([-1, 0, 1].map((offset) => addMonths(app.currentMonth, offset)));
+
+  async function showMonth(dir: -1 | 1): Promise<void> {
+    app.navigateMonth(dir);
+    await tick();
+  }
+
+  async function page(dir: -1 | 1): Promise<void> {
+    if (!viewport.compact || !trackEl || viewport.reducedMotion) {
+      app.navigateMonth(dir);
+      return;
+    }
+    if (paging) return;
+    paging = true;
+    try {
+      await turnPage(trackEl, dir, showMonth);
+    } finally {
+      paging = false;
+    }
+  }
+
+  // Wider screens: the grid slides in from the side it came from, so paging
+  // reads as movement through time. Plain variable on purpose: it only
+  // remembers the last month to tell the direction.
+  let lastMonth = app.currentMonth.getTime();
+  const slideDir = $derived.by(() => {
+    const t = app.currentMonth.getTime();
+    const dir = Math.sign(t - lastMonth);
+    lastMonth = t;
+    return dir;
+  });
+  function slideIn(node: HTMLElement) {
+    if (slideDir === 0 || viewport.reducedMotion) return { duration: 0 };
+    return fly(node, { x: slideDir * 32, duration: 220, easing: cubicOut });
+  }
+
+  // Keyboard focus lives in the current month's grid only.
+  function currentGrid(node: HTMLElement, current: boolean) {
+    if (current) gridEl = node;
+    return {
+      update(next: boolean) {
+        if (next) gridEl = node;
+      },
+      destroy() {
+        if (gridEl === node) gridEl = null;
+      },
+    };
+  }
+
+  // Phones can't fit titles in the cells, so the month's entries are listed
+  // under the grid instead, grouped by day.
+  const daysWithEntries = $derived(
+    grid
+      .filter(inCurrentMonth)
+      .map((day) => ({ day, entries: entriesOn(day) }))
+      .filter((d) => d.entries.length > 0),
+  );
+
   // Titles shown inside a day cell before collapsing the rest into "+N more".
   const MAX_CELL_TITLES = 3;
 
@@ -127,6 +195,9 @@
   function inCurrentMonth(d: Date): boolean {
     return d.getMonth() === app.currentMonth.getMonth();
   }
+  function inMonth(d: Date, month: Date): boolean {
+    return d.getMonth() === month.getMonth();
+  }
   function isSelected(d: Date): boolean {
     return app.selectedKey === dateKey(d);
   }
@@ -143,15 +214,87 @@
   }
 </script>
 
-<section class="flex h-full flex-col px-6 pb-6 pt-3 sm:px-10">
+{#snippet dayGrid(month: Date, current: boolean)}
+  <div
+    class="grid grid-cols-7 grid-rows-[repeat(6,3.25rem)] gap-px sm:h-full sm:grid-rows-6"
+    use:currentGrid={current}
+  >
+    {#each monthGrid(month, app.weekStart) as day (dateKey(day))}
+      {@const entries = entriesOn(day)}
+      {@const count = entries.length}
+      {@const shown = visibleTitles(entries)}
+      {@const muted = !inMonth(day, month)}
+      {@const key = dateKey(day)}
+      <button
+        class="group relative flex flex-col items-center rounded-xl border border-transparent p-1 text-left sm:items-stretch sm:p-2 transition-all duration-200 hover:border-slate hover:bg-slate-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-faint
+          {isSelected(day) ? 'border-faint bg-slate-soft ring-1 ring-faint' : ''}
+          {muted ? 'opacity-35' : ''}"
+        data-daykey={key}
+        tabindex={current && key === rovingKey ? 0 : -1}
+        aria-label={dayLabel(day)}
+        aria-pressed={isSelected(day)}
+        aria-current={isSameDay(day, today) ? 'date' : undefined}
+        onclick={() => { focusedKey = key; app.selectDay(key); }}
+        onfocus={() => (focusedKey = key)}
+        onkeydown={onDayKeydown}
+      >
+        <div class="flex w-7 flex-col items-center gap-1">
+          <span
+            class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm tabular-nums transition-colors
+              {isSameDay(day, today)
+                ? 'bg-text font-semibold text-ink'
+                : 'text-muted group-hover:text-text'}"
+          >
+            {day.getDate()}
+          </span>
+
+          <!-- Narrow screens: no room for titles, keep up to three dots -->
+          {#if count > 0}
+            <span class="flex items-center gap-1 sm:hidden">
+              {#each Array(Math.min(count, 3)) as _, i (i)}
+                <span class="h-1.5 w-1.5 rounded-full bg-muted"></span>
+              {/each}
+            </span>
+          {/if}
+        </div>
+
+        <!-- Wider screens: entry titles, one line each, overflow as "+N more" -->
+        {#if count > 0}
+          <ul class="mt-1 hidden min-h-0 min-w-0 flex-col gap-0.5 overflow-hidden sm:flex" aria-hidden="true">
+            {#each shown as entry (entry.uid)}
+              <li
+                class="truncate rounded-md bg-slate px-1.5 py-0.5 text-[0.7rem] leading-tight text-text/80 transition-colors group-hover:text-text"
+                title={entryTitle(entry)}
+              >
+                {entryTitle(entry)}
+              </li>
+            {/each}
+            {#if count > shown.length}
+              <li class="px-1.5 text-[0.65rem] font-medium leading-tight text-muted">
+                +{count - shown.length} more
+              </li>
+            {/if}
+          </ul>
+        {/if}
+      </button>
+    {/each}
+  </div>
+{/snippet}
+
+<!--
+  Phones: a fixed, compact calendar that pages with the finger, and the
+  month's entries scrolling below it. Wider screens: the grid fills the stage
+  and shows titles in its cells.
+-->
+<section class="flex h-full flex-col px-3 pt-2 sm:px-10 sm:pb-6 sm:pt-3">
   <!-- Month header -->
-  <header class="relative mb-5 flex items-center justify-between">
+  <header class="relative mb-3 flex shrink-0 items-center justify-between sm:mb-5">
     <!-- Month navigation: arrows flanking the month/year picker -->
     <div class="flex items-center gap-1">
       <button
-        class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
+        class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
         aria-label="Previous month"
-        onclick={() => app.navigateMonth(-1)}
+        onclick={() => page(-1)}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
       </button>
@@ -219,16 +362,16 @@
       </div>
 
       <button
-        class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
+        class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
         aria-label="Next month"
-        onclick={() => app.navigateMonth(1)}
+        onclick={() => page(1)}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
       </button>
     </div>
 
     <button
-      class="rounded-lg px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text"
+      class="rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text sm:py-1.5"
       onclick={() => app.goToToday()}
     >
       Today
@@ -236,7 +379,7 @@
   </header>
 
   <!-- Weekday labels -->
-  <div class="mb-2 grid grid-cols-7 gap-px">
+  <div class="mb-1 grid shrink-0 grid-cols-7 gap-px sm:mb-2">
     {#each weekdays as label}
       <div class="pb-1 text-center text-[0.7rem] font-medium uppercase tracking-wider text-muted">
         {label}
@@ -245,65 +388,73 @@
   </div>
 
   <!-- Day grid -->
-  <div class="grid min-h-0 flex-1 grid-cols-7 grid-rows-6 gap-px" bind:this={gridEl}>
-    {#each grid as day (dateKey(day))}
-      {@const entries = entriesOn(day)}
-      {@const count = entries.length}
-      {@const shown = visibleTitles(entries)}
-      {@const muted = !inCurrentMonth(day)}
-      {@const key = dateKey(day)}
-      <button
-        class="group relative flex flex-col rounded-xl border border-transparent p-2 text-left transition-all duration-200 hover:border-slate hover:bg-slate-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-faint
-          {isSelected(day) ? 'border-faint bg-slate-soft ring-1 ring-faint' : ''}
-          {muted ? 'opacity-35' : ''}"
-        data-daykey={key}
-        tabindex={key === rovingKey ? 0 : -1}
-        aria-label={dayLabel(day)}
-        aria-pressed={isSelected(day)}
-        aria-current={isSameDay(day, today) ? 'date' : undefined}
-        onclick={() => { focusedKey = key; app.selectDay(key); }}
-        onfocus={() => (focusedKey = key)}
-        onkeydown={onDayKeydown}
-      >
-        <div class="flex w-7 flex-col items-center gap-1">
-          <span
-            class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-sm tabular-nums transition-colors
-              {isSameDay(day, today)
-                ? 'bg-text font-semibold text-ink'
-                : 'text-muted group-hover:text-text'}"
-          >
-            {day.getDate()}
-          </span>
+  {#if viewport.compact}
+    <!-- Edge to edge, so the neighbouring month slides in from the screen edge. -->
+    <div
+      class="-mx-3 shrink-0 touch-pan-y overflow-hidden"
+      use:dragPager={{
+        track: trackEl,
+        onpage: showMonth,
+        enabled: !app.selectedKey && !pickerOpen,
+        reducedMotion: viewport.reducedMotion,
+      }}
+    >
+      <div bind:this={trackEl} class="flex will-change-transform" style="transform: translateX(-100%)">
+        {#each panelMonths as month, i (i)}
+          <div class="w-full shrink-0 px-3" inert={i !== 1} aria-hidden={i === 1 ? undefined : 'true'}>
+            {@render dayGrid(month, i === 1)}
+          </div>
+        {/each}
+      </div>
+    </div>
+  {:else}
+    {#key app.currentMonth.getTime()}
+      <div class="min-h-0 flex-1" in:slideIn>
+        {@render dayGrid(app.currentMonth, true)}
+      </div>
+    {/key}
+  {/if}
 
-          <!-- Narrow screens: no room for titles, keep up to three dots -->
-          {#if count > 0}
-            <span class="flex items-center gap-1 sm:hidden">
-              {#each Array(Math.min(count, 3)) as _, i (i)}
-                <span class="h-1.5 w-1.5 rounded-full bg-muted"></span>
+  <!-- Phones: this month's entries, tap one to read it. The only scroller. -->
+  <div
+    class="-mx-3 mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-slate px-3 pt-3 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:hidden"
+    role="region"
+    aria-label="Entries this month"
+  >
+    {#if daysWithEntries.length === 0}
+      <p class="py-6 text-center text-sm text-muted">No entries this month.</p>
+    {:else}
+      <ol class="space-y-1">
+        {#each daysWithEntries as { day, entries } (dateKey(day))}
+          <li class="flex gap-3">
+            <div
+              class="w-10 shrink-0 pt-2.5 text-center leading-none {isSameDay(day, today) ? 'text-text' : 'text-muted'}"
+              aria-hidden="true"
+            >
+              <span class="block text-[0.6rem] font-medium uppercase tracking-wider">{weekdayShortLabel(day)}</span>
+              <span class="mt-1 block text-lg font-semibold tabular-nums">{day.getDate()}</span>
+            </div>
+            <ul class="min-w-0 flex-1 space-y-1">
+              {#each entries as entry (entry.uid)}
+                <li>
+                  <button
+                    class="block w-full rounded-xl px-3 py-2.5 text-left transition-colors active:bg-slate hover:bg-slate-soft"
+                    aria-label="{longDayLabel(day, app.dateFormat)}: {entryTitle(entry)}"
+                    onclick={() => app.jumpToEntry(entry)}
+                  >
+                    <span class="block truncate text-sm font-medium text-text">{entryTitle(entry)}</span>
+                    {#if entry.location || entry.content}
+                      <span class="mt-0.5 block truncate text-xs text-muted">
+                        {[entry.location, truncateText(entry.content, 140)].filter(Boolean).join(' · ')}
+                      </span>
+                    {/if}
+                  </button>
+                </li>
               {/each}
-            </span>
-          {/if}
-        </div>
-
-        <!-- Wider screens: entry titles, one line each, overflow as "+N more" -->
-        {#if count > 0}
-          <ul class="mt-1 hidden min-h-0 min-w-0 flex-col gap-0.5 overflow-hidden sm:flex" aria-hidden="true">
-            {#each shown as entry (entry.uid)}
-              <li
-                class="truncate rounded-md bg-slate px-1.5 py-0.5 text-[0.7rem] leading-tight text-text/80 transition-colors group-hover:text-text"
-                title={entryTitle(entry)}
-              >
-                {entryTitle(entry)}
-              </li>
-            {/each}
-            {#if count > shown.length}
-              <li class="px-1.5 text-[0.65rem] font-medium leading-tight text-muted">
-                +{count - shown.length} more
-              </li>
-            {/if}
-          </ul>
-        {/if}
-      </button>
-    {/each}
+            </ul>
+          </li>
+        {/each}
+      </ol>
+    {/if}
   </div>
 </section>

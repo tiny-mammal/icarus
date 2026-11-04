@@ -5,7 +5,6 @@
   import TopBar from './components/TopBar.svelte';
   import Calendar from './components/Calendar.svelte';
   import DayPane from './components/DayPane.svelte';
-  import Composer from './components/Composer.svelte';
   import WriteButton from './components/WriteButton.svelte';
   import SettingsMenu from './components/SettingsMenu.svelte';
   import StatsModal from './components/StatsModal.svelte';
@@ -35,21 +34,21 @@
   onMount(() => {
     app.init();
 
-    // Global Escape closes the top-most overlay; N opens the composer from the
-    // calendar (an open day pane handles N itself, dating the entry that day).
+    // Global Escape closes the top-most layer (writing goes back to reading);
+    // N starts writing from the calendar (an open day pane handles N itself,
+    // dating the entry that day).
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'n' || e.key === 'N') && !e.shiftKey) {
         if (app.view !== 'main' || app.selectedKey || app.overlayOpen) return;
         if (!isPlainShortcut(e)) return;
         e.preventDefault();
-        app.openComposer();
+        app.resumeWriting();
         return;
       }
       if (e.key !== 'Escape') return;
       if (app.statsOpen) app.statsOpen = false;
       else if (app.settingsOpen) app.settingsOpen = false;
-      else if (app.composerOpen) app.closeComposer();
-      else if (app.readerFullscreen) app.readerFullscreen = false;
+      else if (app.editing) app.stopEditing();
       else if (app.selectedKey) app.closeDay();
     };
     window.addEventListener('keydown', onKey);
@@ -111,13 +110,12 @@
     <LockScreen />
   {:else}
     <TopBar />
-    <!-- Main stage: calendar with the day pane sliding over it. -->
+    <!-- Main stage: calendar with the day pane (reading and writing) over it. -->
     <main class="relative min-h-0 flex-1 overflow-hidden">
       <Calendar />
       <DayPane />
     </main>
     <WriteButton variant="floating" />
-    <Composer />
     <SettingsMenu />
     <StatsModal />
     {#if app.privacyDialog}<PrivacyDialog />{/if}

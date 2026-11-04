@@ -74,7 +74,7 @@
 </script>
 
 <header
-  class="relative z-40 flex h-14 shrink-0 items-center gap-4 border-b border-slate px-4 sm:px-6"
+  class="relative z-40 flex h-14 shrink-0 items-center gap-2 border-b border-slate px-3 sm:gap-4 sm:px-6"
 >
   <!-- Brand -->
   <div class="flex shrink-0 items-center gap-2 text-sm font-semibold tracking-tight text-text">
@@ -87,7 +87,7 @@
   <!-- Centered search -->
   <div class="relative mx-auto w-full max-w-md">
     <div
-      class="flex items-center gap-2 rounded-lg border border-slate bg-slate-soft px-3 py-1.5 transition-colors focus-within:border-faint"
+      class="flex items-center gap-2 rounded-lg border border-slate bg-slate-soft px-3 py-2 transition-colors focus-within:border-faint sm:py-1.5"
     >
       <svg class="shrink-0 text-muted" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
       <input
@@ -97,6 +97,7 @@
         onblur={() => setTimeout(() => (focused = false), 120)}
         onkeydown={onKeydown}
         type="text"
+        enterkeyhint="search"
         placeholder="Search entries…"
         class="w-full bg-transparent text-sm text-text placeholder:text-muted focus:outline-none"
         spellcheck="false"
@@ -120,13 +121,13 @@
 
   <!-- Writing: saved drafts (only once there are any) and the "write" action -->
   {#if app.drafts.length > 0}
-    <DraftsMenu placement="bottom" compact />
+    <DraftsMenu compact />
   {/if}
   <WriteButton variant="header" />
 
   <!-- Statistics -->
   <button
-    class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
+    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text"
     aria-label="Statistics"
     onclick={() => (app.statsOpen = true)}
   >
@@ -136,7 +137,7 @@
   <!-- Lock (encrypted diaries only) -->
   {#if app.encrypted}
     <button
-      class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:opacity-50"
+      class="grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text disabled:opacity-50"
       aria-label="Lock diary"
       title="Lock diary"
       onclick={() => app.lock()}
@@ -148,7 +149,7 @@
 
   <!-- Settings -->
   <button
-    class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
+    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text"
     aria-label="Settings"
     onclick={() => (app.settingsOpen = true)}
   >

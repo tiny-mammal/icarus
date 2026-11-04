@@ -3,8 +3,8 @@
   import { compactDayLabel, keyToDate, longDayLabel, shortDayLabel } from '../lib/date';
 
   // The open day's label flanked by arrows that jump to the previous/next day
-  // with entries. Shared by the side pane and the full-screen reader.
-  let { date, compact = false }: { date: Date; compact?: boolean } = $props();
+  // with entries.
+  let { date }: { date: Date } = $props();
 
   function hint(dir: 'Previous' | 'Next', key: string | null): string {
     if (!key) return `No ${dir === 'Previous' ? 'earlier' : 'later'} entries`;
@@ -24,7 +24,7 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
   </button>
   <h2
-    class="truncate font-semibold tracking-tight text-text tabular-nums {compact ? 'text-sm' : 'text-base'}"
+    class="truncate text-base font-semibold tracking-tight text-text tabular-nums"
   >
     <!-- Narrow screens get the short form so the header's actions fit. -->
     <span class="sm:hidden">{compactDayLabel(date, app.dateFormat)}</span>

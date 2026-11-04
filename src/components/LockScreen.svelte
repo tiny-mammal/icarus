@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
-  import Modal from './Modal.svelte';
+  import ConfirmDialog from './ConfirmDialog.svelte';
   import NewPasswordFields from './NewPasswordFields.svelte';
   import PasswordField from './PasswordField.svelte';
   import { app } from '../lib/store.svelte';
@@ -136,24 +136,14 @@
 </div>
 
 {#if confirmForget}
-  <Modal title="Delete this diary?" onclose={() => (confirmForget = false)} width="max-w-xs">
-    <p class="text-sm text-muted">
-      The encrypted diary and its drafts will be permanently erased from this browser. Only do this
-      if the password and recovery key are lost. This can't be undone.
-    </p>
-    <div class="mt-5 flex justify-end gap-2">
-      <button
-        class="rounded-lg px-3.5 py-2 text-sm text-muted transition-colors hover:bg-slate hover:text-text"
-        onclick={() => (confirmForget = false)}
-      >
-        Cancel
-      </button>
-      <button
-        class="rounded-lg bg-red-500 px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-red-500/90"
-        onclick={forget}
-      >
-        Delete diary
-      </button>
-    </div>
-  </Modal>
+  <ConfirmDialog
+    title="Delete this diary?"
+    confirmLabel="Delete diary"
+    onconfirm={forget}
+    oncancel={() => (confirmForget = false)}
+    z="z-[65]"
+  >
+    The encrypted diary and its drafts will be permanently erased from this browser. Only do this
+    if the password and recovery key are lost. This can't be undone.
+  </ConfirmDialog>
 {/if}

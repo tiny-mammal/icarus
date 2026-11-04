@@ -23,15 +23,23 @@
     type SpellHit,
   } from '../lib/spellcheck-extension';
   import SpellMenu from './SpellMenu.svelte';
+  import { countVisible, indexAfterVisible } from '../lib/caret';
 
   let {
     value = $bindable(''),
     placeholder = '',
     class: className = '',
+    focusAt = null,
   }: {
     value?: string;
     placeholder?: string;
     class?: string;
+    /**
+     * Where to put the caret once the editor is up: after the n-th visible
+     * character (where the user tapped while reading, see `caret.ts`), at the
+     * end of the text, or nowhere.
+     */
+    focusAt?: number | 'end' | null;
   } = $props();
 
   let editor = $state<Editor>();
@@ -41,6 +49,24 @@
   // (typing) apart from external ones (opening a draft, reset after commit) so
   // we never feed the editor back its own output — which would jump the cursor.
   let lastValue = value;
+
+  /** Document position right after the n-th visible character, if it exists. */
+  function positionAfterVisible(current: Editor, n: number): number | null {
+    let remaining = n;
+    let found: number | null = null;
+    current.state.doc.descendants((node, pos) => {
+      if (found !== null) return false;
+      if (!node.isText || !node.text) return true;
+      const count = countVisible(node.text);
+      if (count >= remaining) {
+        found = pos + (indexAfterVisible(node.text, remaining) ?? 0);
+      } else {
+        remaining -= count;
+      }
+      return false;
+    });
+    return found;
+  }
 
   function openMenu(hit: SpellHit) {
     menu = { hit, suggestions: suggest(hit.word) };
@@ -82,6 +108,15 @@
         value = lastValue;
       },
     });
+
+    const initialFocus = focusAt;
+    if (initialFocus) {
+      requestAnimationFrame(() => {
+        if (!editor) return;
+        const pos = initialFocus === 'end' ? null : positionAfterVisible(editor, initialFocus);
+        editor.commands.focus(pos ?? 'end', { scrollIntoView: true });
+      });
+    }
 
     return {
       destroy() {

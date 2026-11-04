@@ -74,13 +74,30 @@ test('steps between days with entries and between entries of a day', async ({ pa
   await page.keyboard.press('ArrowRight');
   await expect(article(page)).toContainText('Morning walk');
 
-  // Full-screen reader carries the same controls.
-  await page.getByRole('button', { name: 'View full screen' }).click();
+  // E edits the entry being read in the same pane; Escape goes back to reading.
+  const title = page.getByPlaceholder('Title', { exact: true });
+  await page.keyboard.press('e');
+  await expect(title).toHaveValue('Morning walk');
+  await page.keyboard.press('Escape');
+  await expect(article(page)).toContainText('Morning walk');
+
+  // Tapping the text does the same, with the caret where it was tapped.
+  await article(page).getByRole('heading', { name: 'Morning walk' }).click();
+  await expect(title).toBeFocused();
+  await page.keyboard.press('Escape');
+
+  // Leaving an untouched entry doesn't leave a draft behind.
+  await expect(page.getByRole('button', { name: /Drafts/ })).toHaveCount(0);
+
+  // Wide screens can expand the pane to the whole window; F toggles it too.
+  await page.getByRole('button', { name: 'Full screen' }).click();
   await expect(page.getByRole('button', { name: 'Exit full screen' })).toBeVisible();
-  await page.waitForTimeout(300); // let the fade-in settle for the screenshot
-  await page.screenshot({ path: 'test-results/day-navigation-fullscreen.png' });
+  await page.waitForTimeout(350); // let the pane settle for the screenshot
+  await page.screenshot({ path: 'test-results/day-navigation-expanded.png' });
+  await page.keyboard.press('f');
+  await expect(page.getByRole('button', { name: 'Full screen' })).toBeVisible();
   await page.keyboard.press('ArrowRight');
-  await expect(page.getByRole('heading', { name: 'Midsummer' }).last()).toBeVisible();
+  await expect(article(page)).toContainText('Midsummer');
 });
 
 test('writes a new entry on the open day, including empty days', async ({ page }) => {
@@ -92,7 +109,7 @@ test('writes a new entry on the open day, including empty days', async ({ page }
   await page.screenshot({ path: 'test-results/day-compose-header.png' });
   await page.getByRole('button', { name: 'New entry on this day' }).click();
   await expect(page.getByRole('button', { name: /^Sat, .*20.*2026$/ })).toBeVisible();
-  await page.keyboard.press('Escape'); // close the composer
+  await page.keyboard.press('Escape'); // back to reading
   await page.keyboard.press('Escape'); // close the day pane
 
   // An empty day offers the same action from its empty state.
@@ -102,8 +119,8 @@ test('writes a new entry on the open day, including empty days', async ({ page }
   await page.screenshot({ path: 'test-results/day-compose-empty.png' });
   await page.getByRole('button', { name: 'Write an entry for this day' }).click();
   await expect(page.getByRole('button', { name: /^Tue, .*16.*2026$/ })).toBeVisible();
-  await page.waitForTimeout(350); // let the composer open for the screenshot
-  await page.screenshot({ path: 'test-results/day-compose-composer.png' });
+  await page.waitForTimeout(350); // let the editor settle for the screenshot
+  await page.screenshot({ path: 'test-results/day-compose-editor.png' });
 });
 
 test('narrow screens show the short day label so header actions fit', async ({ page }) => {

@@ -141,10 +141,11 @@ class AppStore {
   /** UID of the entry to focus inside the opened day (from a search hit). */
   focusEntryUid = $state<string | null>(null);
 
-  /** Whether the writing composer (the entry editor modal) is open. */
-  composerOpen = $state(false);
-  /** Shows the currently-read entry full-screen in distraction-free mode. */
-  readerFullscreen = $state(false);
+  /**
+   * Whether the day pane shows the editor (writing a new entry or revising
+   * one) instead of the reader. Reading and writing share that one surface.
+   */
+  editing = $state(false);
   settingsOpen = $state(false);
   statsOpen = $state(false);
   busy = $state(false);
@@ -159,11 +160,18 @@ class AppStore {
   /** Underline misspellings in the writing fields. User preference. */
   spellcheck = $state(true);
 
+  /**
+   * Wide screens: the day pane fills the window, text centred. Lasts while
+   * the pane stays open (across days, reading and writing) and resets when
+   * it closes, so the next quick look at a day opens at the side again.
+   */
+  paneExpanded = $state(false);
+
   /** Personal spell-check dictionary (words added from the editor menu). */
   spellWords = $state<string[]>([]);
 
   // --- draft editor state -------------------------------------------------
-  // The live contents of the composer. Kept here (not in the component) so
+  // The live contents of the editor. Kept here (not in the component) so
   // it can be autosaved and swapped between drafts from one place.
   draftId = $state<string | null>(null); // null = a fresh, unsaved draft
   // True only when the editor was loaded from a previously saved draft (not a
@@ -436,10 +444,10 @@ class AppStore {
     setUserWords([]);
     buildSearchIndex([]);
     this.selectedKey = null;
+    this.paneExpanded = false;
     this.searchHighlight = '';
     this.focusEntryUid = null;
-    this.composerOpen = false;
-    this.readerFullscreen = false;
+    this.editing = false;
     this.settingsOpen = false;
     this.statsOpen = false;
     this.exportOpen = false;
@@ -745,8 +753,8 @@ class AppStore {
   // --- writing ------------------------------------------------------------
   /**
    * Commit the current editor contents as a new entry: update memory, rebuild
-   * search, and persist. On success the backing draft is removed and the
-   * editor is cleared.
+   * search, and persist. On success the backing draft is removed, the editor
+   * is cleared and the calendar shows the entry's month.
    */
   async commit(): Promise<void> {
     const title = this.draftTitle.trim();
@@ -755,7 +763,6 @@ class AppStore {
       return;
     }
 
-    const targetKey = this.draftDateKey;
     const fields = {
       title: title || 'Untitled',
       content: this.draftContent,
@@ -805,21 +812,16 @@ class AppStore {
     // A committed entry must no longer linger as a draft.
     this.cancelDraftSave();
     if (this.draftId) await this.removeDraft(this.draftId);
-    this.resetEditor();
-
-    this.selectedKey = targetKey;
-    this.currentMonth = startOfMonth(keyToDate(targetKey));
-    this.composerOpen = false;
+    this.leaveEditorForCalendar();
   }
 
   /**
-   * Load an existing committed entry back into the composer to revise it.
-   * On the next commit the entry is updated in place rather than duplicated.
+   * Turn an entry in the day pane into the editor to revise it. On the next
+   * commit the entry is updated in place rather than duplicated.
    */
   async editEntry(entry: DiaryEntry): Promise<void> {
-    // Preserve whatever was already in the composer before swapping it.
+    // Preserve whatever was already in the editor before swapping it.
     await this.flushDraftNow();
-    this.readerFullscreen = false;
     this.editingUid = entry.uid;
     const saved = findEntryDraft(this.drafts, entry.uid);
     this.draftId = saved?.id ?? randomId();
@@ -828,20 +830,67 @@ class AppStore {
     this.draftLocation = saved?.location ?? entry.location ?? '';
     this.draftContent = saved?.content ?? entry.content;
     this.draftDateKey = saved?.dateKey ?? dateKey(entry.date);
-    this.composerOpen = true;
+    this.openEditor();
   }
 
   /**
-   * Open the composer on a fresh entry dated `key`. Work already in the
-   * composer is stashed to the drafts list first, so nothing in progress is lost.
+   * Start a fresh entry dated `key` in the day pane. Work already in the
+   * editor is stashed to the drafts list first, so nothing in progress is lost.
    */
-  async composeFor(key: string): Promise<void> {
+  async newEntryOn(key: string): Promise<void> {
     if (this.hasEditorContent() && !(await this.flushDraftNow())) return;
     this.cancelDraftSave();
     this.resetEditor();
     this.draftDateKey = key;
-    this.readerFullscreen = false;
-    this.composerOpen = true;
+    this.openEditor();
+  }
+
+  /**
+   * Resume writing whatever is loaded in the editor: a fresh entry for today,
+   * or the work in progress the user left when they last stopped editing.
+   */
+  resumeWriting(): void {
+    this.openEditor();
+  }
+
+  /**
+   * Go back to reading. Work in progress is flushed to drafts and stays
+   * loaded, so resuming picks up exactly where the user left off. Opening an
+   * entry for editing and leaving it untouched leaves nothing behind.
+   */
+  stopEditing(): void {
+    if (!this.editing) return;
+    this.editing = false;
+    if (this.editingUid && this.revisionUnchanged()) {
+      const id = this.draftId;
+      this.cancelDraftSave();
+      this.resetEditor();
+      if (id && this.drafts.some((d) => d.id === id)) void this.removeDraft(id);
+      return;
+    }
+    void this.flushDraftNow();
+  }
+
+  /** Show the editor in the day pane, on the day the draft is dated. */
+  private openEditor(): void {
+    this.clearSearchFocus();
+    this.selectedKey = this.draftDateKey;
+    this.currentMonth = startOfMonth(keyToDate(this.draftDateKey));
+    this.editing = true;
+  }
+
+  /** True while revising an entry without having changed anything yet. */
+  private revisionUnchanged(): boolean {
+    const entry = this.editingUid
+      ? this.entries.find((e) => e.uid === this.editingUid)
+      : undefined;
+    return (
+      !!entry &&
+      this.draftTitle === entry.title &&
+      this.draftLocation === (entry.location ?? '') &&
+      this.draftContent === entry.content &&
+      this.draftDateKey === dateKey(entry.date)
+    );
   }
 
   // --- drafts -------------------------------------------------------------
@@ -978,7 +1027,8 @@ class AppStore {
    * Empty editors are ignored so we never persist a blank draft.
    */
   async flushDraft(): Promise<boolean> {
-    if (!this.hasEditorContent()) return true;
+    // An untouched revision is not a draft: the entry itself already holds it.
+    if (!this.hasEditorContent() || this.revisionUnchanged()) return true;
     if (!this.draftId) this.draftId = randomId();
 
     const draft: StoredDraft = {
@@ -1038,10 +1088,10 @@ class AppStore {
     this.draftLocation = d.location;
     this.draftContent = d.content;
     this.draftDateKey = d.dateKey;
-    this.composerOpen = true;
+    this.openEditor();
   }
 
-  /** "Save as draft" — stash the current work and start a fresh editor. */
+  /** "Save as draft" — park the current work in drafts and go back to the calendar. */
   async saveDraftAndReset(): Promise<void> {
     this.cancelDraftSave();
     if (!this.hasEditorContent()) {
@@ -1049,7 +1099,7 @@ class AppStore {
       return;
     }
     if (!(await this.flushDraft())) return;
-    this.resetEditor();
+    this.leaveEditorForCalendar();
     this.toast('success', 'Saved to drafts');
   }
 
@@ -1068,12 +1118,27 @@ class AppStore {
     if (await this.deleteDraft(id)) this.toast('info', 'Draft deleted');
   }
 
-  /** Delete a draft; clears the editor (and pending autosave) if it was open. */
+  /** Delete a draft; if it was open, the editor is cleared and closed. */
   async deleteDraft(id: string): Promise<boolean> {
     if (this.draftId === id) this.cancelDraftSave();
     if (!(await this.removeDraft(id))) return false;
-    if (this.draftId === id) this.resetEditor();
+    if (this.draftId === id) {
+      if (this.editing) this.leaveEditorForCalendar();
+      else this.resetEditor();
+    }
     return true;
+  }
+
+  /**
+   * Finish a writing session (saved, parked as a draft or discarded): clear
+   * the editor and return to the calendar, on the month the entry was dated.
+   */
+  private leaveEditorForCalendar(): void {
+    const month = startOfMonth(keyToDate(this.draftDateKey));
+    this.resetEditor();
+    this.editing = false;
+    this.hidePane();
+    this.currentMonth = month;
   }
 
   // --- committed entry deletion -------------------------------------------
@@ -1113,7 +1178,10 @@ class AppStore {
       return;
     }
     // If we were editing this entry, drop the editor state.
-    if (this.editingUid === uid) this.resetEditor();
+    if (this.editingUid === uid) {
+      this.editing = false;
+      this.resetEditor();
+    }
     // If the open day no longer has anything or the focused entry is gone,
     // close the pane — nothing to show.
     if (this.focusEntryUid === uid) this.focusEntryUid = null;
@@ -1224,29 +1292,10 @@ class AppStore {
     }
   }
 
-  /**
-   * Open the composer on whatever is loaded in the editor: a fresh entry for
-   * today, or the work in progress the user left when they last closed it.
-   */
-  openComposer(): void {
-    this.readerFullscreen = false;
-    this.composerOpen = true;
-  }
-
-  /**
-   * Close the composer and flush the current snapshot. The editor state stays
-   * loaded so reopening resumes exactly where the user left off, including
-   * while revising a committed entry.
-   */
-  closeComposer(): void {
-    void this.flushDraftNow();
-    this.composerOpen = false;
-  }
-
-  /** True while any overlay sits on top of the main view (blocks shortcuts). */
+  /** True while writing or an overlay is up (blocks reading shortcuts). */
   get overlayOpen(): boolean {
     return (
-      this.composerOpen ||
+      this.editing ||
       this.settingsOpen ||
       this.statsOpen ||
       this.exportOpen ||
@@ -1265,19 +1314,26 @@ class AppStore {
 
   // --- navigation ---------------------------------------------------------
   selectDay(key: string): void {
+    this.stopEditing();
     this.clearSearchFocus();
     this.selectedKey = key;
   }
   /** Open a specific day and bring the calendar to its month. */
   openDay(key: string): void {
+    this.stopEditing();
     this.clearSearchFocus();
     this.currentMonth = startOfMonth(keyToDate(key));
     this.selectedKey = key;
   }
   closeDay(): void {
+    this.stopEditing();
+    this.hidePane();
+  }
+  /** Close the day pane; full screen only lasts while it is open. */
+  private hidePane(): void {
     this.clearSearchFocus();
     this.selectedKey = null;
-    this.readerFullscreen = false;
+    this.paneExpanded = false;
   }
   /**
    * Open the previous/next day that has entries, skipping empty days, and keep
@@ -1286,6 +1342,7 @@ class AppStore {
   stepDay(dir: -1 | 1): void {
     const key = dir === 1 ? this.nextDayKey : this.prevDayKey;
     if (!key) return;
+    this.stopEditing();
     this.clearSearchFocus();
     this.selectedKey = key;
     this.currentMonth = startOfMonth(keyToDate(key));
@@ -1298,6 +1355,7 @@ class AppStore {
     this.currentMonth = new Date(year, month, 1);
   }
   goToToday(): void {
+    this.stopEditing();
     this.clearSearchFocus();
     this.currentMonth = startOfMonth(new Date());
     this.selectedKey = dateKey(new Date());
@@ -1308,6 +1366,7 @@ class AppStore {
    * carrying the query so the reader can highlight what was searched for.
    */
   jumpToEntry(entry: DiaryEntry, query = ''): void {
+    this.stopEditing();
     this.currentMonth = startOfMonth(entry.date);
     this.selectedKey = dateKey(entry.date);
     this.focusEntryUid = entry.uid;

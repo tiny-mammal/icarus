@@ -16,7 +16,11 @@
   } from '../lib/date';
 
   // Bound to a local `YYYY-MM-DD` key (e.g. app.draftDateKey).
-  let { value = $bindable() }: { value: string } = $props();
+  // `align` picks which edge of the trigger the popover hangs from.
+  let {
+    value = $bindable(),
+    align = 'right',
+  }: { value: string; align?: 'left' | 'right' } = $props();
 
   const today = new Date();
   const weekdays = $derived(weekdayLabels(app.weekStart));
@@ -53,7 +57,7 @@
   <!-- Trigger: mirrors the old native input's chip styling -->
   <button
     type="button"
-    class="flex items-center gap-1.5 rounded-md bg-slate-soft px-2.5 py-1 text-xs text-muted transition-colors hover:text-text focus:outline-none focus:ring-1 focus:ring-faint {open ? 'text-text ring-1 ring-faint' : ''}"
+    class="flex items-center gap-1.5 rounded-md bg-slate-soft px-2.5 py-2 text-xs sm:py-1 text-muted transition-colors hover:text-text focus:outline-none focus:ring-1 focus:ring-faint {open ? 'text-text ring-1 ring-faint' : ''}"
     onclick={toggle}
     aria-haspopup="dialog"
     aria-expanded={open}
@@ -63,9 +67,9 @@
   </button>
 
   {#if open}
-    <!-- Trigger sits near the top of the fullscreen panel, so open downward. -->
+    <!-- Trigger sits near the top of the editor, so open downward. -->
     <div
-      class="absolute top-full right-0 z-50 mt-2 w-72 origin-top-right rounded-2xl border border-slate bg-surface p-3 shadow-2xl shadow-black/50"
+      class="absolute top-full z-50 mt-2 w-72 rounded-2xl {align === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'} border border-slate bg-surface p-3 shadow-2xl shadow-black/50"
       transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
       use:clickOutside={() => (open = false)}
       use:trapFocus={() => (open = false)}

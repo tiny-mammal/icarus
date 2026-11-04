@@ -28,7 +28,7 @@
 <!-- A polite live region for success/info; we render each error with an
      `alert` role so screen readers interrupt instead of waiting. -->
 <div
-  class="pointer-events-none fixed inset-x-0 top-20 z-[60] flex flex-col items-center gap-2"
+  class="pointer-events-none fixed inset-x-0 top-[calc(4.5rem+env(safe-area-inset-top))] z-[80] flex flex-col items-center gap-2 px-4"
   role="region"
   aria-label="Notifications"
 >

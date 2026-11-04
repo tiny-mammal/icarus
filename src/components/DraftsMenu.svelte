@@ -6,20 +6,14 @@
   import { keyToDate, longDayLabel } from '../lib/date';
   import { truncateText } from '../lib/text';
 
-  // Anchor the popover to the left or right edge of the trigger button, and
-  // open it above (inside the composer's footer) or below (in the top bar).
+  // The list hangs below the trigger, from its right edge (the trigger sits at
+  // the right of the top bar and of the editor header).
   let {
-    align = 'right',
-    placement = 'top',
     compact = false,
   }: {
-    align?: 'left' | 'right';
-    placement?: 'top' | 'bottom';
     /** Hide the "Drafts" label on narrow screens, leaving the icon. */
     compact?: boolean;
   } = $props();
-
-  const origin = $derived(`${placement === 'top' ? 'bottom' : 'top'} ${align}`);
 
   let open = $state(false);
 
@@ -62,9 +56,7 @@
   {#if open}
     <div
       class="absolute z-50 max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-slate bg-surface p-1.5 shadow-2xl shadow-black/50
-        {placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}
-        {align === 'right' ? 'right-0' : 'left-0'}"
-      style:transform-origin={origin}
+        right-0 top-full mt-2 origin-top-right"
       transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
       use:clickOutside={() => (open = false)}
       use:trapFocus={() => (open = false)}
@@ -99,7 +91,7 @@
               </p>
             </button>
             <button
-              class="shrink-0 rounded-md p-1 text-muted opacity-0 transition-all hover:bg-slate hover:text-red-400 group-hover:opacity-100"
+              class="shrink-0 rounded-md p-2 text-muted transition-all hover:bg-slate hover:text-red-400 focus-visible:opacity-100 sm:p-1 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
               aria-label="Delete draft"
               onclick={() => askDelete(draft.id)}
             >

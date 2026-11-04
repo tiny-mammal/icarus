@@ -73,7 +73,7 @@ describe('encrypted diary flow', () => {
   it('locks, clears memory, and unlocks with the password', async () => {
     const { app } = await encryptedApp();
     app.draftTitle = 'Unsaved thought';
-    app.composerOpen = true;
+    app.editing = true;
 
     expect(await app.lock()).toBe(true);
     expect(app.view).toBe('locked');

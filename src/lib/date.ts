@@ -110,6 +110,11 @@ export function compactDayLabel(d: Date, format: DateFormat = 'auto'): string {
   return formatDay(d, 'compact', format);
 }
 
+/** Localised short weekday name for a specific day, e.g. "Mon". */
+export function weekdayShortLabel(d: Date): string {
+  return fmtWeekdayShort.format(d);
+}
+
 /** Localised short month names (Jan…Dec), for the header month/year picker. */
 export function monthShortLabels(): string[] {
   return Array.from({ length: 12 }, (_, m) =>

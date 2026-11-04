@@ -3,7 +3,8 @@
   import { app } from '../lib/store.svelte';
 
   /**
-   * The primary "write" action. On wide screens it sits in the top bar; on
+   * The primary "write" action: opens the day pane in writing mode on today
+   * (or on the work in progress). On wide screens it sits in the top bar; on
    * phones it floats in the bottom-right corner, within thumb reach, and steps
    * aside while a day pane (which offers its own "new entry" action) is open.
    */
@@ -28,7 +29,7 @@
     class="hidden h-8 shrink-0 items-center gap-1.5 rounded-lg bg-text px-3 text-sm font-medium text-ink transition-opacity hover:opacity-90 sm:flex"
     aria-label={label}
     title="{label} (N)"
-    onclick={() => app.openComposer()}
+    onclick={() => app.resumeWriting()}
   >
     {@render plus(16)}
     <span class="hidden md:inline">{label}</span>
@@ -37,7 +38,7 @@
   <button
     class="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-5 z-30 grid h-14 w-14 place-items-center rounded-full bg-text text-ink shadow-xl shadow-black/50 transition-transform active:scale-95 sm:hidden"
     aria-label={label}
-    onclick={() => app.openComposer()}
+    onclick={() => app.resumeWriting()}
     transition:fade={{ duration: 150 }}
   >
     {@render plus(22)}

@@ -23,14 +23,30 @@ export function clickOutside(node: HTMLElement, onOutside: () => void) {
   };
 }
 
+export interface TrapFocusOptions {
+  onClose?: () => void;
+  /**
+   * Where focus goes on open: the first control (popovers) or the container
+   * itself (dialogs, so their Close button isn't focused by default). Focus
+   * that a child already claimed (e.g. an autofocused field) is left alone.
+   */
+  initial?: 'first' | 'container';
+}
+
 /**
  * Keep keyboard focus inside `node` while it's mounted — for popovers/dialogs
  * that should behave like proper dialogs: Tab cycles within, Escape closes (via
  * the supplied callback), and focus moves to the first control on open and
  * returns to the previously-focused element on close.
  */
-export function trapFocus(node: HTMLElement, onClose?: () => void) {
-  let close = onClose;
+export function trapFocus(
+  node: HTMLElement,
+  options?: (() => void) | TrapFocusOptions,
+) {
+  const parse = (o: typeof options): TrapFocusOptions =>
+    typeof o === 'function' ? { onClose: o } : (o ?? {});
+  let close = parse(options).onClose;
+  const initial = parse(options).initial ?? 'first';
   const previouslyFocused = document.activeElement as HTMLElement | null;
 
   const FOCUSABLE =
@@ -64,12 +80,16 @@ export function trapFocus(node: HTMLElement, onClose?: () => void) {
   };
 
   node.addEventListener('keydown', onKeydown);
-  // Focus the first control once the popover has mounted.
-  requestAnimationFrame(() => focusable()[0]?.focus());
+  // Move focus in once the popover has mounted.
+  requestAnimationFrame(() => {
+    if (node.contains(document.activeElement)) return;
+    if (initial === 'container') node.focus({ preventScroll: true });
+    else focusable()[0]?.focus();
+  });
 
   return {
-    update(next: () => void) {
-      close = next;
+    update(next?: (() => void) | TrapFocusOptions) {
+      close = parse(next).onClose;
     },
     destroy() {
       node.removeEventListener('keydown', onKeydown);

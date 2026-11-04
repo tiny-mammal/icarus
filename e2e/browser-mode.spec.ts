@@ -25,15 +25,18 @@ const IMPORTED_ICS = [
 ].join('\r\n');
 
 
-async function openComposer(page: Page): Promise<void> {
+async function startWriting(page: Page): Promise<void> {
   await page.getByRole('button', { name: /New entry|Continue draft/ }).click();
 }
 
 async function writeEntry(page: Page, title: string, body: string): Promise<void> {
-  await openComposer(page);
+  await startWriting(page);
   await page.getByPlaceholder('Title', { exact: true }).fill(title);
   await page.locator('.ProseMirror').fill(body);
-  await page.getByRole('button', { name: /Commit entry/ }).click();
+  await page.getByRole('button', { name: 'Save entry' }).click();
+  // Saving returns to the calendar; the entry is there on its day.
+  await expect(page.getByRole('complementary')).toBeHidden();
+  await openToday(page);
   await expect(page.getByRole('article').getByText(title)).toBeVisible();
 }
 
@@ -70,9 +73,11 @@ test('creates, persists and edits an entry in IndexedDB', async ({ page }) => {
   await expect(page.getByRole('article').getByText('Browser smoke test')).toBeVisible();
 
   // Editing exercises id generation on this origin.
-  await page.getByLabel('Edit entry').first().click();
+  await page.getByRole('button', { name: 'Edit entry' }).click();
   await page.locator('.ProseMirror').fill('Edited in the browser.');
-  await page.getByRole('button', { name: /Save changes/ }).click();
+  await page.getByRole('button', { name: 'Save entry' }).click();
+  await expect(page.getByRole('complementary')).toBeHidden();
+  await openToday(page);
   await expect(
     page.getByRole('article').getByText('Edited in the browser.'),
   ).toBeVisible();
@@ -87,7 +92,7 @@ test('creates, persists and edits an entry in IndexedDB', async ({ page }) => {
 
 test('restores an autosaved draft after a reload', async ({ page }) => {
   await startPlainDiary(page);
-  await openComposer(page);
+  await startWriting(page);
   await page.getByPlaceholder('Title', { exact: true }).fill('Half-written');
   await page.locator('.ProseMirror').fill('Draft body');
   await page.getByRole('button', { name: 'Save as draft' }).click();
