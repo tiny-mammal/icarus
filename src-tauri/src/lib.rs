@@ -5,8 +5,10 @@
 //! dialogs and the system-opener used to launch
 //! external links from diary entries in the user's default browser). The app
 //! is fully local-first: the only network request is the opt-in update check
-//! in `updates.rs`, which is off unless the user turns it on.
+//! in `updates.rs`, which is off unless the user turns it on. The only file it
+//! keeps outside the diary folder is that folder's path (`remembered.rs`).
 
+mod remembered;
 mod updates;
 
 #[cfg(target_os = "linux")]
@@ -38,6 +40,10 @@ fn private_runtime_dirs() -> std::io::Result<std::path::PathBuf> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+    // Resolved before Linux moves the XDG directories into tmpfs below.
+    let remembered = remembered::RememberedFolder::locate(&context.config().identifier);
+
     #[cfg(target_os = "linux")]
     let runtime_dir = private_runtime_dirs().expect("Icarus needs /dev/shm for private GTK data");
 
@@ -45,7 +51,12 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![updates::latest_release])
+        .manage(remembered)
+        .invoke_handler(tauri::generate_handler![
+            updates::latest_release,
+            remembered::remembered_folder,
+            remembered::set_remembered_folder,
+        ])
         .setup(|_app| {
             #[cfg(target_os = "linux")]
             if let Some(settings) = gtk::Settings::default() {
@@ -56,7 +67,7 @@ pub fn run() {
             }
             Ok(())
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while running Icarus Diary");
     app.run(move |_, event| {
         #[cfg(target_os = "linux")]

@@ -2,8 +2,10 @@
 
 Icarus Diary is a local-first diary backed by a plain `.ics` file. On desktop,
 you choose a data folder. Icarus keeps `diary.ics`, `drafts.json`, and
-`settings.json` in that folder, including when it is on removable media. It
-does not remember the folder on the host: choose it again after relaunching.
+`settings.json` in that folder, including when it is on removable media. The
+only thing it keeps on the computer is the folder's path, so the next launch
+reopens it (or its lock screen). Turn off "Open this folder on launch" in
+Settings to erase that record and choose the folder every time.
 No account, server, or sync service is required.
 
 The same frontend runs in a plain browser and on Android too: the app detects

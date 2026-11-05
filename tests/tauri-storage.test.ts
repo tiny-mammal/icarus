@@ -5,6 +5,21 @@ const mocks = vi.hoisted(() => ({
   selections: [] as (string | null)[],
   writes: [] as string[],
   failWrites: new Set<string>(),
+  // Stands in for the record `src-tauri/src/remembered.rs` keeps on the computer.
+  rememberedFolder: null as string | null,
+  failRemember: false,
+}));
+
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: async (command: string, args?: { folder: string | null }) => {
+    if (command === 'remembered_folder') return mocks.rememberedFolder;
+    if (command === 'set_remembered_folder') {
+      if (mocks.failRemember) throw new Error('Config directory is read-only');
+      mocks.rememberedFolder = args!.folder;
+      return null;
+    }
+    throw new Error(`Unexpected command: ${command}`);
+  },
 }));
 
 vi.mock('@tauri-apps/api/path', () => ({
@@ -46,6 +61,8 @@ beforeEach(async () => {
   mocks.selections.length = 0;
   mocks.writes.length = 0;
   mocks.failWrites.clear();
+  mocks.rememberedFolder = null;
+  mocks.failRemember = false;
 });
 
 describe('desktop diary folder', () => {
@@ -69,7 +86,45 @@ describe('desktop diary folder', () => {
     ]);
     expect(mocks.writes.every((path) => path.startsWith('/usb/Journal/'))).toBe(true);
     expect(await tauriBackend.getItem('drafts', 'drafts')).toEqual(['private']);
-    expect(await tauriBackend.getRememberedVault()).toBeNull();
+  });
+
+  it('reopens the last folder on launch, preferring its encrypted diary', async () => {
+    await tauriBackend.rememberVault({ kind: 'file', path: '/usb/Journal/diary.ics' });
+    expect(mocks.rememberedFolder).toBe('/usb/Journal');
+
+    // A later launch, with the diary encrypted in the meantime.
+    await tauriBackend.rememberVault(null);
+    mocks.rememberedFolder = '/usb/Journal';
+    mocks.files.set('/usb/Journal/diary.icarus', '{"format":"icarus-encrypted-diary"}');
+    mocks.files.set('/usb/Journal/settings.json', '{"autoLockMinutes":5}');
+    expect(await tauriBackend.getRememberedVault()).toEqual({
+      kind: 'file',
+      path: '/usb/Journal/diary.icarus',
+    });
+    // Its settings are readable before the lock screen asks for the password.
+    expect(await tauriBackend.getItem('settings', 'autoLockMinutes')).toBe(5);
+  });
+
+  it('keeps nothing on the computer when the folder opts out or is closed', async () => {
+    const ref = { kind: 'file' as const, path: '/usb/Journal/diary.ics' };
+    await tauriBackend.rememberVault(ref);
+    await tauriBackend.setItem('settings', 'rememberFolder', false);
+    await tauriBackend.rememberVault(ref);
+    expect(mocks.rememberedFolder).toBeNull();
+
+    await tauriBackend.setItem('settings', 'rememberFolder', true);
+    await tauriBackend.rememberVault(ref);
+    expect(mocks.rememberedFolder).toBe('/usb/Journal');
+    await tauriBackend.rememberVault(null);
+    expect(mocks.rememberedFolder).toBeNull();
+  });
+
+  it('still opens the folder when the computer refuses the record', async () => {
+    mocks.failRemember = true;
+    const ref = { kind: 'file' as const, path: '/usb/Journal/diary.ics' };
+    await expect(tauriBackend.rememberVault(ref)).resolves.toBeUndefined();
+    await tauriBackend.setItem('settings', 'weekStart', 0);
+    expect(mocks.files.has('/usb/Journal/settings.json')).toBe(true);
   });
 
   it('keeps preferences separate when the user switches folders', async () => {

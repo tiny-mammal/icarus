@@ -126,6 +126,20 @@
       </p>
     </div>
 
+    {#if app.storageKind === 'folder'}
+      <div class="mb-5 flex items-center justify-between gap-4">
+        <span>
+          <span class="block text-sm text-text">Open this folder on launch</span>
+          <span class="block text-xs text-muted">
+            {app.rememberFolder
+              ? 'Only its location is saved on this computer'
+              : 'Nothing is saved on this computer; choose the folder each time'}
+          </span>
+        </span>
+        <Switch checked={app.rememberFolder} label="Open this folder on launch" onchange={(on) => app.setRememberFolder(on)} />
+      </div>
+    {/if}
+
     <!-- Actions -->
     <div class="space-y-2">
       {#if app.storageKind === 'folder'}
