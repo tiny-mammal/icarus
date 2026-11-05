@@ -19,6 +19,11 @@
   import { watchIdle } from './lib/idle';
   import { isPlainShortcut } from './lib/keyboard';
   import { dismissBootSplash } from './lib/boot-splash';
+  import { gestureLog } from './lib/gesture-log';
+
+  // Development only (`?debug=gestures`): the gesture recorder, loaded on demand.
+  const gestureRecorder =
+    import.meta.env.DEV && gestureLog.enabled ? import('./components/GestureRecorder.svelte') : null;
 
   // The static splash in index.html covers the app until the first screen is
   // known; it is fixed-position, so uncovering it never shifts the layout.
@@ -134,3 +139,7 @@
 <DraftDeleteDialog />
 <EntryDeleteDialog />
 <Toasts />
+
+{#if gestureRecorder}
+  {#await gestureRecorder then { default: GestureRecorder }}<GestureRecorder />{/await}
+{/if}

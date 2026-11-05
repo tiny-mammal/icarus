@@ -1,8 +1,12 @@
 /**
- * Touch gestures for the phone layout: horizontal swipes that page through
- * months or days, and the drag-down that dismisses a bottom sheet. Both are
- * Svelte actions; the thresholds live in pure helpers so they can be tested.
+ * Touch and touchpad gestures: horizontal swipes (one finger on a screen, two
+ * on a touchpad) that page through months or days, and the drag-down that
+ * dismisses a bottom sheet. All are Svelte actions; the thresholds live in
+ * pure helpers so they can be tested.
  */
+
+import { gestureLog } from './gesture-log';
+import { listenWheelGesture, OWN_GESTURES } from './wheel-gesture';
 
 /** Minimum horizontal travel (px) for a swipe. */
 export const SWIPE_MIN_DISTANCE = 56;
@@ -22,22 +26,66 @@ export function swipeDirection(dx: number, dy: number, ms: number): -1 | 0 | 1 {
   return dx < 0 ? 1 : -1;
 }
 
-/** Content that scrolls sideways on its own keeps its horizontal gestures. */
-const OWN_GESTURES = 'pre, table, input, textarea, [contenteditable="true"], [data-no-swipe]';
 
 export interface SwipeOptions {
   onswipe: (dir: -1 | 1) => void;
   enabled?: boolean;
 }
 
+/** Travel (px) a touchpad swipe needs to turn the page without a flick. */
+export const WHEEL_SWIPE_DISTANCE = 60;
+
+/** Smoothed speed (px/ms), so one jittery sample doesn't decide a flick. */
+export function smoothVelocity(previous: number, delta: number, dt: number): number {
+  return dt > 0 ? previous * 0.6 + (delta / dt) * 0.4 : previous;
+}
+
 /**
- * Call `onswipe` on a horizontal single-finger swipe over `node`. Vertical
- * scrolling is left alone; give the node `touch-action: pan-y` so the browser
- * doesn't claim horizontal pans for itself.
+ * Call `onswipe` when two fingers swipe sideways on a touchpad over `node`
+ * and lift (see `wheel-gesture`). Vertical scrolling and pinch-zoom are left
+ * alone, and content that scrolls sideways keeps its own horizontal scrolling.
+ */
+export function trackpadSwipe(node: HTMLElement, options: SwipeOptions) {
+  let opts = options;
+  let swipe: { offset: number; velocity: number; t: number } | null = null;
+
+  const stop = listenWheelGesture(
+    node,
+    () => opts.enabled !== false,
+    (action, t) => {
+      if (action.type === 'move') {
+        if (action.start || !swipe) swipe = { offset: 0, velocity: 0, t };
+        swipe.velocity = smoothVelocity(swipe.velocity, action.delta, t - swipe.t);
+        swipe.offset += action.delta;
+        swipe.t = t;
+      } else if (action.type === 'release' && swipe) {
+        const dir = releaseDecision(swipe.offset, WHEEL_SWIPE_DISTANCE, swipe.velocity);
+        swipe = null;
+        if (dir !== 0) {
+          gestureLog.record('swipe', { dir }, t);
+          opts.onswipe(dir);
+        }
+      }
+    },
+  );
+  return {
+    update(next: SwipeOptions) {
+      opts = next;
+    },
+    destroy: stop,
+  };
+}
+
+/**
+ * Call `onswipe` on a horizontal single-finger swipe over `node`, or a
+ * two-finger swipe on a touchpad (see `trackpadSwipe`). Vertical scrolling is
+ * left alone; give the node `touch-action: pan-y` so the browser doesn't claim
+ * horizontal pans for itself.
  */
 export function swipe(node: HTMLElement, options: SwipeOptions) {
   let opts = options;
   let start: { x: number; y: number; t: number } | null = null;
+  const trackpad = trackpadSwipe(node, options);
 
   const onStart = (e: TouchEvent) => {
     const target = e.target as Element | null;
@@ -64,8 +112,10 @@ export function swipe(node: HTMLElement, options: SwipeOptions) {
   return {
     update(next: SwipeOptions) {
       opts = next;
+      trackpad.update(next);
     },
     destroy() {
+      trackpad.destroy();
       node.removeEventListener('touchstart', onStart);
       node.removeEventListener('touchend', onEnd);
       node.removeEventListener('touchcancel', onCancel);
@@ -157,18 +207,24 @@ const AXIS_LOCK_DISTANCE = 8;
 
 /**
  * Decide where a released drag settles: 1 for the next page (dragged left),
- * -1 for the previous one, 0 to spring back. `velocity` is in px/ms, signed
- * like `dx`.
+ * -1 for the previous one, 0 to spring back. It turns after `commit` px of
+ * travel, or on a flick; `velocity` is in px/ms, signed like `dx`.
  */
-export function pageDecision(dx: number, width: number, velocity: number): -1 | 0 | 1 {
-  if (width <= 0 || dx === 0) return 0;
-  const far = Math.abs(dx) >= width * PAGE_COMMIT_FRACTION;
+export function releaseDecision(dx: number, commit: number, velocity: number): -1 | 0 | 1 {
+  if (dx === 0) return 0;
+  const far = Math.abs(dx) >= commit;
   const flick =
     Math.abs(dx) > 16 &&
     Math.abs(velocity) >= PAGE_FLICK_VELOCITY &&
     Math.sign(velocity) === Math.sign(dx);
   if (!far && !flick) return 0;
   return dx < 0 ? 1 : -1;
+}
+
+/** `releaseDecision` for a pager `width` px wide. */
+export function pageDecision(dx: number, width: number, velocity: number): -1 | 0 | 1 {
+  if (width <= 0) return 0;
+  return releaseDecision(dx, width * PAGE_COMMIT_FRACTION, velocity);
 }
 
 /** How long the settle animation takes: quicker the faster the finger went. */
@@ -225,71 +281,50 @@ export interface DragPagerOptions {
 }
 
 /**
- * A native-feeling pager: the track follows the finger, the neighbouring page
- * slides in as the current one slides out, and on release it settles on
- * whichever page the drag or flick points at. Vertical moves are left to
- * scrolling. Touch and pen only; mouse users have the arrow buttons.
+ * A native-feeling pager: the track follows a finger on a touch screen, or two
+ * on a touchpad, the neighbouring page sliding in as the current one slides
+ * out, at most one page either way. When the fingers lift it settles on
+ * whichever page the drag or flick points at; a touchpad's momentum after the
+ * lift is ignored (see `wheel-gesture`). Vertical moves are left to
+ * scrolling, and mouse drags to the arrow buttons.
  */
 export function dragPager(node: HTMLElement, options: DragPagerOptions) {
   let opts = options;
-  let drag: {
-    id: number;
-    x: number;
-    y: number;
-    axis: 'x' | 'y' | null;
-    dx: number;
-    lastX: number;
-    lastT: number;
-    velocity: number;
-  } | null = null;
+
+  // --- the track, whatever moves it ---------------------------------------
+  // `dx` is the track's offset from rest (negative shows the next page) and
+  // `velocity` its smoothed speed in px/ms, signed like `dx`.
+  let dx = 0;
+  let velocity = 0;
+  let lastT = 0;
   let settling = false;
-  // A click arriving right after a drag is the finger lifting, not a tap.
-  let swallowClicksUntil = 0;
 
-  const onDown = (e: PointerEvent) => {
-    if (opts.enabled === false || settling || e.pointerType === 'mouse' || !opts.track) return;
-    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, axis: null, dx: 0, lastX: e.clientX, lastT: e.timeStamp, velocity: 0 };
-  };
+  function begin(t: number): void {
+    dx = 0;
+    velocity = 0;
+    lastT = t;
+  }
 
-  const onMove = (e: PointerEvent) => {
-    if (!drag || e.pointerId !== drag.id || !opts.track) return;
-    const dx = e.clientX - drag.x;
-    const dy = e.clientY - drag.y;
-    if (drag.axis === null) {
-      if (Math.abs(dx) > AXIS_LOCK_DISTANCE && Math.abs(dx) > Math.abs(dy)) {
-        drag.axis = 'x';
-        node.setPointerCapture(e.pointerId);
-      } else if (Math.abs(dy) > AXIS_LOCK_DISTANCE) {
-        drag = null; // a scroll, not a page turn
-        return;
-      } else {
-        return;
-      }
-    }
-    const dt = e.timeStamp - drag.lastT;
-    if (dt > 0) {
-      // Smoothed, so one jittery sample doesn't decide the flick.
-      const v = (e.clientX - drag.lastX) / dt;
-      drag.velocity = drag.velocity * 0.6 + v * 0.4;
-    }
-    drag.lastX = e.clientX;
-    drag.lastT = e.timeStamp;
-    drag.dx = dx;
-    placeTrack(opts.track, `calc(-100% + ${dx}px)`);
-  };
-
-  const onUp = async (e: PointerEvent) => {
-    if (!drag || e.pointerId !== drag.id) return;
-    const { axis, dx, velocity } = drag;
-    drag = null;
+  function move(delta: number, t: number): void {
     const track = opts.track;
-    if (axis !== 'x' || !track) return;
-    // The finger moved the page; the lift must not also tap a day.
-    swallowClicksUntil = performance.now() + 400;
+    if (!track) return;
     const width = node.clientWidth;
-    const dir = e.type === 'pointercancel' ? 0 : pageDecision(dx, width, velocity);
+    velocity = smoothVelocity(velocity, delta, t - lastT);
+    lastT = t;
+    // Only the neighbouring pages are rendered: never past them.
+    dx = Math.max(-width, Math.min(width, dx + delta));
+    placeTrack(track, `calc(-100% + ${dx}px)`);
+    gestureLog.record('move', { offset: Math.round(dx), v: Math.round(velocity * 1000) / 1000, width }, t);
+  }
+
+  async function settle(cancel: boolean): Promise<void> {
+    const track = opts.track;
+    if (!track) return;
     settling = true;
     try {
+      const width = node.clientWidth;
+      const dir = cancel ? 0 : pageDecision(dx, width, velocity);
+      gestureLog.record('settle', { dir, cancel, offset: Math.round(dx), v: Math.round(velocity * 1000) / 1000, width });
       if (dir === 0) {
         placeTrack(track, '-100%', opts.reducedMotion ? 0 : settleDuration(dx, velocity));
       } else {
@@ -298,7 +333,54 @@ export function dragPager(node: HTMLElement, options: DragPagerOptions) {
       }
     } finally {
       settling = false;
+      dx = 0;
+      velocity = 0;
+      gestureLog.record('settled');
     }
+  }
+
+  // --- touch and pen --------------------------------------------------------
+  let drag: { id: number; x: number; y: number; lastX: number; axis: 'x' | 'y' | null } | null = null;
+  // A click arriving right after a drag is the finger lifting, not a tap.
+  let swallowClicksUntil = 0;
+
+  const onDown = (e: PointerEvent) => {
+    if (opts.enabled === false || settling || wheelDragging || e.pointerType === 'mouse' || !opts.track) return;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, lastX: e.clientX, axis: null };
+    gestureLog.record('pointerdown', { x: e.clientX, y: e.clientY, type: e.pointerType }, e.timeStamp);
+    begin(e.timeStamp);
+  };
+
+  const onMove = (e: PointerEvent) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    gestureLog.record('pointermove', { x: e.clientX, y: e.clientY }, e.timeStamp);
+    if (drag.axis === null) {
+      const ox = e.clientX - drag.x;
+      const oy = e.clientY - drag.y;
+      if (Math.abs(ox) > AXIS_LOCK_DISTANCE && Math.abs(ox) > Math.abs(oy)) {
+        drag.axis = 'x';
+        node.setPointerCapture(e.pointerId);
+        drag.lastX = drag.x;
+      } else if (Math.abs(oy) > AXIS_LOCK_DISTANCE) {
+        drag = null; // a scroll, not a page turn
+        return;
+      } else {
+        return;
+      }
+    }
+    move(e.clientX - drag.lastX, e.timeStamp);
+    drag.lastX = e.clientX;
+  };
+
+  const onUp = (e: PointerEvent) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { axis } = drag;
+    drag = null;
+    gestureLog.record(e.type, { x: e.clientX, y: e.clientY, axis }, e.timeStamp);
+    if (axis !== 'x') return;
+    // The finger moved the page; the lift must not also tap a day.
+    swallowClicksUntil = performance.now() + 400;
+    void settle(e.type === 'pointercancel');
   };
 
   const onClick = (e: MouseEvent) => {
@@ -307,6 +389,27 @@ export function dragPager(node: HTMLElement, options: DragPagerOptions) {
     e.preventDefault();
     e.stopPropagation();
   };
+
+  // --- touchpad ---------------------------------------------------------------
+  let wheelDragging = false;
+  const stopWheel = listenWheelGesture(
+    node,
+    () => opts.enabled !== false && !drag && !!opts.track,
+    (action, t) => {
+      if (action.type === 'move') {
+        // Fingers moving while the last swipe settles wait for it to finish.
+        if (settling) return;
+        if (!wheelDragging) {
+          wheelDragging = true;
+          begin(t);
+        }
+        move(action.delta, t);
+      } else if (action.type === 'release' && wheelDragging) {
+        wheelDragging = false;
+        void settle(false);
+      }
+    },
+  );
 
   node.addEventListener('pointerdown', onDown);
   node.addEventListener('pointermove', onMove);
@@ -318,6 +421,7 @@ export function dragPager(node: HTMLElement, options: DragPagerOptions) {
       opts = next;
     },
     destroy() {
+      stopWheel();
       node.removeEventListener('pointerdown', onDown);
       node.removeEventListener('pointermove', onMove);
       node.removeEventListener('pointerup', onUp);

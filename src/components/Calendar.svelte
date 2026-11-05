@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { fly, scale } from 'svelte/transition';
+  import { scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
   import { clickOutside, trapFocus } from '../lib/actions';
@@ -115,8 +115,9 @@
   }
 
   // --- month paging -------------------------------------------------------
-  // Phones: the previous, current and next months sit side by side on a track
-  // that follows the finger (see `dragPager`), and the arrows slide it too.
+  // The previous, current and next months sit side by side on a track that
+  // follows a finger on a touch screen or two on a touchpad (see `dragPager`);
+  // the arrows slide it too.
   let trackEl = $state<HTMLElement | null>(null);
   let paging = false;
   const panelMonths = $derived([-1, 0, 1].map((offset) => addMonths(app.currentMonth, offset)));
@@ -127,7 +128,7 @@
   }
 
   async function page(dir: -1 | 1): Promise<void> {
-    if (!viewport.compact || !trackEl || viewport.reducedMotion) {
+    if (!trackEl || viewport.reducedMotion) {
       app.navigateMonth(dir);
       return;
     }
@@ -138,21 +139,6 @@
     } finally {
       paging = false;
     }
-  }
-
-  // Wider screens: the grid slides in from the side it came from, so paging
-  // reads as movement through time. Plain variable on purpose: it only
-  // remembers the last month to tell the direction.
-  let lastMonth = app.currentMonth.getTime();
-  const slideDir = $derived.by(() => {
-    const t = app.currentMonth.getTime();
-    const dir = Math.sign(t - lastMonth);
-    lastMonth = t;
-    return dir;
-  });
-  function slideIn(node: HTMLElement) {
-    if (slideDir === 0 || viewport.reducedMotion) return { duration: 0 };
-    return fly(node, { x: slideDir * 32, duration: 220, easing: cubicOut });
   }
 
   // Keyboard focus lives in the current month's grid only.
@@ -437,33 +423,25 @@
     {/each}
   </div>
 
-  <!-- Day grid -->
-  {#if viewport.compact}
-    <!-- Edge to edge, so the neighbouring month slides in from the screen edge. -->
-    <div
-      class="-mx-3 shrink-0 touch-pan-y overflow-hidden"
-      use:dragPager={{
-        track: trackEl,
-        onpage: showMonth,
-        enabled: !app.selectedKey && !pickerOpen,
-        reducedMotion: viewport.reducedMotion,
-      }}
-    >
-      <div bind:this={trackEl} class="flex will-change-transform" style="transform: translateX(-100%)">
-        {#each panelMonths as month, i (i)}
-          <div class="w-full shrink-0 px-3" inert={i !== 1} aria-hidden={i === 1 ? undefined : 'true'}>
-            {@render dayGrid(month, i === 1)}
-          </div>
-        {/each}
-      </div>
+  <!-- Day grid. Edge to edge, so the neighbouring month slides in from the edge. -->
+  <!-- On phones the open day covers the calendar, so it doesn't page underneath. -->
+  <div
+    class="-mx-3 shrink-0 touch-pan-y overflow-hidden sm:-mx-10 sm:min-h-0 sm:flex-1"
+    use:dragPager={{
+      track: trackEl,
+      onpage: showMonth,
+      enabled: !pickerOpen && !(viewport.compact && app.selectedKey),
+      reducedMotion: viewport.reducedMotion,
+    }}
+  >
+    <div bind:this={trackEl} class="flex will-change-transform sm:h-full" style="transform: translateX(-100%)">
+      {#each panelMonths as month, i (i)}
+        <div class="w-full shrink-0 px-3 sm:h-full sm:px-10" inert={i !== 1} aria-hidden={i === 1 ? undefined : 'true'}>
+          {@render dayGrid(month, i === 1)}
+        </div>
+      {/each}
     </div>
-  {:else}
-    {#key app.currentMonth.getTime()}
-      <div class="min-h-0 flex-1" in:slideIn>
-        {@render dayGrid(app.currentMonth, true)}
-      </div>
-    {/key}
-  {/if}
+  </div>
 
   <!-- Phones: this month's entries, tap one to read it. The only scroller. -->
   <div
