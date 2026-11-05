@@ -72,7 +72,7 @@
             "downloadUrl": "https://icarus.4oli.com/download",
             "isAccessibleForFree": true,
             "license": "https://www.gnu.org/licenses/gpl-3.0.html",
-            "screenshot": "https://icarus.4oli.com/app-calendar.webp",
+            "screenshot": "https://icarus.4oli.com/shots/calendar.webp",
             "image": "https://icarus.4oli.com/og-image.png",
             "author": { "@id": "https://icarus.4oli.com/#author" },
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -126,7 +126,8 @@
       }
     </script>
     <link rel="stylesheet" href="./style.css" />
-    <script type="module" src="./main.ts"></script>
+    <link rel="stylesheet" href="./home.css" />
+    <script type="module" src="./home.ts"></script>
     <!--
       Prerender the web app once a visitor shows intent (hover or press on an
       "Open the web app" link), so it opens instantly. Same origin only, and
@@ -139,13 +140,8 @@
     </script>
   </head>
   <body class="relative min-h-screen bg-ink text-text">
-    <a
-      href="#main"
-      class="sr-only rounded-lg bg-text px-3 py-2 text-sm font-medium text-ink focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50"
-      >Skip to content</a
-    >
+    <a href="#main" class="sr-only rounded-lg bg-text px-3 py-2 text-sm font-medium text-ink focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50">Skip to content</a>
 
-    <!-- Transparent: it sits on top of the hero so the vignette runs behind it. -->
     <header class="absolute inset-x-0 top-0 z-20">
       <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <a href="/" class="flex items-center gap-2 text-sm font-semibold tracking-tight text-text" aria-label="Icarus home">
@@ -157,106 +153,120 @@
         <nav class="flex items-center gap-1 text-sm" aria-label="Primary">
           <a href="/download" class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text">Download</a>
           <a href="/app/" class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text">Web app</a>
-          <a
-            href="https://github.com/tiny-mammal/icarus"
-            rel="noopener"
-            class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text"
-            >GitHub</a
-          >
+          <a href="https://github.com/tiny-mammal/icarus" rel="noopener" class="hidden rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text sm:inline-block">GitHub</a>
         </nav>
       </div>
     </header>
 
     <main id="main">
-      <!-- Hero: the app's welcome screen, opened up. -->
-      <section class="vignette relative overflow-hidden px-4 pt-34 sm:px-6 sm:pt-42" aria-labelledby="hero-title">
-        <div class="pointer-events-none absolute -top-40 left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-slate/20 blur-3xl" aria-hidden="true"></div>
+      <!--
+        The Icarus mark, a dot inside a ring, at the scale of the page. The
+        ring draws itself and the dot climbs to the top of it: the one
+        orchestrated moment on this page.
+      -->
+      <section class="home-hero" aria-labelledby="hero-title">
+        <div class="home-mark" aria-hidden="true">
+          <svg class="home-ring" viewBox="0 0 100 100" fill="none">
+            <!-- Lit from above: the ring is brightest where the sun stops. -->
+            <defs>
+              <linearGradient id="home-ring-light" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#8b8b94" />
+                <stop offset="0.55" stop-color="#3f3f46" />
+                <stop offset="1" stop-color="#27272a" />
+              </linearGradient>
+            </defs>
+            <circle cx="50" cy="50" r="49.6" pathLength="1" stroke="url(#home-ring-light)" />
+          </svg>
+          <span class="home-sun"></span>
+        </div>
 
-        <div class="relative mx-auto flex max-w-2xl flex-col items-center text-center">
-          <div class="mb-8 grid h-14 w-14 place-items-center rounded-full border border-faint" aria-hidden="true">
-            <span class="h-2.5 w-2.5 rounded-full bg-muted"></span>
-          </div>
-          <h1 id="hero-title" class="text-4xl font-semibold tracking-tight text-balance sm:text-6xl">
-            A private diary for all your years
-          </h1>
-          <p class="mt-5 max-w-xl text-base leading-relaxed text-balance text-muted sm:text-lg">
-            Icarus is a free, open-source diary app. Lock it with a password, keep every entry on your own device,
-            and return to any day in an instant.
+        <div class="home-copy">
+          <h1 id="hero-title" class="home-title">A private diary<br />for all your years</h1>
+          <p class="home-lede">
+            Icarus is a free, open-source diary app. Lock it with a password, keep every entry on your own
+            device, and return to any day in an instant.
           </p>
-          <div class="mt-10 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
+          <div class="mt-9 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
             <a href="/download" class="btn btn-primary" data-download>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
               <span data-download-label>Download</span>
             </a>
-            <a href="/app/" class="btn btn-secondary">Open the web app</a>
+            <a href="/app/" class="btn btn-secondary" data-webapp>Open the web app</a>
           </div>
-          <p class="mt-4 text-xs text-muted">For Windows, macOS, Linux and Android, or right in your browser.</p>
-        </div>
-
-        <figure class="shot-fade relative mx-auto mt-16 max-w-5xl sm:mt-20">
-          <img
-            src="/app-calendar.webp"
-            width="2560"
-            height="1720"
-            alt="The Icarus calendar for October 2026, with an entry title on most days."
-            fetchpriority="high"
-            decoding="async"
-            class="block h-auto w-full rounded-t-2xl border border-b-0 border-slate"
-          />
-        </figure>
-      </section>
-
-      <section class="mx-auto max-w-5xl px-4 pt-8 sm:px-6" aria-labelledby="features-title">
-        <h2 id="features-title" class="sr-only">Why Icarus</h2>
-        <ul class="grid gap-4 sm:grid-cols-2">
-          <li class="rounded-2xl border border-slate bg-surface p-6">
-            <span class="grid h-10 w-10 place-items-center rounded-full border border-faint text-muted" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-            </span>
-            <h3 class="mt-5 text-base font-semibold tracking-tight">Locked with your password</h3>
-            <p class="mt-2 text-sm leading-relaxed text-muted">Entries and drafts are encrypted on your device. Without your password, no one else can read them.</p>
-          </li>
-          <li class="rounded-2xl border border-slate bg-surface p-6">
-            <span class="grid h-10 w-10 place-items-center rounded-full border border-faint text-muted" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>
-            </span>
-            <h3 class="mt-5 text-base font-semibold tracking-tight">Nothing leaves your device</h3>
-            <p class="mt-2 text-sm leading-relaxed text-muted">No account, no cloud, no tracking. Your diary lives in a folder you choose, inside the app on your phone, or in your browser.</p>
-          </li>
-          <li class="rounded-2xl border border-slate bg-surface p-6">
-            <span class="grid h-10 w-10 place-items-center rounded-full border border-faint text-muted" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            </span>
-            <h3 class="mt-5 text-base font-semibold tracking-tight">Years in an instant</h3>
-            <p class="mt-2 text-sm leading-relaxed text-muted">Move through decades of entries and search everything you've written, with no waiting.</p>
-          </li>
-          <li class="rounded-2xl border border-slate bg-surface p-6">
-            <span class="grid h-10 w-10 place-items-center rounded-full border border-faint text-muted" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
-            </span>
-            <h3 class="mt-5 text-base font-semibold tracking-tight">A file that outlasts any app</h3>
-            <p class="mt-2 text-sm leading-relaxed text-muted">Everything is saved as a standard <span class="text-text">.ics</span> calendar file. Import your old diary, export it whenever you want.</p>
-          </li>
-        </ul>
-      </section>
-
-      <section class="mx-auto mt-24 max-w-5xl px-4 sm:mt-32 sm:px-6" aria-labelledby="open-title">
-        <div class="flex flex-col items-start gap-6 rounded-2xl border border-slate bg-slate-soft p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
-          <div class="max-w-xl">
-            <h2 id="open-title" class="text-xl font-semibold tracking-tight">Free software, in the open</h2>
-            <p class="mt-2 text-sm leading-relaxed text-muted">
-              Icarus is open source under the GNU General Public License v3. Anyone can read the code to check how a
-              diary is handled, build it themselves, or help make it better.
-            </p>
-          </div>
-          <a href="https://github.com/tiny-mammal/icarus" rel="noopener" class="btn btn-secondary shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a10.9 10.9 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.09 0 4.42-2.7 5.4-5.26 5.68.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
-            View the source on GitHub
-          </a>
+          <p class="mt-4 text-xs text-muted" data-platform-note>For Windows, macOS, Linux and Android, or right in your browser.</p>
         </div>
       </section>
 
-      <section class="mx-auto mt-24 max-w-2xl px-4 sm:mt-32 sm:px-6" aria-labelledby="faq-title">
+      <!-- The calendar lies back like an open book and sits up as you scroll to it. -->
+      <section class="home-stage" aria-label="The Icarus calendar">
+        <div class="home-tilt">
+          <div class="screen">
+            <img src="/shots/calendar.webp" width="2880" height="1800" alt="The Icarus calendar for October 2026, with an entry title on most days and today, the 24th, circled." fetchpriority="high" decoding="async" />
+          </div>
+        </div>
+      </section>
+
+      <!-- A day with Icarus. On wide screens one frame stays put while the steps scroll past it. -->
+      <section class="home-tour" aria-labelledby="tour-title">
+        <h2 id="tour-title" class="home-tour-title">Everything a diary needs.<br />Nothing that gets in the way.</h2>
+        <div class="home-tour-grid">
+          <ol class="home-steps">
+            <li class="home-step">
+              <h3>Write the day down</h3>
+              <p>A calm editor with Markdown, spell check and autosave. Unfinished entries wait for you in Drafts.</p>
+              <div class="screen home-step-shot"><img src="/shots/editor.webp" width="2880" height="1800" alt="The editor open on “Walking the old town”, with a bulleted list and a quote." loading="lazy" decoding="async" /></div>
+            </li>
+            <li class="home-step">
+              <h3>Come back to any day</h3>
+              <p>Pick a day on the calendar and read it as you wrote it. Days with several entries let you page through them.</p>
+              <div class="screen home-step-shot"><img src="/shots/reader.webp" width="2880" height="1800" alt="Saturday, October 24, 2026 open beside the calendar, showing the first of two entries." loading="lazy" decoding="async" /></div>
+            </li>
+            <li class="home-step">
+              <h3>Find it, whatever the year</h3>
+              <p>Search titles, places and text across every entry as you type, and jump straight to the day.</p>
+              <div class="screen home-step-shot"><img src="/shots/search.webp" width="2880" height="1800" alt="Searching for “Ana” lists matching entries from 2019 to 2026 with the word highlighted." loading="lazy" decoding="async" /></div>
+            </li>
+            <li class="home-step">
+              <h3>See how far you've come</h3>
+              <p>Entries, characters written and your fullest days, for the last month, the last year or all time.</p>
+              <div class="screen home-step-shot"><img src="/shots/stats.webp" width="2880" height="1800" alt="Statistics for all time: 1,046 entries, a chart of characters per year since 2019, and the top days." loading="lazy" decoding="async" /></div>
+            </li>
+            <li class="home-step">
+              <h3>Lock it when you step away</h3>
+              <p>With a password, every entry and draft is encrypted, and the diary locks itself after a few idle minutes.</p>
+              <div class="screen home-step-shot"><img src="/shots/lock.webp" width="2880" height="1800" alt="The lock screen: “Diary locked” with a password field and an Unlock button." loading="lazy" decoding="async" /></div>
+            </li>
+          </ol>
+
+          <div class="home-frame" aria-hidden="true">
+            <div class="screen">
+              <img src="/shots/editor.webp" width="2880" height="1800" alt="" loading="lazy" decoding="async" data-shot />
+              <img src="/shots/reader.webp" width="2880" height="1800" alt="" loading="lazy" decoding="async" data-shot />
+              <img src="/shots/search.webp" width="2880" height="1800" alt="" loading="lazy" decoding="async" data-shot />
+              <img src="/shots/stats.webp" width="2880" height="1800" alt="" loading="lazy" decoding="async" data-shot />
+              <img src="/shots/lock.webp" width="2880" height="1800" alt="" loading="lazy" decoding="async" data-shot />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="home-pocket" aria-labelledby="pocket-title">
+        <div class="home-pocket-phones">
+          <div class="phone"><img src="/shots/phone-calendar.webp" width="1170" height="2532" alt="The calendar on an Android phone." loading="lazy" decoding="async" /></div>
+          <div class="phone"><img src="/shots/phone-reader.webp" width="1170" height="2532" alt="An entry open on an Android phone." loading="lazy" decoding="async" /></div>
+        </div>
+        <div class="home-pocket-copy">
+          <h2 id="pocket-title">In your pocket too</h2>
+          <p>The Android app is the same diary, made for one hand. Swipe between days, write on the bus, and lock it with the same password.</p>
+          <ul class="home-facts">
+            <li><strong>No account.</strong> Nothing to sign up for and no server that ever sees your diary.</li>
+            <li><strong>Your own file.</strong> Entries live in a standard .ics calendar file. Import your old diary, export it whenever you like.</li>
+            <li><strong>Free and open source.</strong> GNU GPL v3. Anyone can read the code and check how a diary is handled.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="mx-auto mt-32 max-w-2xl px-4 sm:px-6" aria-labelledby="faq-title">
         <h2 id="faq-title" class="text-xl font-semibold tracking-tight">Questions</h2>
         <div class="mt-6 border-t border-slate">
           <details class="group border-b border-slate">
@@ -290,29 +300,25 @@
         </div>
       </section>
 
-      <section class="mx-auto mt-24 flex max-w-2xl flex-col items-center px-4 text-center sm:mt-32 sm:px-6" aria-labelledby="closing-title">
-        <div class="mb-6 grid h-10 w-10 place-items-center rounded-full border border-faint" aria-hidden="true">
-          <span class="h-2 w-2 rounded-full bg-muted"></span>
-        </div>
-        <h2 id="closing-title" class="text-2xl font-semibold tracking-tight sm:text-3xl">Write today's chapter</h2>
+      <section class="home-closing" aria-labelledby="closing-title">
+        <div class="home-closing-mark" aria-hidden="true"><span></span></div>
+        <h2 id="closing-title">Write today's chapter</h2>
         <div class="mt-8 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row">
           <a href="/download" class="btn btn-primary" data-download>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
             <span data-download-label>Download</span>
           </a>
-          <a href="/app/" class="btn btn-secondary">Open the web app</a>
+          <a href="/app/" class="btn btn-secondary" data-webapp>Open the web app</a>
         </div>
       </section>
     </main>
 
     <footer class="mt-24 border-t border-slate sm:mt-32">
       <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <p>
-          Icarus is free software, licensed under the
-          <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="noopener license" class="underline underline-offset-4 hover:text-text">GNU GPL v3</a>.
-        </p>
+        <p>Icarus is free software, licensed under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="noopener license" class="underline underline-offset-4 hover:text-text">GNU GPL v3</a>.</p>
         <a href="https://github.com/tiny-mammal/icarus" rel="noopener" class="hover:text-text">Source code</a>
       </div>
     </footer>
+
   </body>
 </html>

@@ -8,6 +8,7 @@
 @source './404.html';
 @source './download.html';
 @source './download.ts';
+@source './mockups/*.html';
 
 @import '../src/styles/theme.css';
 
@@ -96,9 +97,38 @@
     background: var(--color-slate);
   }
 
-  /* The app screenshot dissolves into the page instead of ending on a hard edge. */
-  .shot-fade {
-    mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  /* A desktop window of the app. The faint top highlight reads as glass. */
+  .screen {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--color-slate);
+    border-radius: 1rem;
+    background: var(--color-ink);
+    box-shadow:
+      inset 0 1px 0 color-mix(in oklab, var(--color-text) 8%, transparent),
+      0 40px 120px -40px #000;
+  }
+  .screen > img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  /* A phone: the capture sits in a thin bezel with the app's own radius scale. */
+  .phone {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--color-faint);
+    border-radius: 2.4rem;
+    padding: 0.45rem;
+    background: #000;
+    box-shadow: 0 50px 100px -40px #000;
+  }
+  .phone > img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 2rem;
   }
 
   .faq-chevron {

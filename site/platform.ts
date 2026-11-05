@@ -3,6 +3,9 @@
  * Only a hint: every platform stays one click away on the download page.
  */
 import type { PlatformId } from './releases';
+import { isAppleMobile } from '../src/lib/user-agent';
+
+export { isAppleMobile };
 
 export const PLATFORM_NAMES: Record<PlatformId, string> = {
   windows: 'Windows',
@@ -20,8 +23,7 @@ export function detectPlatform(nav: Navigator = navigator): PlatformId | null {
   const source = `${hint ?? ''} ${nav.userAgent}`.toLowerCase();
   // Mobile first: Android also reports Linux, and iPadOS reports a Mac.
   if (source.includes('android')) return 'android';
-  if (/iphone|ipad|ipod/.test(source)) return null;
-  if (source.includes('mac') && nav.maxTouchPoints > 1) return null;
+  if (isAppleMobile(nav)) return null;
   if (source.includes('win')) return 'windows';
   if (source.includes('mac')) return 'macos';
   // ChromeOS and the BSDs also report X11 but can't run these Linux builds.

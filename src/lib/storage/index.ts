@@ -10,7 +10,7 @@
  * with a password on any platform. Consumers import `storage` and stay
  * platform-agnostic.
  */
-import { isTauri } from '@tauri-apps/api/core';
+import { runningUnderTauri } from '../runtime';
 import { tauriBackend } from './tauri';
 import { deviceBackend } from './device';
 import { webBackend } from './web';
@@ -19,13 +19,6 @@ import { withEncryption, type SecureStorage } from './encrypted';
 import { serializeIcs } from '../ical';
 import { seedEntries } from '../seed';
 import type { StorageBackend } from './types';
-
-function runningUnderTauri(): boolean {
-  if (isTauri()) return true;
-  // Belt and braces: `__TAURI_INTERNALS__` is the object every Tauri API calls
-  // into, so its presence is a reliable signal even without the helper.
-  return '__TAURI_INTERNALS__' in globalThis;
-}
 
 function platformBackend(): StorageBackend {
   if (!runningUnderTauri()) return webBackend;

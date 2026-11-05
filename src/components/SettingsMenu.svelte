@@ -4,6 +4,7 @@
   import { DATE_FORMATS, longDayLabel, type DateFormat } from '../lib/date';
   import { SOURCE_REPO, openExternal } from '../lib/external';
   import { AUTO_LOCK_CHOICES } from '../lib/config';
+  import { install } from '../lib/install.svelte';
   import Switch from './Switch.svelte';
   import Modal from './Modal.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
@@ -53,6 +54,20 @@
     app.settingsOpen = false;
     open();
   }
+
+  /** Hand over to the browser's install dialog, or to the instructions. */
+  function installApp() {
+    app.settingsOpen = false;
+    void install.start();
+  }
+
+  const installHint = $derived(
+    install.method === 'ios'
+      ? 'Add Icarus to your Home Screen and open it like any other app'
+      : install.method === 'mac-safari'
+        ? 'Add Icarus to your Dock and open it like any other app'
+        : 'Open Icarus in its own window, like any other app, even offline',
+  );
 
   const autoLockLabel = (minutes: number) => (minutes === 0 ? 'Never' : `${minutes} min`);
 </script>
@@ -129,6 +144,19 @@
           </span>
         </span>
       </button>
+
+      {#if install.available}
+        <button
+          class="flex w-full items-center gap-3 rounded-lg border border-slate px-3.5 py-3 text-left text-sm text-text transition-colors hover:bg-slate"
+          onclick={installApp}
+        >
+          <svg class="shrink-0 text-muted" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M12 7v7"/><path d="m9 11 3 3 3-3"/></svg>
+          <span>
+            <span class="block font-medium">Install the app</span>
+            <span class="block text-xs text-muted">{installHint}</span>
+          </span>
+        </button>
+      {/if}
 
       {#if app.vault}
         <button
