@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Icarus: private, encrypted diary app. Free and open source</title>
+    <meta name="description" content="Icarus is a free, open-source diary app. Lock your entries with a password, keep them on your own device, and browse years of writing instantly." />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#09090b" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="./sealed.css" />
+    <script type="module" src="./sealed.ts"></script>
+  </head>
+  <body class="relative min-h-screen bg-ink text-text">
+    <a href="#main" class="sr-only rounded-lg bg-text px-3 py-2 text-sm font-medium text-ink focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50">Skip to content</a>
+
+    <header class="absolute inset-x-0 top-0 z-20">
+      <div class="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <a href="/" class="flex items-center gap-2 text-sm font-semibold tracking-tight text-text" aria-label="Icarus home">
+          <span class="grid h-6 w-6 place-items-center rounded-full border border-faint" aria-hidden="true">
+            <span class="h-1.5 w-1.5 rounded-full bg-muted"></span>
+          </span>
+          Icarus
+        </a>
+        <nav class="flex items-center gap-1 text-sm" aria-label="Primary">
+          <a href="/download" class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text">Download</a>
+          <a href="/app/" class="rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text">Web app</a>
+          <a href="https://github.com/tiny-mammal/icarus" rel="noopener" class="hidden rounded-lg px-3 py-1.5 text-muted transition-colors hover:bg-slate hover:text-text sm:inline-block">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="sl-hero" aria-labelledby="hero-title">
+        <div class="sl-hero-copy">
+          <!-- The headline arrives encrypted and decrypts itself, once. -->
+          <h1 id="hero-title" class="sl-title" data-decrypt>Only you can read this diary.</h1>
+          <div class="sl-hero-aside">
+            <p class="sl-lede">
+              Icarus is a free, open-source diary app. Entries are encrypted with your password and kept on your
+              own device. No account, no cloud, no one else.
+            </p>
+            <div class="mt-7 flex flex-col gap-3 sm:flex-row">
+              <a href="/download" class="btn btn-primary" data-download>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+                <span data-download-label>Download</span>
+              </a>
+              <a href="/app/" class="btn btn-secondary">Open the web app</a>
+            </div>
+            <p class="mt-4 text-xs text-muted">For Windows, macOS, Linux and Android, or right in your browser.</p>
+          </div>
+        </div>
+
+        <!--
+          The lens: the reader, blurred and buried in ciphertext, with a clear
+          circle that follows the pointer (or drifts on its own until you move).
+        -->
+        <figure class="sl-lens" data-lens>
+          <div class="screen">
+            <picture class="sl-lens-base" aria-hidden="true">
+              <source media="(max-width: 40rem)" srcset="/shots/phone-reader.webp" width="1170" height="2532" />
+              <img src="/shots/reader.webp" width="2880" height="1800" alt="" fetchpriority="high" decoding="async" />
+            </picture>
+            <div class="sl-lens-noise" aria-hidden="true" data-noise></div>
+            <picture class="sl-lens-clear">
+              <source media="(max-width: 40rem)" srcset="/shots/phone-reader.webp" width="1170" height="2532" />
+              <img src="/shots/reader.webp" width="2880" height="1800" alt="An entry called “Walking the old town”, open in the Icarus reader on Saturday, October 24, 2026." decoding="async" />
+            </picture>
+            <span class="sl-lens-ring" aria-hidden="true"></span>
+          </div>
+          <figcaption>Without your password, this is all anyone gets. Move over it to read the way you do.</figcaption>
+        </figure>
+      </section>
+
+      <!-- The same entry, as it sits on disk and as it reads in Icarus. -->
+      <section class="sl-split" aria-labelledby="split-title">
+        <div class="sl-section-head">
+          <h2 id="split-title">One entry, two ways to look at it</h2>
+          <p>Icarus encrypts with AES-256 and a key made from your password with Argon2id. Your device holds the file; only your password turns it back into words.</p>
+        </div>
+
+        <div class="sl-split-grid">
+          <figure class="sl-pane sl-pane-disk">
+            <figcaption><span>diary.icarus</span> on your disk</figcaption>
+            <pre aria-label="Encrypted diary file: unreadable ciphertext."><code>{
+  "format": "icarus-encrypted-diary",
+  "version": 1,
+  "keyring": {
+    "password": {
+      "kdf": {
+        "name": "argon2id",
+        "salt": "tgktOUXHWIqy8oWAnf/BKA==",
+        "memoryKiB": 65536,
+        "iterations": 3,
+        "parallelism": 1
+      },
+      "iv": "ZNnKs+c5Fmnu5Lhj",
+      "data": "IXN0MqDj6AFgjJGn4YDL0fFXdlOm+zQZuN3RzKTstx82PuZj+xb6T4n6yu5SQ+i3"
+    },
+    "recovery": {
+      "kdf": { "name": "hkdf-sha256", "salt": "2wRZgRUJcFeMa8RGfOsHNw==" },
+      "iv": "z94QbcwILIhVr8nq",
+      "data": "I3gm/4TmuYTXrbBw8uF+lPKwFsI4cIaPStS6j6MqhYPX6I9BT6th9Nje5pw1Tdkk"
+    }
+  },
+  "payload": {
+    "iv": "94uGRZJ/M2mJHYAB",
+    "data": "c92P2+zHd3OC2pYwL82DeaGdyy8Yck0kF4nP47GiCpj7ZfZzp72dpiifA9SHEA8JMOE9mQfHdlNwl9cyhDujS38BqRV1p0do/43+7tcVtUFQwjqDSQcRkMQbZhvYSmIR9QTYrwA2Ne3pDXhg+rVlaxKQoTLHrEVWFk9VA/ZowuweIj+0GQIPd8x8La6PMHKCMPy7xCFrpGIdZWv9NgBF3fj5zZdN/+IFNS9k/tqapJMZCv0lNnFCAsWcVNRLYhITFzWVoj4DmV5fn3Qg9ZZ71ZMi3WIuoCdP6DrRnD+5MCi9ofCNMq/zY+F7mhRrDBobCYP2QT29tGRBa9LnmH1LhSztuPoRIDp6j6fanZ0SRzbq6jS/BBFEaXI/DwstSF6HkvkhF1wj5HP7VKi7sIWV8iOXCOwEeelbs0/2CAWZohN7EbtPUSL/EhNzi168C+bvvLy0Icv26ldaFa955hPf22rxygfdf5IDn6lhYZUDmxIUF6Md/kHharpUY++8sZR1cHbWihWEwIMHT5kWewU69bIcf8edqOt8QeUCXk0krZwzhCvA51eo7nF/5D1TZ6pAMqJuzc7B6jPhNmI4letRNSIif1nW5dkKthDz+kbSKxxzeEbsNtRpYaCFfqxQt9bX+59zUhPUCEffmwqttUeSWk+mypAEpCJndDAGxNREPMckywz7oR1yG6GJp6POXvUTrzIz0nlBLbYCwXiI"
+  }
+}</code></pre>
+          </figure>
+
+          <figure class="sl-pane sl-pane-app">
+            <figcaption>
+              <span>The same entry</span> in Icarus
+              <button type="button" class="sl-toggle" data-toggle aria-pressed="false">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                <span data-toggle-label>Lock</span>
+              </button>
+            </figcaption>
+            <article class="sl-entry" data-entry>
+              <p class="sl-entry-date">Saturday, October 24, 2026</p>
+              <h3>Walking the old town</h3>
+              <p class="sl-entry-place">Lisbon</p>
+              <p>Woke before the alarm and took the long way down to the river. The trams were still asleep and the light came in sideways, gold on the yellow walls.</p>
+              <p>Things I want to remember about today:</p>
+              <ul>
+                <li>The baker who gave me the burnt one for free</li>
+                <li>Ana laughing so hard she had to sit on the steps</li>
+                <li>How quiet the miradouro was at eight</li>
+              </ul>
+              <blockquote>Some days you live, and some days you keep.</blockquote>
+            </article>
+          </figure>
+        </div>
+      </section>
+
+      <section class="sl-keys" aria-labelledby="keys-title">
+        <div class="screen sl-keys-shot">
+          <img src="/shots/lock.webp" width="2880" height="1800" alt="The Icarus lock screen: “Diary locked” with a password field and an Unlock button." loading="lazy" decoding="async" />
+        </div>
+        <div class="sl-keys-copy">
+          <h2 id="keys-title">No reset link. No back door.</h2>
+          <p>There is no account, so there is nothing to reset. When you set a password, Icarus gives you a recovery key. Keep it somewhere safe; it is the only other way in.</p>
+          <div class="sl-recovery" aria-label="An example recovery key">
+            <span>TJQA</span><span>PCPY</span><span>BOCO</span><span>UZUL</span><span>ZX6Z</span><span>AH35</span><span>C6YC</span><span>UEHO</span>
+          </div>
+          <p class="sl-note">The diary also locks itself after a few idle minutes, and whenever you choose.</p>
+        </div>
+      </section>
+
+      <section class="sl-rest" aria-labelledby="rest-title">
+        <div class="sl-section-head">
+          <h2 id="rest-title">And once it's open, it's just your diary</h2>
+          <p>A calm editor, every year a search away, and the same diary on your phone.</p>
+        </div>
+        <div class="sl-rest-grid">
+          <figure class="sl-rest-editor">
+            <div class="screen"><img src="/shots/editor.webp" width="2880" height="1800" alt="The editor open on an entry, with a bulleted list and a quote." loading="lazy" decoding="async" /></div>
+            <figcaption>Write in Markdown, with spell check and drafts that save as you type.</figcaption>
+          </figure>
+          <figure class="sl-rest-phone">
+            <div class="phone"><img src="/shots/phone-reader.webp" width="1170" height="2532" alt="An entry open in the Android app." loading="lazy" decoding="async" /></div>
+            <figcaption>The Android app, locked with the same password.</figcaption>
+          </figure>
+          <figure class="sl-rest-search">
+            <div class="screen"><img src="/shots/search.webp" width="2880" height="1800" alt="Searching for “Ana” lists entries from 2019 to 2026 with the word highlighted." loading="lazy" decoding="async" /></div>
+            <figcaption>Search runs on your device, across every year at once.</figcaption>
+          </figure>
+          <figure class="sl-rest-stats">
+            <div class="screen"><img src="/shots/stats.webp" width="2880" height="1800" alt="Statistics: 1,046 entries and a chart of characters written per year since 2019." loading="lazy" decoding="async" /></div>
+            <figcaption>See what you've written, counted on your device too.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="mx-auto mt-32 max-w-2xl px-4 sm:px-6" aria-labelledby="faq-title">
+        <h2 id="faq-title" class="text-xl font-semibold tracking-tight">Questions</h2>
+        <div class="mt-6 border-t border-slate">
+          <details class="group border-b border-slate">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 py-5 text-sm font-medium text-text">
+              Is Icarus free?
+              <svg class="faq-chevron shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="pb-5 text-sm leading-relaxed text-muted">Yes. Icarus is free and open source under the GNU GPL v3. There are no accounts, ads or subscriptions.</p>
+          </details>
+          <details class="group border-b border-slate">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 py-5 text-sm font-medium text-text">
+              Where is my diary stored?
+              <svg class="faq-chevron shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="pb-5 text-sm leading-relaxed text-muted">Only on your device. The desktop app saves it in a folder you choose, the Android app keeps it in its private storage, and the web app keeps it in your browser's storage. Icarus has no servers that receive or store diaries.</p>
+          </details>
+          <details class="group border-b border-slate">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 py-5 text-sm font-medium text-text">
+              What happens if I forget my password?
+              <svg class="faq-chevron shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="pb-5 text-sm leading-relaxed text-muted">Use the recovery key you saved when you set your password. Without the password or the recovery key, no one can open the diary.</p>
+          </details>
+          <details class="group border-b border-slate">
+            <summary class="flex cursor-pointer items-center justify-between gap-4 py-5 text-sm font-medium text-text">
+              Can I bring the diary I already have?
+              <svg class="faq-chevron shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <p class="pb-5 text-sm leading-relaxed text-muted">Yes. Import any .ics file and each entry appears on its day. You can export your diary as .ics at any time.</p>
+          </details>
+        </div>
+      </section>
+
+      <section class="sl-closing" aria-labelledby="closing-title">
+        <h2 id="closing-title">Keep it to yourself</h2>
+        <div class="mt-8 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          <a href="/download" class="btn btn-primary" data-download>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+            <span data-download-label>Download</span>
+          </a>
+          <a href="/app/" class="btn btn-secondary">Open the web app</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mt-24 border-t border-slate sm:mt-32">
+      <div class="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <p>Icarus is free software, licensed under the <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="noopener license" class="underline underline-offset-4 hover:text-text">GNU GPL v3</a>.</p>
+        <a href="https://github.com/tiny-mammal/icarus" rel="noopener" class="hover:text-text">Source code</a>
+      </div>
+    </footer>
+
+    <nav class="mockup-switch" aria-label="Landing page mockups">
+      <a href="./sealed.html" aria-current="page">Sealed</a>
+      <a href="./years.html">Years</a>
+      <a href="/">Live page</a>
+    </nav>
+  </body>
+</html>

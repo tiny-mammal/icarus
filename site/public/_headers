@@ -23,6 +23,12 @@
 /download
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
 
+# Landing page mockups that were not chosen (site/mockups/): the landing
+# page's policy, kept out of search results.
+/mockups/*
+  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  X-Robots-Tag: noindex
+
 # Web app: the diary never leaves the browser. connect-src keeps every request
 # on this origin and img-src blocks remote images, so a pasted image URL can't
 # leak that a diary was opened. 'wasm-unsafe-eval' runs the password

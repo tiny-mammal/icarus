@@ -1,0 +1,380 @@
+/*
+ * Landing page. The Icarus mark at the scale of the page: the ring draws
+ * itself, its dot climbs to the top like a rising sun, and that light falls
+ * on the headline and on the app below it. Loaded after `style.css`.
+ */
+
+/* ------------------------------------------------------------------ */
+/* Hero                                                                */
+/* ------------------------------------------------------------------ */
+.home-hero {
+  --mark: min(92vw, 46rem);
+  --mark-top: 4.5rem;
+  position: relative;
+  padding: calc(var(--mark-top) + var(--mark) * 0.24) 1rem 0;
+  overflow-x: clip;
+  background: radial-gradient(
+      60rem 40rem at 50% calc(var(--mark-top) - 6rem),
+      color-mix(in oklab, var(--color-slate) 30%, transparent),
+      transparent 70%
+    ),
+    var(--color-ink);
+}
+
+.home-mark {
+  position: absolute;
+  top: var(--mark-top);
+  left: 50%;
+  width: var(--mark);
+  aspect-ratio: 1;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.home-ring {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  /* Draw from the bottom, so the stroke closes where the sun ends up. */
+  rotate: 90deg;
+}
+.home-ring circle {
+  /* About one CSS pixel at the ring's full size. (A non-scaling stroke
+     would be simpler, but Chromium then measures the dash in screen space.) */
+  stroke-width: 0.15;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: home-draw 1.4s var(--ease-glide) 0.1s forwards;
+}
+
+/* Starts as the logo's dot in the middle of the ring, then rises. */
+.home-sun {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.75rem;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 999px;
+  background: var(--color-muted);
+  animation: home-rise 1.6s var(--ease-glide) 0.9s forwards;
+}
+.home-sun::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34rem;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 999px;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in oklab, var(--color-text) 16%, transparent),
+    color-mix(in oklab, var(--color-text) 4%, transparent) 45%,
+    transparent
+  );
+  opacity: 0;
+  animation: home-bloom 1.8s var(--ease-glide) 1.1s forwards;
+}
+
+.home-copy {
+  position: relative;
+  max-width: 44rem;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.home-copy > * {
+  opacity: 0;
+  animation: home-appear 1s var(--ease-glide) forwards;
+  animation-delay: 1.35s;
+}
+.home-copy > :nth-child(2) {
+  animation-delay: 1.5s;
+}
+.home-copy > :nth-child(n + 3) {
+  animation-delay: 1.65s;
+}
+
+/* Lit from above by the sun: full white at the top of each line. */
+.home-title {
+  margin: 0;
+  font-size: clamp(2.6rem, 7vw, 5.4rem);
+  font-weight: 600;
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+  background: linear-gradient(to bottom, var(--color-text) 45%, color-mix(in oklab, var(--color-muted) 80%, var(--color-text)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding-bottom: 0.08em;
+}
+
+.home-lede {
+  max-width: 34rem;
+  margin: 1.5rem 0 0;
+  font-size: clamp(1rem, 1.6vw, 1.125rem);
+  line-height: 1.6;
+  color: var(--color-muted);
+  text-wrap: balance;
+}
+
+@keyframes home-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes home-rise {
+  to {
+    top: 0;
+    width: 1rem;
+    background: var(--color-text);
+    box-shadow:
+      0 0 18px 4px color-mix(in oklab, var(--color-text) 55%, transparent),
+      0 0 60px 18px color-mix(in oklab, var(--color-text) 14%, transparent);
+  }
+}
+@keyframes home-bloom {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes home-appear {
+  from {
+    opacity: 0;
+    translate: 0 0.75rem;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Stage: the calendar leans back, then sits up as it scrolls in.      */
+/* ------------------------------------------------------------------ */
+.home-stage {
+  position: relative;
+  max-width: 72rem;
+  margin: 4.5rem auto 0;
+  padding: 0 1rem;
+  perspective: 1800px;
+}
+.home-tilt {
+  --tilt: 26; /* LEAN in home.ts */
+  transform: rotateX(calc(var(--tilt) * 1deg)) scale(calc(1 - var(--tilt) * 0.0025));
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+/* Sunlight on the top edge, fading as the screen turns to face you. */
+.home-tilt .screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, color-mix(in oklab, var(--color-text) 9%, transparent), transparent 40%);
+  opacity: calc(var(--tilt) / 26);
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tour                                                                */
+/* ------------------------------------------------------------------ */
+.home-tour {
+  max-width: 80rem;
+  margin: 9rem auto 0;
+  padding: 0 1rem;
+}
+.home-tour-title {
+  max-width: 40rem;
+  margin: 0;
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.home-tour-grid {
+  margin-top: 3.5rem;
+}
+.home-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4rem;
+}
+.home-step h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.home-step p {
+  max-width: 26rem;
+  margin: 0.6rem 0 0;
+  font-size: 0.975rem;
+  line-height: 1.65;
+  color: var(--color-muted);
+}
+.home-step-shot {
+  margin-top: 1.5rem;
+}
+.home-frame {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .home-tour-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.5fr) minmax(0, 1.5fr);
+    gap: 3.5rem;
+  }
+  .home-steps {
+    gap: 0;
+  }
+  .home-step {
+    min-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    opacity: 0.3;
+    transition: opacity 500ms var(--ease-glide);
+  }
+  .home-step[data-active] {
+    opacity: 1;
+  }
+  .home-step-shot {
+    display: none;
+  }
+  .home-frame {
+    display: block;
+    position: sticky;
+    top: calc(50vh - 18rem);
+    align-self: start;
+    margin-top: calc(39vh - 18rem);
+    margin-bottom: calc(39vh - 18rem);
+  }
+  .home-frame .screen {
+    display: grid;
+  }
+  .home-frame img {
+    grid-area: 1 / 1;
+    opacity: 0;
+    scale: 0.985;
+    transition:
+      opacity 600ms var(--ease-glide),
+      scale 900ms var(--ease-glide);
+  }
+  .home-frame img[data-active] {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Phones and the promises                                             */
+/* ------------------------------------------------------------------ */
+.home-pocket {
+  max-width: 72rem;
+  margin: 9rem auto 0;
+  padding: 0 1rem;
+  display: grid;
+  gap: 3.5rem;
+  align-items: center;
+}
+.home-pocket-phones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  max-width: 30rem;
+  margin: 0 auto;
+}
+.home-pocket-phones .phone:last-child {
+  translate: 0 3rem;
+}
+.home-pocket-copy h2 {
+  margin: 0;
+  font-size: clamp(1.9rem, 4vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+.home-pocket-copy > p {
+  max-width: 30rem;
+  margin: 1rem 0 0;
+  line-height: 1.65;
+  color: var(--color-muted);
+}
+.home-facts {
+  margin: 2.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.home-facts li {
+  padding: 1.1rem 0;
+  border-top: 1px solid var(--color-slate);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--color-muted);
+}
+.home-facts strong {
+  font-weight: 500;
+  color: var(--color-text);
+}
+@media (min-width: 56rem) {
+  .home-pocket {
+    grid-template-columns: 1fr 1fr;
+    gap: 5rem;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Closing                                                             */
+/* ------------------------------------------------------------------ */
+.home-closing {
+  margin: 8rem auto 0;
+  padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.home-closing h2 {
+  margin: 1.5rem 0 0;
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+/* The mark again, with its sun already at the top. */
+.home-closing-mark {
+  position: relative;
+  width: 3.5rem;
+  aspect-ratio: 1;
+  border: 1px solid var(--color-faint);
+  border-radius: 999px;
+}
+.home-closing-mark span {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 0.5rem;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 999px;
+  background: var(--color-text);
+  box-shadow: 0 0 14px 3px color-mix(in oklab, var(--color-text) 40%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-ring circle,
+  .home-sun,
+  .home-sun::before,
+  .home-copy > * {
+    animation-duration: 1ms;
+    animation-delay: 0s;
+  }
+}
