@@ -5,6 +5,9 @@
   import { SOURCE_REPO, openExternal } from '../lib/external';
   import { AUTO_LOCK_CHOICES } from '../lib/config';
   import { install } from '../lib/install.svelte';
+  import { updates } from '../lib/updates.svelte';
+  import { timeAgo } from '../lib/date';
+  import UpdateMark from './UpdateMark.svelte';
   import Switch from './Switch.svelte';
   import Modal from './Modal.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
@@ -68,6 +71,32 @@
         ? 'Add Icarus to your Dock and open it like any other app'
         : 'Open Icarus in its own window, like any other app, even offline',
   );
+
+  // The answer to the last check, shown beside the version.
+  const updateStatus = $derived(
+    updates.status === 'checking'
+      ? 'Checking…'
+      : updates.status === 'failed'
+        ? 'Could not reach icarus.4oli.com'
+        : updates.status === 'done' && !updates.available
+          ? 'Up to date'
+          : '',
+  );
+
+  function saveUpdatePref(save: Promise<void>) {
+    save.catch(() => app.toast('error', 'Could not save settings to the diary folder.'));
+  }
+
+  function getUpdate() {
+    app.settingsOpen = false;
+    void updates.download();
+  }
+
+  /** Desktop checks in place; Android hands over to the browser. */
+  function checkNow() {
+    if (updates.canCheck) void updates.check();
+    else void updates.lookForUpdate();
+  }
 
   const autoLockLabel = (minutes: number) => (minutes === 0 ? 'Never' : `${minutes} min`);
 </script>
@@ -317,6 +346,78 @@
       </div>
     </div>
 
+    <!-- Updates (desktop app only) -->
+    {#if updates.supported}
+      <div class="mt-5 border-t border-slate pt-5">
+        <p class="mb-2 text-[0.7rem] font-medium uppercase tracking-wider text-muted">Updates</p>
+
+        {#if updates.available && updates.latest}
+          <div class="update-row mb-4 flex items-center gap-3 rounded-lg border border-[#f5b452]/25 px-3.5 py-3">
+            <UpdateMark size="sm" />
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-medium text-text">Version {updates.latest.version} is ready</span>
+              <span class="block text-xs text-muted">Released {timeAgo(new Date(updates.latest.published))}</span>
+            </span>
+            <button
+              class="shrink-0 rounded-lg bg-text px-3 py-1.5 text-xs font-semibold text-ink transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              onclick={getUpdate}
+            >
+              Get the update
+            </button>
+          </div>
+        {/if}
+
+        <div class="flex items-center justify-between gap-4">
+          <span class="min-w-0">
+            <span class="block text-sm text-text">Icarus <span class="tabular-nums">{updates.current}</span></span>
+            <span class="block text-xs {updates.status === 'failed' ? 'text-red-400/80' : 'text-muted'}" aria-live="polite">
+              {updateStatus || (updates.canCheck ? 'Installed version' : 'Opens the download page in your browser')}
+            </span>
+          </span>
+          <button
+            class="flex shrink-0 items-center gap-2 rounded-lg border border-slate px-3 py-1.5 text-xs font-medium text-text transition-colors hover:bg-slate disabled:opacity-60"
+            onclick={checkNow}
+            disabled={updates.status === 'checking'}
+          >
+            {#if updates.canCheck}
+              <svg class={updates.status === 'checking' ? 'animate-spin' : ''} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+              Check now
+            {:else}
+              Check online
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
+            {/if}
+          </button>
+        </div>
+
+        {#if updates.canCheck}
+          <div class="mt-4 flex items-center justify-between gap-4">
+            <span>
+              <span class="block text-sm text-text">Check automatically</span>
+              <span class="block text-xs text-muted">
+                Asks icarus.4oli.com for the latest version number every few hours. Nothing about
+                you or your diary is sent.
+              </span>
+            </span>
+            <Switch checked={updates.enabled} label="Check for updates automatically" onchange={(on) => saveUpdatePref(updates.setEnabled(on))} />
+          </div>
+        {/if}
+
+        {#if !updates.canCheck || !updates.enabled}
+          <div class="mt-4 flex items-center justify-between gap-4">
+            <span>
+              <span class="block text-sm text-text">Monthly reminder</span>
+              <span class="block text-xs text-muted">
+                {updates.canCheck
+                  ? 'Once a month, ask whether to look for a new version'
+                  : 'Once a month, ask whether to look for a new version. Icarus itself never goes online'}
+              </span>
+            </span>
+            <Switch checked={updates.reminders} label="Monthly update reminder" onchange={(on) => saveUpdatePref(updates.setReminders(on))} />
+          </div>
+        {/if}
+      </div>
+    {/if}
+
     <!-- Source code -->
     <div class="mt-5 flex justify-center border-t border-slate pt-4">
       <a
@@ -357,3 +458,9 @@
     </ConfirmDialog>
   {/if}
 {/if}
+
+<style>
+  .update-row {
+    background: linear-gradient(100deg, color-mix(in oklab, #f5b452 9%, transparent), transparent 70%);
+  }
+</style>

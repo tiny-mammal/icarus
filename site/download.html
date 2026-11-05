@@ -59,6 +59,11 @@
             Free for Windows, macOS, Linux and Android. Your diary stays on your device, and nowhere else.
           </p>
           <p class="mt-4 min-h-4 text-xs text-muted" data-release-status aria-live="polite"></p>
+          <!-- Filled in by download.ts when the app links here with ?installed=<version>. -->
+          <div class="update-check mt-6 hidden w-full max-w-md rounded-2xl border px-5 py-4 text-left" data-update-check aria-live="polite">
+            <p class="text-sm font-medium text-text" data-update-title></p>
+            <p class="mt-1 text-xs leading-relaxed text-muted" data-update-detail></p>
+          </div>
         </div>
       </section>
 
@@ -146,6 +151,11 @@
                 <li>Open the downloaded file. Icarus isn't on Google Play yet, so Android asks you to allow your browser to install apps.</li>
                 <li>If Play Protect warns about an unknown app, choose <span class="text-text">More details</span>, then <span class="text-text">Install anyway</span>.</li>
               </ol>
+              <h3 class="mt-5 text-xs font-medium tracking-wide text-text uppercase">Updating</h3>
+              <p class="mt-2">
+                Open the new APK and tap <span class="text-text">Update</span>. Android replaces the app in place and
+                keeps your diary. Don't uninstall the old version first.
+              </p>
               <p class="mt-3">
                 Your diary is stored privately inside the app, so uninstalling it erases the diary. Export a backup
                 from Settings before you do.

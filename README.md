@@ -75,6 +75,26 @@ The release job also runs the smoke test (`e2e/android/`) on an emulator. It
 drives the debug app with Playwright over the WebView's DevTools socket, and
 checks that the release APK starts.
 
+## Updates
+
+The apps never look for updates on their own unless asked to:
+
+- **Desktop, opt-in.** *Settings → Updates → Check automatically* (off by
+  default) fetches `https://icarus.4oli.com/download/latest.json` shortly
+  after the diary opens and every few hours. The request comes from the Rust
+  side (`src-tauri/src/updates.rs`) with no cookies or identifiers; the
+  webview's CSP still blocks every outside origin. A newer version shows a
+  notice that leads to the download page.
+- **Monthly reminder.** Once a build is 30 days old (by its commit date), the
+  Android app and the desktop app with automatic checks off ask once a month
+  whether to look for a new version. Desktop checks once; Android, which has
+  no network access, opens `/download?installed=<version>` in the browser,
+  where the page compares versions and explains how to update in place.
+
+The browser app updates itself when the site is deployed. On the dev server,
+`?debug=updates`, `?debug=updates-reminder` and `?debug=updates-android`
+simulate each case.
+
 ## Password protection
 
 Creating or importing a diary starts by asking whether to protect it with a

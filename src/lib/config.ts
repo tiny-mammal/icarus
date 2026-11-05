@@ -77,3 +77,31 @@ export async function getSavedDateFormat(): Promise<DateFormat> {
 export async function setSavedDateFormat(format: DateFormat): Promise<void> {
   await storage.setItem(STORE, 'dateFormat', format);
 }
+
+/** Whether the desktop app checks icarus.4oli.com for new versions. Opt-in, off by default. */
+export async function getSavedUpdateCheck(): Promise<boolean> {
+  return (await storage.getItem<boolean>(STORE, 'checkForUpdates')) === true;
+}
+
+export async function setSavedUpdateCheck(enabled: boolean): Promise<void> {
+  await storage.setItem(STORE, 'checkForUpdates', enabled);
+}
+
+/** Whether to ask once a month about looking for a new version. On by default. */
+export async function getSavedUpdateReminder(): Promise<boolean> {
+  return (await storage.getItem<boolean>(STORE, 'updateReminder')) !== false;
+}
+
+export async function setSavedUpdateReminder(enabled: boolean): Promise<void> {
+  await storage.setItem(STORE, 'updateReminder', enabled);
+}
+
+/** Epoch milliseconds before which the update reminder stays quiet (0 = no snooze). */
+export async function getSavedUpdateRemindAfter(): Promise<number> {
+  const value = await storage.getItem<number>(STORE, 'updateRemindAfter');
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+export async function setSavedUpdateRemindAfter(time: number): Promise<void> {
+  await storage.setItem(STORE, 'updateRemindAfter', time);
+}

@@ -62,6 +62,7 @@ import {
 } from './search';
 import { addMonths, adjacentKey, dateKey, keyToDate, startOfMonth } from './date';
 import { addUserWord, setUserWords } from './spellcheck';
+import { updates } from './updates.svelte';
 import { randomId } from './random';
 import { devError } from './log';
 
@@ -432,6 +433,7 @@ class AppStore {
       this.loadSpellcheck(),
       this.loadSpellWords(),
       this.loadLockPreferences(),
+      updates.load(),
     ]);
   }
 

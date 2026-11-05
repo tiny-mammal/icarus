@@ -7,6 +7,9 @@
  * `v<version>/`, and `latest.json` at the root pointing at the current one.
  * The manifest is written last, so a half-uploaded release is never served.
  */
+import { isVersion } from '../src/lib/semver.ts';
+
+export { compareVersions } from '../src/lib/semver.ts';
 
 export type PlatformId = 'windows' | 'macos' | 'linux' | 'android';
 
@@ -64,13 +67,10 @@ export function assetPath(id: string, version?: string): string {
   return version ? `/download/${id}?version=${encodeURIComponent(version)}` : `/download/${id}`;
 }
 
-/** SemVer, with optional pre-release and build metadata. */
-const VERSION_PATTERN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
-
 /** Where a given release keeps asset `id`, or null for an unknown id or version. */
 export function releasedAsset(id: string, version: string): { key: string; name: string } | null {
   const spec = ASSETS.find((asset) => asset.id === id);
-  if (!spec || !VERSION_PATTERN.test(version)) return null;
+  if (!spec || !isVersion(version)) return null;
   const name = assetFileName(spec, version);
   return { key: releasePrefix(version) + name, name };
 }
@@ -84,31 +84,6 @@ export function releasePrefix(version: string): string {
 export function assetFileName(spec: AssetSpec, version: string): string {
   const arch = spec.platform === 'macos' || spec.platform === 'android' ? 'universal' : 'x86_64';
   return `Icarus-Diary-${version}-${spec.platform}-${arch}.${spec.extension}`;
-}
-
-/** Compare two versions by SemVer precedence (build metadata is ignored). */
-export function compareVersions(a: string, b: string): number {
-  const split = (version: string) => {
-    const [core, ...pre] = version.split('+')[0].split('-');
-    return { core: core.split('.').map(Number), pre: pre.join('-') };
-  };
-  const [left, right] = [split(a), split(b)];
-  for (let i = 0; i < 3; i++) {
-    const diff = (left.core[i] ?? 0) - (right.core[i] ?? 0);
-    if (diff) return diff;
-  }
-  // A pre-release sorts before its final release: 1.0.0-rc.1 < 1.0.0.
-  if (!left.pre || !right.pre) return (left.pre ? -1 : 0) - (right.pre ? -1 : 0);
-  const [lp, rp] = [left.pre.split('.'), right.pre.split('.')];
-  for (let i = 0; i < Math.min(lp.length, rp.length); i++) {
-    const [l, r] = [lp[i], rp[i]];
-    if (l === r) continue;
-    const [ln, rn] = [/^\d+$/.test(l), /^\d+$/.test(r)];
-    if (ln && rn) return Number(l) - Number(r);
-    if (ln !== rn) return ln ? -1 : 1; // Numeric identifiers sort first.
-    return l < r ? -1 : 1;
-  }
-  return lp.length - rp.length;
 }
 
 export function isReleaseManifest(value: unknown): value is ReleaseManifest {

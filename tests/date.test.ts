@@ -13,6 +13,7 @@ import {
   parseDateFormat,
   startOfMonth,
   weekdayLabels,
+  timeAgo,
 } from '../src/lib/date';
 
 describe('dateKey', () => {
@@ -216,5 +217,25 @@ describe('date formats', () => {
     expect(parseDateFormat('nope')).toBe('auto');
     expect(parseDateFormat(undefined)).toBe('auto');
     expect(parseDateFormat('mdy')).toBe('mdy');
+  });
+});
+
+describe('timeAgo', () => {
+  const now = new Date(2026, 10, 5, 9, 30);
+
+  it('counts calendar days, not hours', () => {
+    expect(timeAgo(new Date(2026, 10, 5, 0, 5), now)).toBe('today');
+    expect(timeAgo(new Date(2026, 10, 4, 23, 50), now)).toBe('yesterday');
+    expect(timeAgo(new Date(2026, 10, 2), now)).toBe('3 days ago');
+  });
+
+  it('switches to weeks, months and years', () => {
+    expect(timeAgo(new Date(2026, 9, 22), now)).toBe('2 weeks ago');
+    expect(timeAgo(new Date(2026, 7, 1), now)).toBe('3 months ago');
+    expect(timeAgo(new Date(2024, 10, 1), now)).toBe('2 years ago');
+  });
+
+  it('treats a clock slightly ahead of this one as today', () => {
+    expect(timeAgo(new Date(2026, 10, 6), now)).toBe('today');
   });
 });
