@@ -13,12 +13,14 @@
     type StatsPeriod,
   } from '../lib/stats';
   import {
+    barsPath,
     compactNumber,
-    monotoneAreaPath,
     monotoneLinePath,
     niceCeil,
+    placeTooltip,
     type ChartPoint,
   } from '../lib/chart';
+  import type { BinUnit } from '../lib/timeline';
 
   const numberFmt = new Intl.NumberFormat();
 
@@ -84,102 +86,95 @@
   const CHART_HEIGHT = 190;
   const PAD = { top: 14, right: 10, bottom: 6, left: 40 } as const;
   const PLOT_HEIGHT = CHART_HEIGHT - PAD.top - PAD.bottom;
+  const BASELINE = PAD.top + PLOT_HEIGHT;
+
+  const BAR_NOUN: Record<BinUnit, string> = { day: 'Daily', week: 'Weekly', month: 'Monthly' };
 
   let chartWidth = $state(0);
   let hoverIndex = $state<number | null>(null);
 
-  const maxChars = $derived(
-    stats.buckets.reduce((max, bucket) => Math.max(max, bucket.chars), 0),
+  const timeline = $derived(stats.timeline);
+  const bins = $derived(timeline.bins);
+  const yMax = $derived(
+    niceCeil(bins.reduce((max, bin) => Math.max(max, bin.perDay, bin.average), 0)),
   );
-  const yMax = $derived(niceCeil(maxChars));
   const plotWidth = $derived(Math.max(0, chartWidth - PAD.left - PAD.right));
-  // Points span the plot edge to edge, so the first and last bucket sit right
-  // on the axis instead of leaving half a band of dead space at each side.
-  const stepX = $derived(
-    stats.buckets.length > 1
-      ? plotWidth / (stats.buckets.length - 1)
-      : 0,
-  );
-  const points = $derived<ChartPoint[]>(
-    stats.buckets.map((bucket, i) => ({
-      x:
-        stats.buckets.length === 1
-          ? PAD.left + plotWidth / 2
-          : PAD.left + i * stepX,
-      y:
-        PAD.top +
-        PLOT_HEIGHT -
-        (yMax > 0 ? (bucket.chars / yMax) * PLOT_HEIGHT : 0),
+  // Each bin owns an equal band; its bar fills the band (minus a hairline gap
+  // when bands are wide enough) and its average sits at the band's centre.
+  const bandWidth = $derived(bins.length > 0 ? plotWidth / bins.length : 0);
+  const barGap = $derived(bandWidth >= 4 ? 1 : 0);
+
+  function yOf(value: number): number {
+    return BASELINE - (yMax > 0 ? (value / yMax) * PLOT_HEIGHT : 0);
+  }
+
+  const bars = $derived(
+    bins.map((bin, i) => ({
+      x: PAD.left + i * bandWidth + barGap / 2,
+      width: bandWidth - barGap,
+      top: yOf(bin.perDay),
     })),
   );
-  const linePath = $derived(monotoneLinePath(points));
-  const areaPath = $derived(monotoneAreaPath(points, PAD.top + PLOT_HEIGHT));
+  const barPath = $derived(barsPath(bars, BASELINE));
+  const averagePoints = $derived<ChartPoint[]>(
+    bins.map((bin, i) => ({
+      x: PAD.left + (i + 0.5) * bandWidth,
+      y: yOf(bin.average),
+    })),
+  );
+  const averagePath = $derived(monotoneLinePath(averagePoints));
 
   const yTicks = $derived(
     yMax > 0
       ? [0, yMax / 2, yMax].map((value) => ({
           value,
-          y: PAD.top + PLOT_HEIGHT - (value / yMax) * PLOT_HEIGHT,
+          y: yOf(value),
           label: compactNumber(value),
         }))
-      : [{ value: 0, y: PAD.top + PLOT_HEIGHT, label: '0' }],
+      : [{ value: 0, y: BASELINE, label: '0' }],
   );
 
-  // Thin the x-axis labels out so 30 daily or 40 yearly points stay legible.
-  // Ticks are spread evenly (always including the first and last bucket) so the
-  // final label can never collide with its neighbour.
-  const MAX_X_TICKS = 6;
-  const xTicks = $derived.by(() => {
-    const count = stats.buckets.length;
-    if (count === 0 || chartWidth <= 0) return [];
-    const indices = new Set<number>();
-    if (count <= 12) {
-      for (let i = 0; i < count; i++) indices.add(i);
-    } else {
-      for (let t = 0; t < MAX_X_TICKS; t++) {
-        indices.add(Math.round((t * (count - 1)) / (MAX_X_TICKS - 1)));
-      }
-    }
-    return [...indices].map((i) => ({
-      i,
-      label: stats.buckets[i].label,
-      x: points[i].x,
-      // Anchor the outermost labels inward so they never overflow the chart.
-      anchor:
-        count === 1 ? 'center' : i === 0 ? 'start' : i === count - 1 ? 'end' : 'center',
-    }));
-  });
-
-  // Highlighted strip around the hovered point, bounded by its neighbours.
-  const hoverBand = $derived.by(() => {
-    const count = stats.buckets.length;
-    if (hoverIndex === null || count === 0) return null;
-    if (count === 1) return { x: PAD.left, width: plotWidth };
-    const left = PAD.left + (hoverIndex - 0.5) * stepX;
-    const right = PAD.left + (hoverIndex + 0.5) * stepX;
-    const x = Math.max(PAD.left, left);
-    return { x, width: Math.min(PAD.left + plotWidth, right) - x };
-  });
-
-  const hoverBucket = $derived(
-    hoverIndex === null ? null : (stats.buckets[hoverIndex] ?? null),
+  // Labels sit under their bin; ones near an edge are anchored inward so they
+  // never overflow the chart.
+  const xTicks = $derived(
+    chartWidth > 0
+      ? timeline.ticks.map((tick) => {
+          const x = PAD.left + (tick.index + 0.5) * bandWidth;
+          return {
+            ...tick,
+            x,
+            anchor: x < PAD.left + 24 ? 'start' : x > chartWidth - 24 ? 'end' : 'center',
+          };
+        })
+      : [],
   );
+
+  const hoverBin = $derived(hoverIndex === null ? null : (bins[hoverIndex] ?? null));
+  const hoverBar = $derived(hoverIndex === null ? null : (bars[hoverIndex] ?? null));
   const hoverPoint = $derived(
-    hoverIndex === null ? null : (points[hoverIndex] ?? null),
+    hoverIndex === null ? null : (averagePoints[hoverIndex] ?? null),
   );
-  const tooltipLeft = $derived(
-    hoverPoint
-      ? Math.min(Math.max(hoverPoint.x, 80), Math.max(chartWidth - 80, 80))
-      : 0,
+
+  // The tooltip may rise over the chart heading so it can sit above most
+  // points instead of covering them. It clears both the bar and the line.
+  const TOOLTIP_HEADROOM = 28;
+  let tooltipWidth = $state(0);
+  let tooltipHeight = $state(0);
+  const tooltipBox = $derived(
+    hoverPoint && hoverBar
+      ? placeTooltip(
+          { x: hoverPoint.x, y: Math.min(hoverPoint.y, hoverBar.top) },
+          { width: tooltipWidth, height: tooltipHeight },
+          { top: -TOOLTIP_HEADROOM, width: chartWidth, height: CHART_HEIGHT },
+        )
+      : null,
   );
 
   function onChartMove(e: PointerEvent) {
-    const count = stats.buckets.length;
-    if (count === 0 || plotWidth <= 0) return;
+    if (bins.length === 0 || bandWidth <= 0) return;
     const bounds = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const offset = e.clientX - bounds.left - PAD.left;
-    const index = count === 1 ? 0 : Math.round(offset / stepX);
-    hoverIndex = Math.min(Math.max(index, 0), count - 1);
+    const index = Math.floor((e.clientX - bounds.left - PAD.left) / bandWidth);
+    hoverIndex = Math.min(Math.max(index, 0), bins.length - 1);
   }
 
   function barWidth(day: DayStat): number {
@@ -319,11 +314,11 @@
     <!-- Evolution chart -->
     <div class="mt-6">
       <div class="mb-3 flex items-end justify-between gap-4">
-        <h3 class="text-sm font-medium text-text">Characters over time</h3>
+        <h3 class="text-sm font-medium text-text">Characters per day</h3>
         <p class="text-[0.7rem] text-muted">{periodLabel}</p>
       </div>
 
-      {#if stats.buckets.length > 0 && stats.totalChars > 0}
+      {#if bins.length > 0 && stats.totalChars > 0}
         <div class="relative" bind:clientWidth={chartWidth}>
           <svg
             width={chartWidth}
@@ -335,13 +330,6 @@
             role="img"
             aria-label="Characters written over the selected period"
           >
-            <defs>
-              <linearGradient id="stats-area-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--color-text)" stop-opacity="0.22" />
-                <stop offset="100%" stop-color="var(--color-text)" stop-opacity="0" />
-              </linearGradient>
-            </defs>
-
             {#each yTicks as tick}
               <line
                 x1={PAD.left}
@@ -354,38 +342,35 @@
               />
             {/each}
 
-            {#if hoverBand && hoverPoint}
-              <rect
-                x={hoverBand.x}
-                y={PAD.top}
-                width={hoverBand.width}
-                height={PLOT_HEIGHT}
-                rx="4"
-                fill="var(--color-text)"
-                opacity="0.045"
-              />
+            <path d={barPath} fill="var(--color-text)" opacity="0.16" />
+
+            {#if hoverBar && hoverPoint}
               <line
                 x1={hoverPoint.x}
                 x2={hoverPoint.x}
                 y1={PAD.top}
-                y2={PAD.top + PLOT_HEIGHT}
+                y2={BASELINE}
                 stroke="var(--color-faint)"
                 stroke-width="1"
               />
+              <path
+                d={barsPath([{ ...hoverBar, width: Math.max(hoverBar.width, 2) }], BASELINE)}
+                fill="var(--color-text)"
+                opacity="0.5"
+              />
             {/if}
 
-            <path d={areaPath} fill="url(#stats-area-fill)" />
-            <path
-              d={linePath}
-              fill="none"
-              stroke="var(--color-text)"
-              stroke-width="1.75"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-
-            {#if points.length === 1}
-              <circle cx={points[0].x} cy={points[0].y} r="3.5" fill="var(--color-text)" />
+            {#if bins.length === 1}
+              <circle cx={averagePoints[0].x} cy={averagePoints[0].y} r="3.5" fill="var(--color-text)" />
+            {:else}
+              <path
+                d={averagePath}
+                fill="none"
+                stroke="var(--color-text)"
+                stroke-width="1.75"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             {/if}
 
             {#if hoverPoint}
@@ -411,27 +396,33 @@
             </span>
           {/each}
 
-          {#if hoverBucket && hoverPoint}
+          {#if hoverBin && tooltipBox}
             <div
-              class="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-lg border border-slate bg-surface/95 px-2.5 py-1.5 shadow-lg shadow-black/40 backdrop-blur-sm"
-              style:left="{tooltipLeft}px"
+              class="pointer-events-none absolute z-10 rounded-lg border border-slate bg-surface/95 px-2.5 py-1.5 shadow-lg shadow-black/40 backdrop-blur-sm"
+              style:left="{tooltipBox.left}px"
+              style:top="{tooltipBox.top}px"
+              bind:offsetWidth={tooltipWidth}
+              bind:offsetHeight={tooltipHeight}
             >
               <p class="text-[0.65rem] font-medium whitespace-nowrap text-muted">
-                {hoverBucket.fullLabel}
+                {hoverBin.fullLabel}
               </p>
               <p class="text-xs whitespace-nowrap text-text">
-                {numberFmt.format(hoverBucket.chars)}
-                <span class="text-muted">characters</span>
+                {numberFmt.format(hoverBin.chars)}
+                <span class="text-muted">
+                  characters · {hoverBin.entries}
+                  {hoverBin.entries === 1 ? 'entry' : 'entries'}
+                </span>
               </p>
               <p class="text-[0.65rem] whitespace-nowrap text-muted">
-                {hoverBucket.entries}
-                {hoverBucket.entries === 1 ? 'entry' : 'entries'}
+                {numberFmt.format(Math.round(hoverBin.average))} per day,
+                {timeline.averageDays}-day average
               </p>
             </div>
           {/if}
 
           <div class="relative mt-1.5 h-4">
-            {#each xTicks as tick (tick.i)}
+            {#each xTicks as tick (tick.index)}
               <span
                 class="absolute top-0 text-[0.6rem] whitespace-nowrap text-muted
                   {tick.anchor === 'center'
@@ -444,6 +435,17 @@
                 {tick.label}
               </span>
             {/each}
+          </div>
+
+          <div class="mt-2 flex items-center justify-end gap-4 text-[0.65rem] text-muted">
+            <span class="flex items-center gap-1.5">
+              <span class="inline-block h-2.5 w-1.5 rounded-[1px] bg-text/30"></span>
+              {BAR_NOUN[timeline.unit]}{timeline.unit === 'day' ? '' : ' (per day)'}
+            </span>
+            <span class="flex items-center gap-1.5">
+              <span class="inline-block h-[2px] w-3 rounded-full bg-text"></span>
+              {timeline.averageDays}-day average
+            </span>
           </div>
         </div>
       {:else}

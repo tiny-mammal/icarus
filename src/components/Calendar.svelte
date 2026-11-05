@@ -5,6 +5,7 @@
   import { app } from '../lib/store.svelte';
   import { clickOutside, trapFocus } from '../lib/actions';
   import {
+    addDays,
     addMonths,
     dateKey,
     keyToDate,
@@ -49,10 +50,6 @@
     if (inCurrentMonthKey(todayKey)) return todayKey;
     return dateKey(app.currentMonth);
   });
-
-  function addDays(d: Date, n: number): Date {
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
-  }
 
   // Move focus to a day, switching the visible month first if it falls outside.
   async function focusDay(target: Date): Promise<void> {

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   compactNumber,
-  monotoneAreaPath,
+  barsPath,
   monotoneLinePath,
   niceCeil,
+  placeTooltip,
   type ChartPoint,
 } from '../src/lib/chart';
 
@@ -88,21 +89,25 @@ describe('monotoneLinePath', () => {
   });
 });
 
-describe('monotoneAreaPath', () => {
-  it('closes the line down to the baseline', () => {
-    const d = monotoneAreaPath(
-      [
-        { x: 0, y: 10 },
-        { x: 10, y: 20 },
-      ],
-      30,
-    );
-    expect(d.endsWith('L 0 30 Z')).toBe(true);
-    expect(d).toContain('L 10 30');
+describe('barsPath', () => {
+  it('draws each bar as a closed rectangle from the baseline', () => {
+    expect(barsPath([{ x: 1, width: 2, top: 4 }], 10)).toBe('M1 10V4h2V10Z');
   });
 
-  it('returns an empty path for no points', () => {
-    expect(monotoneAreaPath([], 10)).toBe('');
+  it('skips bars without height or width', () => {
+    const d = barsPath(
+      [
+        { x: 0, width: 2, top: 10 },
+        { x: 2, width: 0, top: 3 },
+        { x: 4, width: 2, top: 5 },
+      ],
+      10,
+    );
+    expect(d).toBe('M4 10V5h2V10Z');
+  });
+
+  it('is empty without bars', () => {
+    expect(barsPath([], 10)).toBe('');
   });
 });
 
@@ -128,5 +133,31 @@ describe('compactNumber', () => {
     const label = compactNumber(12_345);
     expect(label.length).toBeLessThan(7);
     expect(label).not.toBe('12345');
+  });
+});
+
+describe('placeTooltip', () => {
+  const size = { width: 100, height: 50 };
+  const bounds = { top: -20, width: 400, height: 190 };
+
+  it('centres the tooltip above the point when there is room', () => {
+    expect(placeTooltip({ x: 200, y: 120 }, size, bounds)).toEqual({ left: 150, top: 60 });
+  });
+
+  it('may borrow the space above the chart', () => {
+    expect(placeTooltip({ x: 200, y: 40 }, size, bounds).top).toBe(-20);
+  });
+
+  it('keeps the tooltip inside the horizontal bounds', () => {
+    expect(placeTooltip({ x: 10, y: 120 }, size, bounds).left).toBe(0);
+    expect(placeTooltip({ x: 395, y: 120 }, size, bounds).left).toBe(300);
+  });
+
+  it('moves beside a peak too close to the top, never over it', () => {
+    const leftHalf = placeTooltip({ x: 100, y: 14 }, size, bounds);
+    expect(leftHalf.left).toBe(110);
+    const rightHalf = placeTooltip({ x: 300, y: 14 }, size, bounds);
+    expect(rightHalf.left).toBe(190);
+    expect(rightHalf.top).toBe(-11);
   });
 });

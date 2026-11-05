@@ -80,19 +80,24 @@ export function monotoneLinePath(points: readonly ChartPoint[]): string {
   return d;
 }
 
-/** Close a line path down to `baselineY` so it can be filled as an area. */
-export function monotoneAreaPath(
-  points: readonly ChartPoint[],
-  baselineY: number,
-): string {
-  if (points.length === 0) return '';
-  if (points.length === 1) {
-    const p = points[0];
-    return `M ${r(p.x)} ${r(p.y)} L ${r(p.x)} ${r(baselineY)} Z`;
+/** A vertical bar from `top` down to the baseline, `width` wide from `x`. */
+export interface ChartBar {
+  x: number;
+  width: number;
+  top: number;
+}
+
+/**
+ * Every bar as rectangles in one SVG path: a year of daily bars stays a single
+ * DOM node instead of hundreds. Bars with no height are skipped.
+ */
+export function barsPath(bars: readonly ChartBar[], baselineY: number): string {
+  let d = '';
+  for (const bar of bars) {
+    if (bar.top >= baselineY || bar.width <= 0) continue;
+    d += `M${r(bar.x)} ${r(baselineY)}V${r(bar.top)}h${r(bar.width)}V${r(baselineY)}Z`;
   }
-  const first = points[0];
-  const last = points[points.length - 1];
-  return `${monotoneLinePath(points)} L ${r(last.x)} ${r(baselineY)} L ${r(first.x)} ${r(baselineY)} Z`;
+  return d;
 }
 
 /** Round `value` up to a "nice" axis maximum (1/1.5/2/2.5/3/4/5/10 × 10ⁿ). */
@@ -114,4 +119,41 @@ const compact = new Intl.NumberFormat(undefined, {
 /** Compact axis label, e.g. 1_234 → "1.2K"; plain below a thousand. */
 export function compactNumber(value: number): string {
   return value < 1000 ? String(value) : compact.format(value);
+}
+
+export interface TooltipBox {
+  left: number;
+  top: number;
+}
+
+/**
+ * Place a tooltip of `size` next to the hovered `point` without hiding the
+ * point or the line under it. It sits centred above the point whenever there
+ * is room (it may rise up to `bounds.top`, which can be negative to borrow the
+ * space above the chart); for a peak too close to the top it moves beside the
+ * point instead, towards the wider half of the chart. Horizontally it is always
+ * kept within `bounds.width`.
+ */
+export function placeTooltip(
+  point: ChartPoint,
+  size: { width: number; height: number },
+  bounds: { top: number; width: number; height: number },
+  gap = 10,
+): TooltipBox {
+  const clamp = (v: number, min: number, max: number) =>
+    Math.min(Math.max(v, min), Math.max(min, max));
+  const maxLeft = bounds.width - size.width;
+
+  const aboveTop = point.y - gap - size.height;
+  if (aboveTop >= bounds.top) {
+    return { left: clamp(point.x - size.width / 2, 0, maxLeft), top: aboveTop };
+  }
+
+  const fitsRight = point.x + gap + size.width <= bounds.width;
+  const fitsLeft = point.x - gap - size.width >= 0;
+  const right = fitsRight && (point.x < bounds.width / 2 || !fitsLeft);
+  return {
+    left: right ? point.x + gap : clamp(point.x - gap - size.width, 0, maxLeft),
+    top: clamp(point.y - size.height / 2, bounds.top, bounds.height - size.height),
+  };
 }

@@ -30,6 +30,21 @@ export function addMonths(d: Date, n: number): Date {
   return new Date(d.getFullYear(), d.getMonth() + n, 1);
 }
 
+export function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+/** Local midnight `n` days after `d` (negative goes back). DST-safe. */
+export function addDays(d: Date, n: number): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+}
+
+/** Whole calendar days from `a` to `b` (negative when `b` is earlier). */
+export function daysBetween(a: Date, b: Date): number {
+  // Rounding absorbs the hour a DST change adds or removes.
+  return Math.round((startOfDay(b).getTime() - startOfDay(a).getTime()) / 86_400_000);
+}
+
 /**
  * Which weekday the calendar grid starts on: 0 = Sunday, 1 = Monday. Stored as
  * a user preference so the grid can match local convention.

@@ -42,9 +42,10 @@ describe('computeStats — last 30 days', () => {
 
   it('covers exactly the last 30 days, today included', () => {
     const stats = computeStats(entries, '30d', NOW);
-    expect(stats.buckets).toHaveLength(30);
-    expect(stats.buckets[0].key).toBe('2026-08-27');
-    expect(stats.buckets.at(-1)?.key).toBe('2026-09-25');
+    expect(stats.timeline.bins).toHaveLength(30);
+    expect(stats.timeline.unit).toBe('day');
+    expect(stats.timeline.bins[0].key).toBe('2026-08-27');
+    expect(stats.timeline.bins.at(-1)?.key).toBe('2026-09-25');
   });
 
   it('only totals entries inside the window', () => {
@@ -61,32 +62,25 @@ describe('computeStats — this year (calendar year)', () => {
     entry('2026-09-25', 'abcde', 'Today'),
   ];
 
-  it('runs from January to the current month', () => {
+  it('runs day by day from January 1 to today', () => {
     const stats = computeStats(entries, 'year', NOW);
-    expect(stats.buckets.map((b) => b.key)).toEqual([
-      '2026-01',
-      '2026-02',
-      '2026-03',
-      '2026-04',
-      '2026-05',
-      '2026-06',
-      '2026-07',
-      '2026-08',
-      '2026-09',
-    ]);
+    expect(stats.timeline.unit).toBe('day');
+    expect(stats.timeline.bins[0].key).toBe('2026-01-01');
+    expect(stats.timeline.bins.at(-1)?.key).toBe('2026-09-25');
+    expect(stats.timeline.bins).toHaveLength(268);
     expect(stats.totalEntries).toBe(2);
     expect(stats.totalChars).toBe(7);
   });
 
-  it('sums characters into the right month', () => {
+  it('puts characters on the right day', () => {
     const stats = computeStats(entries, 'year', NOW);
-    expect(stats.buckets[0].chars).toBe(2);
-    expect(stats.buckets.at(-1)?.chars).toBe(5);
+    expect(stats.timeline.bins[0].chars).toBe(2);
+    expect(stats.timeline.bins.at(-1)?.chars).toBe(5);
   });
 });
 
 describe('computeStats — last year (trailing 12 months)', () => {
-  it('spans the current month and the eleven before it', () => {
+  it('spans from the start of the month eleven months back to today', () => {
     const entries = [
       entry('2025-10-01', 'aa'),
       entry('2025-12-24', 'bb'),
@@ -94,59 +88,38 @@ describe('computeStats — last year (trailing 12 months)', () => {
       entry('2025-09-30', 'excluded'),
     ];
     const stats = computeStats(entries, '12m', NOW);
-    expect(stats.buckets).toHaveLength(12);
-    expect(stats.buckets[0].key).toBe('2025-10');
-    expect(stats.buckets.at(-1)?.key).toBe('2026-09');
+    expect(stats.timeline.bins).toHaveLength(360);
+    expect(stats.timeline.bins[0].key).toBe('2025-10-01');
+    expect(stats.timeline.bins.at(-1)?.key).toBe('2026-09-25');
     expect(stats.totalEntries).toBe(3);
   });
 });
 
 describe('computeStats — all time', () => {
-  it('uses monthly buckets for a few years of history', () => {
+  it('uses weekly bins for a couple of years of history', () => {
     const entries = [entry('2025-01-10', 'a'), entry('2026-09-25', 'bb')];
     const stats = computeStats(entries, 'all', NOW);
-    expect(stats.buckets[0].key).toBe('2025-01');
-    expect(stats.buckets.at(-1)?.key).toBe('2026-09');
-    expect(stats.buckets).toHaveLength(21);
+    expect(stats.timeline.unit).toBe('week');
+    // The first week is clipped to the first entry; later ones start on Monday.
+    expect(stats.timeline.bins[0].key).toBe('2025-01-10');
+    expect(stats.timeline.bins[1].key).toBe('2025-01-13');
+    expect(stats.timeline.bins.at(-1)?.key).toBe('2026-09-21');
   });
 
-  it('keeps monthly buckets up to four years, then goes yearly', () => {
-    const monthly = computeStats(
-      [entry('2022-10-01', 'a'), entry('2026-09-25', 'b')],
-      'all',
-      NOW,
-    );
-    expect(monthly.buckets).toHaveLength(48);
-    expect(monthly.buckets[0].key).toBe('2022-10');
-
-    const yearly = computeStats(
-      [entry('2022-09-30', 'a'), entry('2026-09-25', 'b')],
-      'all',
-      NOW,
-    );
-    expect(yearly.buckets[0].key).toBe('2022');
-    expect(yearly.buckets).toHaveLength(5);
-  });
-
-  it('switches to yearly buckets for long histories', () => {
-    const entries = [entry('2020-01-10', 'a'), entry('2026-09-25', 'bb')];
+  it('switches to monthly bins for long histories', () => {
+    const entries = [entry('2018-01-10', 'a'), entry('2026-09-25', 'bb')];
     const stats = computeStats(entries, 'all', NOW);
-    expect(stats.buckets.map((b) => b.key)).toEqual([
-      '2020',
-      '2021',
-      '2022',
-      '2023',
-      '2024',
-      '2025',
-      '2026',
-    ]);
+    expect(stats.timeline.unit).toBe('month');
+    expect(stats.timeline.bins[0].key).toBe('2018-01-10');
+    expect(stats.timeline.bins[1].key).toBe('2018-02-01');
+    expect(stats.timeline.bins.at(-1)?.key).toBe('2026-09-01');
     expect(stats.totalChars).toBe(3);
   });
 
   it('extends to a future-dated entry rather than cutting it off', () => {
     const entries = [entry('2026-09-25', 'a'), entry('2026-11-02', 'bbb')];
     const stats = computeStats(entries, 'all', NOW);
-    expect(stats.buckets.at(-1)?.key).toBe('2026-11');
+    expect(stats.timeline.bins.at(-1)?.key).toBe('2026-11-02');
     expect(stats.totalChars).toBe(4);
   });
 
@@ -158,8 +131,7 @@ describe('computeStats — all time', () => {
       date: new Date(9999, 0, 1),
     };
     const stats = computeStats([entry('2026-09-25', 'aaa'), placeholder], 'all', NOW);
-    expect(stats.buckets.at(-1)?.key).toBe('2026-09');
-    expect(stats.buckets.some((b) => b.key.startsWith('9999'))).toBe(false);
+    expect(stats.timeline.bins.map((b) => b.key)).toEqual(['2026-09-25']);
     expect(stats.totalEntries).toBe(1);
     expect(stats.totalChars).toBe(3);
     expect(stats.bestDay?.chars).toBe(3);
@@ -173,7 +145,7 @@ describe('computeStats — all time', () => {
       date: new Date(9999, 0, 1),
     };
     const stats = computeStats([placeholder], 'all', NOW);
-    expect(stats.buckets).toEqual([]);
+    expect(stats.timeline.bins).toEqual([]);
     expect(stats.totalEntries).toBe(0);
     expect(stats.bestDay).toBeNull();
   });
@@ -190,8 +162,8 @@ describe('computeStats — all time', () => {
     );
     expect(stats.totalEntries).toBe(2);
     expect(stats.totalChars).toBe(5);
-    expect(stats.buckets[0].key).toBe('2025-06');
-    expect(stats.buckets.at(-1)?.key).toBe('2026-09');
+    expect(stats.timeline.bins[0].key).toBe('2025-06-01');
+    expect(stats.timeline.bins.at(-1)?.key).toBe('2026-09-21'); // weekly bins
     expect(stats.bestDay?.key).toBe('2025-06-01');
     expect(stats.ranking.some((day) => day.key.startsWith('3000'))).toBe(false);
   });
@@ -204,18 +176,18 @@ describe('computeStats — all time', () => {
     );
     expect(stats.totalEntries).toBe(1);
     expect(stats.totalChars).toBe(2);
-    expect(stats.buckets.map((b) => b.key)).toEqual(['2026-09']);
+    expect(stats.timeline.bins.map((b) => b.key)).toEqual(['2026-09-25']);
     expect(stats.ranking.some((day) => day.key.startsWith('0300'))).toBe(false);
   });
 
   it('counts dates up to the window edge and drops anything beyond', () => {
     const edge = computeStats([entry('2226-01-01', 'edge')], 'all', NOW);
     expect(edge.totalEntries).toBe(1);
-    expect(edge.buckets.map((b) => b.key)).toEqual(['2226-01']);
+    expect(edge.timeline.bins.at(-1)?.key).toBe('2226-01-01');
 
     const beyond = computeStats([entry('2227-01-01', 'beyond')], 'all', NOW);
     expect(beyond.totalEntries).toBe(0);
-    expect(beyond.buckets).toEqual([]);
+    expect(beyond.timeline.bins).toEqual([]);
   });
 });
 
@@ -276,9 +248,9 @@ describe('computeStats — empty diary', () => {
   });
 
   it('still charts the fixed windows when the diary is empty', () => {
-    expect(computeStats([], '30d', NOW).buckets).toHaveLength(30);
-    expect(computeStats([], '12m', NOW).buckets).toHaveLength(12);
-    expect(computeStats([], 'all', NOW).buckets).toEqual([]);
+    expect(computeStats([], '30d', NOW).timeline.bins).toHaveLength(30);
+    expect(computeStats([], '12m', NOW).timeline.bins).toHaveLength(360);
+    expect(computeStats([], 'all', NOW).timeline.bins).toEqual([]);
   });
 
   it('has no best day when every entry is an empty body', () => {
