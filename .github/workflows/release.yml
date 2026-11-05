@@ -47,8 +47,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
       - id: version
@@ -88,11 +88,11 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -111,7 +111,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm tauri build --ci --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
       - run: node scripts/release-assets.ts collect "src-tauri/target/${{ matrix.target }}/release/bundle" ${{ matrix.platform }} release-assets
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-${{ matrix.platform }}
           path: release-assets/
@@ -134,15 +134,15 @@ jobs:
             /usr/local/share/chromium /usr/lib/google-cloud-sdk /usr/lib/jvm
           sudo docker image prune --all --force > /dev/null || true
           df -h /
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
@@ -203,7 +203,7 @@ jobs:
       - if: github.ref_type == 'tag'
         run: node scripts/release-assets.ts collect "$APK_ROOT" android release-assets
       - if: github.ref_type == 'tag'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-android
           path: release-assets/
@@ -240,7 +240,7 @@ jobs:
             adb install -r "$APK_ROOT/universal/debug/app-universal-debug.apk"
             pnpm exec playwright test --config playwright.android.config.ts
       - if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-smoke-report
           path: |
@@ -264,16 +264,16 @@ jobs:
       BUCKET: icarus-releases
       VERSION: ${{ needs.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: release-*
           path: release-assets
