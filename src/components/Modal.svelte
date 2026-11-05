@@ -20,6 +20,7 @@
    */
   let {
     title,
+    subtitle,
     onclose,
     locked = false,
     width = 'sm:max-w-sm',
@@ -30,6 +31,8 @@
     children,
   }: {
     title: string;
+    /** Secondary line under the title, e.g. progress through a multi-step flow. */
+    subtitle?: string;
     onclose: () => void;
     locked?: boolean;
     /** Max width on wide screens (phones always use the full width). */
@@ -104,7 +107,10 @@
       <!-- Grab handle: phones only, where the card is a pull-down sheet. -->
       <div class="mx-auto mb-3 h-1 w-9 rounded-full bg-faint sm:hidden" aria-hidden="true"></div>
       <div class="flex items-center justify-between gap-4">
-        <h2 id={titleId} class="min-w-0 text-base font-semibold tracking-tight text-text">{title}</h2>
+        <div class="min-w-0">
+          <h2 id={titleId} class="text-base font-semibold tracking-tight text-text">{title}</h2>
+          {#if subtitle}<p class="mt-0.5 text-xs text-muted">{subtitle}</p>{/if}
+        </div>
         <div class="-mr-1.5 flex shrink-0 items-center gap-2">
           {@render actions?.()}
           {#if !locked}

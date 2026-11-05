@@ -112,14 +112,11 @@
 
 <Modal
   title={titles[step]}
+  subtitle={step === 'password' ? 'Step 1 of 2' : step === 'recovery' ? 'Step 2 of 2' : undefined}
   onclose={close}
   locked={working}
   width={step === 'choice' ? 'sm:max-w-md' : 'sm:max-w-sm'}
 >
-  {#if step === 'password' || step === 'recovery'}
-    <p class="-mt-2 mb-4 text-xs text-muted">Step {step === 'password' ? 1 : 2} of 2</p>
-  {/if}
-
   {#if step === 'choice'}
     <p class="mb-4 text-sm leading-relaxed text-muted">
       Choose how the diary is stored in {where}. You can change this later in Settings.
