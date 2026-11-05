@@ -71,18 +71,34 @@ function requireFolder(): string {
 
 const folderStores = jsonFileStores(async () => requireFolder());
 
+/** Whether the active folder's settings allow reopening it on launch. */
+async function folderAllowsRemembering(): Promise<boolean> {
+  return remembersFolder(
+    await folderStores.getItem(REMEMBER_FOLDER_ITEM.store, REMEMBER_FOLDER_ITEM.key),
+  );
+}
+
 /**
  * Record the active folder for the next launch, or erase the record when no
- * folder is open or its settings say not to. A failure only costs the user
- * the shortcut on the next launch, so it never blocks opening the diary.
+ * folder is open or its settings say not to. Failing to record only costs the
+ * user the shortcut, so it never blocks opening the diary. Failing to erase
+ * would leave the folder linked against the user's wishes, so it is thrown.
  */
 async function syncRememberedFolder(): Promise<void> {
+  let keep = false;
   try {
-    const keep = activeFolder !== null
-      && remembersFolder(await folderStores.getItem(REMEMBER_FOLDER_ITEM.store, REMEMBER_FOLDER_ITEM.key));
-    await invoke('set_remembered_folder', { folder: keep ? activeFolder : null });
+    keep = activeFolder !== null && (await folderAllowsRemembering());
   } catch (err) {
-    devError('syncRememberedFolder: could not update the remembered folder', err);
+    devError('syncRememberedFolder: could not read the preference', err);
+  }
+  if (!keep) {
+    await invoke('set_remembered_folder', { folder: null });
+    return;
+  }
+  try {
+    await invoke('set_remembered_folder', { folder: activeFolder });
+  } catch (err) {
+    devError('syncRememberedFolder: could not record the folder', err);
   }
 }
 
@@ -103,6 +119,13 @@ export const tauriBackend: StorageBackend = {
     if (!folder) return null;
     // Select it so its settings (e.g. the lock preferences) can be read.
     activeFolder = folder;
+    // The folder may have opted out while the computer could not erase the
+    // record (read-only config directory); honour the opt-out and retry.
+    if (!(await folderAllowsRemembering().catch(() => true))) {
+      activeFolder = null;
+      await invoke('set_remembered_folder', { folder: null }).catch(() => undefined);
+      return null;
+    }
     return diaryInFolder(folder);
   },
 

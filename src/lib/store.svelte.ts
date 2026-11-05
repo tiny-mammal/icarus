@@ -1282,7 +1282,14 @@ class AppStore {
       for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
     }
     if (ref) await storage.forgetVault(ref);
-    await storage.rememberVault(null);
+    try {
+      await storage.rememberVault(null);
+    } catch (err) {
+      // Closing must not leave the folder set to reopen on the next launch.
+      devError('forgetVault: could not erase the remembered folder', err);
+      this.toast('error', 'Could not close the folder: the remembered location could not be erased.');
+      return;
+    }
     storage.encryption.keepSessionFor(null);
     this.clearDiaryFromMemory();
     this.vault = null;

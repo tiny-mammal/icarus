@@ -56,6 +56,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 import { tauriBackend } from '../src/lib/storage/tauri';
 
 beforeEach(async () => {
+  mocks.failRemember = false;
   await tauriBackend.rememberVault(null);
   mocks.files.clear();
   mocks.selections.length = 0;
@@ -117,6 +118,20 @@ describe('desktop diary folder', () => {
     expect(mocks.rememberedFolder).toBe('/usb/Journal');
     await tauriBackend.rememberVault(null);
     expect(mocks.rememberedFolder).toBeNull();
+  });
+
+  it('reports a record that cannot be erased, and honours an opt-out on launch', async () => {
+    const ref = { kind: 'file' as const, path: '/usb/Journal/diary.ics' };
+    await tauriBackend.rememberVault(ref);
+    await tauriBackend.setItem('settings', 'rememberFolder', false);
+    mocks.failRemember = true;
+    await expect(tauriBackend.rememberVault(ref)).rejects.toThrow('read-only');
+    await expect(tauriBackend.rememberVault(null)).rejects.toThrow('read-only');
+
+    // The record survived, but the folder's opt-out wins on the next launch.
+    await tauriBackend.rememberVault(null).catch(() => undefined);
+    mocks.rememberedFolder = '/usb/Journal';
+    expect(await tauriBackend.getRememberedVault()).toBeNull();
   });
 
   it('still opens the folder when the computer refuses the record', async () => {
