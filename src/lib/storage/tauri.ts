@@ -130,8 +130,16 @@ export const tauriBackend: StorageBackend = {
   },
 
   async rememberVault(ref) {
+    const previous = activeFolder;
     activeFolder = ref?.kind === 'file' ? await dirname(ref.path) : null;
-    await syncRememberedFolder();
+    try {
+      await syncRememberedFolder();
+    } catch (err) {
+      // The record could not be erased: the session stays as it was, so the
+      // diary that is still open keeps saving to its folder.
+      activeFolder = previous;
+      throw err;
+    }
   },
 
   async vaultExists(ref) {

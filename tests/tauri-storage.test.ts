@@ -128,6 +128,10 @@ describe('desktop diary folder', () => {
     await expect(tauriBackend.rememberVault(ref)).rejects.toThrow('read-only');
     await expect(tauriBackend.rememberVault(null)).rejects.toThrow('read-only');
 
+    // A refused erase leaves the open folder usable.
+    await tauriBackend.setItem('settings', 'weekStart', 0);
+    expect(JSON.parse(mocks.files.get('/usb/Journal/settings.json')!).weekStart).toBe(0);
+
     // The record survived, but the folder's opt-out wins on the next launch.
     await tauriBackend.rememberVault(null).catch(() => undefined);
     mocks.rememberedFolder = '/usb/Journal';

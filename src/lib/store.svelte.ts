@@ -1278,18 +1278,19 @@ class AppStore {
   async forgetVault(): Promise<void> {
     if (this.vault && !(await this.flushDraftNow())) return;
     const ref = this.vault ?? this.lockedVault;
-    if (ref?.kind === 'app') {
-      for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
-    }
-    if (ref) await storage.forgetVault(ref);
+    // Erase the remembered location first: if that fails nothing else has
+    // changed, so the open diary (and its keys) stay usable.
     try {
       await storage.rememberVault(null);
     } catch (err) {
-      // Closing must not leave the folder set to reopen on the next launch.
       devError('forgetVault: could not erase the remembered folder', err);
       this.toast('error', 'Could not close the folder: the remembered location could not be erased.');
       return;
     }
+    if (ref?.kind === 'app') {
+      for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
+    }
+    if (ref) await storage.forgetVault(ref);
     storage.encryption.keepSessionFor(null);
     this.clearDiaryFromMemory();
     this.vault = null;
