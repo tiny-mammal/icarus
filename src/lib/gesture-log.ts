@@ -6,6 +6,7 @@
  * guessed. It records numbers and timings only, never diary content, and in
  * production builds `enabled` is constant false, so every call is a no-op.
  */
+import { debugFlag } from './debug';
 
 export type GestureLogEntry = {
   /** `performance.now()`-based time, same clock as `Event.timeStamp`. */
@@ -18,16 +19,11 @@ const MAX_ENTRIES = 50_000;
 /** Frames slower than this (ms) are logged as jank. */
 const SLOW_FRAME_MS = 24;
 
-function debugFlag(): boolean {
-  if (!import.meta.env.DEV || typeof location === 'undefined') return false;
-  return new URLSearchParams(location.search).get('debug') === 'gestures';
-}
-
 const entries: GestureLogEntry[] = [];
 const listeners = new Set<() => void>();
 
 export const gestureLog = {
-  enabled: debugFlag(),
+  enabled: debugFlag('gestures'),
 
   record(kind: string, data: Record<string, unknown> = {}, t = performance.now()): void {
     if (!this.enabled) return;

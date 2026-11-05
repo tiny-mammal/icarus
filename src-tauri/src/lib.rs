@@ -4,7 +4,10 @@
 //! registers the official plugins the app relies on (filesystem, native
 //! dialogs and the system-opener used to launch
 //! external links from diary entries in the user's default browser). The app
-//! is fully local-first: no network access is requested or required.
+//! is fully local-first: the only network request is the opt-in update check
+//! in `updates.rs`, which is off unless the user turns it on.
+
+mod updates;
 
 #[cfg(target_os = "linux")]
 fn private_runtime_dirs() -> std::io::Result<std::path::PathBuf> {
@@ -42,6 +45,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![updates::latest_release])
         .setup(|_app| {
             #[cfg(target_os = "linux")]
             if let Some(settings) = gtk::Settings::default() {

@@ -173,3 +173,15 @@ export function adjacentKey(
   const i = dir === 1 ? lo : lo - 1;
   return sortedKeys[i] ?? null;
 }
+
+const relativeTime = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+/** How long ago `date` was, in words: "today", "yesterday", "3 weeks ago". */
+export function timeAgo(date: Date, now: Date = new Date()): string {
+  const midnight = (d: Date) => keyToDate(dateKey(d)).getTime();
+  const days = Math.round((midnight(now) - midnight(date)) / 86_400_000);
+  if (days < 7) return relativeTime.format(-Math.max(0, days), 'day');
+  if (days < 30) return relativeTime.format(-Math.floor(days / 7), 'week');
+  if (days < 365) return relativeTime.format(-Math.floor(days / 30), 'month');
+  return relativeTime.format(-Math.floor(days / 365), 'year');
+}
