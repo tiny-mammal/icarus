@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 import { preloadFonts } from './vite/preload-fonts';
+import { pwa } from './vite/pwa';
 
 // Tauri injects this when targeting a physical device on the LAN; otherwise undefined.
 const host = process.env.TAURI_DEV_HOST;
@@ -13,7 +14,7 @@ const allowedHosts = process.env.ICARUS_ALLOWED_HOSTS?.split(',').map((h) => h.t
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [svelte(), tailwindcss(), preloadFonts()],
+  plugins: [svelte(), tailwindcss(), preloadFonts(), ...pwa()],
 
   // Tauri expects a fixed port and owns the terminal output, so don't let Vite
   // clear the screen or hop ports.

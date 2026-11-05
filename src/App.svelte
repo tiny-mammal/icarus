@@ -15,6 +15,7 @@
   import EncryptionSetup from './components/EncryptionSetup.svelte';
   import PrivacyDialog from './components/PrivacyDialog.svelte';
   import ExportDialog from './components/ExportDialog.svelte';
+  import InstallDialog from './components/InstallDialog.svelte';
   import { watchIdle } from './lib/idle';
   import { isPlainShortcut } from './lib/keyboard';
   import { dismissBootSplash } from './lib/boot-splash';
@@ -120,6 +121,7 @@
     <StatsModal />
     {#if app.privacyDialog}<PrivacyDialog />{/if}
     {#if app.exportOpen}<ExportDialog />{/if}
+    <InstallDialog />
   {/if}
 {/if}
 
