@@ -333,7 +333,7 @@
       </button>
 
       <!-- Month/year label — click to open the picker -->
-      <div class="relative">
+      <div class="relative" use:clickOutside={() => (pickerOpen = false)}>
       <button
         class="group flex items-center gap-1.5 rounded-lg px-2 py-1 text-lg font-semibold tracking-tight text-text transition-colors hover:bg-slate"
         onclick={togglePicker}
@@ -350,7 +350,6 @@
         <div
           class="absolute left-0 top-full z-50 mt-2 w-72 origin-top-left rounded-2xl border border-slate bg-surface p-3 shadow-2xl shadow-black/50"
           transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
-          use:clickOutside={() => (pickerOpen = false)}
           use:trapFocus={() => (pickerOpen = false)}
           role="dialog"
           aria-label="Select month and year"

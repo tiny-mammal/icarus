@@ -3,6 +3,8 @@
 /**
  * Call `onOutside` when a pointer press lands outside `node` — used to dismiss
  * lightweight popovers (e.g. the month/year picker) without a full backdrop.
+ * For toggleable popovers, attach to the wrapper containing both the trigger
+ * and the popover so pressing the trigger does not dismiss before toggling.
  */
 export function clickOutside(node: HTMLElement, onOutside: () => void) {
   let handler = onOutside;

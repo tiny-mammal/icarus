@@ -36,7 +36,7 @@
   }
 </script>
 
-<div class="relative">
+<div class="relative" use:clickOutside={() => (open = false)}>
   <button
     class="flex items-center gap-1.5 rounded-lg border border-slate px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text"
     onclick={() => (open = !open)}
@@ -58,7 +58,6 @@
       class="absolute z-50 max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-slate bg-surface p-1.5 shadow-2xl shadow-black/50
         right-0 top-full mt-2 origin-top-right"
       transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
-      use:clickOutside={() => (open = false)}
       use:trapFocus={() => (open = false)}
       role="dialog"
       aria-label="Saved drafts"

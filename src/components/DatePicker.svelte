@@ -53,7 +53,7 @@
   }
 </script>
 
-<div class="relative">
+<div class="relative" use:clickOutside={() => (open = false)}>
   <!-- Trigger: mirrors the old native input's chip styling -->
   <button
     type="button"
@@ -71,7 +71,6 @@
     <div
       class="absolute top-full z-50 mt-2 w-72 rounded-2xl {align === 'left' ? 'left-0 origin-top-left' : 'right-0 origin-top-right'} border border-slate bg-surface p-3 shadow-2xl shadow-black/50"
       transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
-      use:clickOutside={() => (open = false)}
       use:trapFocus={() => (open = false)}
       role="dialog"
       aria-label="Pick a date"
