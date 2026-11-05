@@ -91,6 +91,8 @@ describe('update checks', () => {
     const { updates } = await freshUpdates();
     expect(await updates.check()).toBe(false);
     expect(updates.status).toBe('failed');
+    state.latest = { version: '0.3.0', published: 'not a date' };
+    expect(await updates.check()).toBe(false);
     state.fail = true;
     expect(await updates.check()).toBe(false);
     expect(updates.available).toBe(false);
@@ -164,5 +166,18 @@ describe('monthly reminder', () => {
     expect(await updates.lookForUpdate()).toBe('opened');
     expect(state.opened).toEqual([`${DOWNLOAD_PAGE}?installed=0.2.0`]);
     expect(updates.notice).toBe(null);
+  });
+
+  it('rests after a manual check from Settings, but not after a failed one', async () => {
+    const { updates } = await freshUpdates();
+    await updates.load(built + 40 * DAY);
+    state.fail = true;
+    expect(await updates.lookForUpdate()).toBe('failed');
+    expect(updates.reminderDue).toBe(true);
+    state.fail = false;
+    state.latest = { version: '0.2.0', published: '2026-11-01T10:00:00.000Z' };
+    expect(await updates.check()).toBe(true);
+    expect(updates.notice).toBe(null);
+    expect(state.settings.get('updateRemindAfter')).toBeGreaterThan(Date.now());
   });
 });

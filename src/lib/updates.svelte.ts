@@ -103,7 +103,8 @@ function isLatestRelease(value: unknown): value is LatestRelease {
   return (
     typeof release?.version === 'string' &&
     isVersion(release.version) &&
-    typeof release.published === 'string'
+    typeof release.published === 'string' &&
+    Number.isFinite(Date.parse(release.published))
   );
 }
 
@@ -205,6 +206,8 @@ class Updates {
       if (!isLatestRelease(release)) throw new Error('Unexpected release manifest');
       this.latest = release;
       this.status = 'done';
+      // Any answer, from Settings or the reminder, counts as having looked.
+      if (this.reminderDue) void this.snoozeReminder();
       return true;
     } catch (err) {
       devError('updates: could not check for updates', err);
@@ -226,10 +229,9 @@ class Updates {
       await openExternal(this.downloadUrl);
       return 'opened';
     }
-    // Keep the reminder up (with its spinner) until there is an answer.
-    const ok = await this.check();
-    void this.snoozeReminder();
-    if (!ok) return 'failed';
+    // The reminder stays up (with its spinner) until there is an answer;
+    // a successful check rests it, a failed one leaves it to retry.
+    if (!(await this.check())) return 'failed';
     return this.available ? 'available' : 'current';
   }
 
