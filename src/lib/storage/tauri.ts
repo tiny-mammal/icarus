@@ -1,16 +1,22 @@
 /**
  * Desktop storage. The selected folder owns the diary (`diary.ics`, or
- * `diary.icarus` when encrypted), drafts and settings.
+ * `diary.icarus` when encrypted), drafts and settings. The only thing kept on
+ * the computer itself is the folder's path, so the next launch can reopen it
+ * (see `src-tauri/src/remembered.rs`); the folder's settings can turn that off.
  */
+import { invoke } from '@tauri-apps/api/core';
 import { readTextFile, remove, exists } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
 import { dirname, join } from '@tauri-apps/api/path';
 import { isEncryptedVault } from '../crypto/vault';
+import { devError } from '../log';
 import { FolderHasDiaryError } from './errors';
 import { jsonFileStores, pickDiaryFileText, saveBackupFile, writeAtomic } from './files';
 import {
   ENCRYPTED_EXTENSION,
   PLAIN_EXTENSION,
+  REMEMBER_FOLDER_ITEM,
+  remembersFolder,
   type StorageBackend,
   type VaultRef,
 } from './types';
@@ -63,6 +69,39 @@ function requireFolder(): string {
   return activeFolder;
 }
 
+const folderStores = jsonFileStores(async () => requireFolder());
+
+/** Whether the active folder's settings allow reopening it on launch. */
+async function folderAllowsRemembering(): Promise<boolean> {
+  return remembersFolder(
+    await folderStores.getItem(REMEMBER_FOLDER_ITEM.store, REMEMBER_FOLDER_ITEM.key),
+  );
+}
+
+/**
+ * Record the active folder for the next launch, or erase the record when no
+ * folder is open or its settings say not to. Failing to record only costs the
+ * user the shortcut, so it never blocks opening the diary. Failing to erase
+ * would leave the folder linked against the user's wishes, so it is thrown.
+ */
+async function syncRememberedFolder(): Promise<void> {
+  let keep = false;
+  try {
+    keep = activeFolder !== null && (await folderAllowsRemembering());
+  } catch (err) {
+    devError('syncRememberedFolder: could not read the preference', err);
+  }
+  if (!keep) {
+    await invoke('set_remembered_folder', { folder: null });
+    return;
+  }
+  try {
+    await invoke('set_remembered_folder', { folder: activeFolder });
+  } catch (err) {
+    devError('syncRememberedFolder: could not record the folder', err);
+  }
+}
+
 /** The vault's path, refusing anything outside the selected folder. */
 async function pathInFolder(ref: VaultRef): Promise<string> {
   if (ref.kind !== 'file') throw new Error('Desktop requires a file vault');
@@ -76,12 +115,31 @@ export const tauriBackend: StorageBackend = {
   kind: 'folder',
 
   async getRememberedVault() {
-    // No path, diary content or preference is stored on the host by Icarus.
-    return null;
+    const folder = await invoke<string | null>('remembered_folder');
+    if (!folder) return null;
+    // Select it so its settings (e.g. the lock preferences) can be read.
+    activeFolder = folder;
+    // The folder may have opted out while the computer could not erase the
+    // record (read-only config directory); honour the opt-out and retry.
+    if (!(await folderAllowsRemembering().catch(() => true))) {
+      activeFolder = null;
+      await invoke('set_remembered_folder', { folder: null }).catch(() => undefined);
+      return null;
+    }
+    return diaryInFolder(folder);
   },
 
   async rememberVault(ref) {
+    const previous = activeFolder;
     activeFolder = ref?.kind === 'file' ? await dirname(ref.path) : null;
+    try {
+      await syncRememberedFolder();
+    } catch (err) {
+      // The record could not be erased: the session stays as it was, so the
+      // diary that is still open keeps saving to its folder.
+      activeFolder = previous;
+      throw err;
+    }
   },
 
   async vaultExists(ref) {
@@ -129,5 +187,5 @@ export const tauriBackend: StorageBackend = {
     return saveBackupFile(contents, defaultName, true);
   },
 
-  ...jsonFileStores(async () => requireFolder()),
+  ...folderStores,
 };

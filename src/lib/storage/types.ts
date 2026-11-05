@@ -44,6 +44,13 @@ export interface StoreItem {
 export const DRAFTS_ITEM: StoreItem = { store: 'drafts', key: 'drafts' };
 /** The personal spell-check dictionary. */
 export const SPELL_WORDS_ITEM: StoreItem = { store: 'settings', key: 'spellWords' };
+/** Whether desktop reopens this folder on launch. */
+export const REMEMBER_FOLDER_ITEM: StoreItem = { store: 'settings', key: 'rememberFolder' };
+
+/** Reading of `REMEMBER_FOLDER_ITEM`: on unless the user turned it off. */
+export function remembersFolder(value: unknown): boolean {
+  return value !== false;
+}
 
 /**
  * Items that contain the user's own writing (or reveal it). They are encrypted
@@ -61,9 +68,16 @@ export interface StorageBackend {
   readonly kind: StorageKind;
 
   // --- vault lifecycle ----------------------------------------------------
-  /** The vault available on boot, or null until a desktop folder is chosen. */
+  /**
+   * The vault to reopen on boot, or null to show the Welcome screen. Desktop
+   * reopens the last folder unless that folder's settings turn it off.
+   */
   getRememberedVault(): Promise<VaultRef | null>;
-  /** Select the active vault for this session; desktop never remembers its path. */
+  /**
+   * Select the active vault and remember it for the next launch; null forgets
+   * it. Desktop keeps only the folder's path on the computer, and only while
+   * `REMEMBER_FOLDER_ITEM` allows it.
+   */
   rememberVault(ref: VaultRef | null): Promise<void>;
   /** Whether the vault's data is still present. */
   vaultExists(ref: VaultRef): Promise<boolean>;

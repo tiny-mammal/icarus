@@ -7,6 +7,8 @@ const state = vi.hoisted(() => ({
   stores: new Map<string, unknown>(),
   selections: [] as string[],
   activeFolder: '',
+  rememberedFolder: null as string | null,
+  failRememberErase: false,
   failDraftWrite: false,
   rejectImport: false,
   rejectExport: false,
@@ -15,9 +17,16 @@ const state = vi.hoisted(() => ({
 vi.mock('../src/lib/storage', () => ({
   storage: {
     kind: 'folder',
-    getRememberedVault: async () => null,
+    getRememberedVault: async () => {
+      if (!state.rememberedFolder) return null;
+      state.activeFolder = state.rememberedFolder;
+      return { kind: 'file', path: `${state.rememberedFolder}/diary.ics` };
+    },
     rememberVault: async (ref: { path: string } | null) => {
+      if (!ref && state.failRememberErase) throw new Error('Config directory is read-only');
       state.activeFolder = ref?.path.slice(0, ref.path.lastIndexOf('/')) ?? '';
+      const keep = state.stores.get(`${state.activeFolder}/settings/rememberFolder`) !== false;
+      state.rememberedFolder = ref && keep ? state.activeFolder : null;
     },
     vaultExists: async (ref: { path: string }) => state.files.has(ref.path),
     readVault: async (ref: { path: string }) => state.files.get(ref.path)!,
@@ -71,6 +80,8 @@ beforeEach(() => {
   state.stores.clear();
   state.selections.length = 0;
   state.activeFolder = '';
+  state.rememberedFolder = null;
+  state.failRememberErase = false;
   state.failDraftWrite = false;
   state.rejectImport = false;
   state.rejectExport = false;
@@ -103,6 +114,53 @@ describe('desktop folder flow', () => {
     expect(app.weekStart).toBe(1);
     expect(app.dateFormat).toBe('auto');
     expect(app.spellcheck).toBe(true);
+  });
+
+  it('reopens the last folder on launch until the user turns it off', async () => {
+    state.files.set('/journal/diary.ics', serializeIcs([]));
+    state.stores.set('/journal/settings/weekStart', 0);
+    state.rememberedFolder = '/journal';
+
+    let { app } = await import('../src/lib/store.svelte');
+    await app.init();
+    expect(app.view).toBe('main');
+    expect(app.vault).toEqual({ kind: 'file', path: '/journal/diary.ics' });
+    expect(app.weekStart).toBe(0);
+    expect(app.rememberFolder).toBe(true);
+
+    await app.setRememberFolder(false);
+    expect(state.rememberedFolder).toBeNull();
+
+    vi.resetModules();
+    ({ app } = await import('../src/lib/store.svelte'));
+    await app.init();
+    expect(app.view).toBe('welcome');
+  });
+
+  it('keeps the diary open when closing the folder cannot erase the remembered location', async () => {
+    state.files.set('/journal/diary.ics', serializeIcs([]));
+    state.rememberedFolder = '/journal';
+    const { app } = await import('../src/lib/store.svelte');
+    await app.init();
+    state.failRememberErase = true;
+
+    await app.forgetVault();
+    expect(app.view).toBe('main');
+    expect(app.vault).toEqual({ kind: 'file', path: '/journal/diary.ics' });
+    expect(app.toasts.at(-1)?.level).toBe('error');
+
+    state.failRememberErase = false;
+    await app.forgetVault();
+    expect(app.view).toBe('welcome');
+    expect(state.rememberedFolder).toBeNull();
+  });
+
+  it('forgets a remembered folder whose diary is gone', async () => {
+    state.rememberedFolder = '/unplugged';
+    const { app } = await import('../src/lib/store.svelte');
+    await app.init();
+    expect(app.view).toBe('welcome');
+    expect(state.rememberedFolder).toBeNull();
   });
 
   it('keeps unsaved editor content when the folder disappears', async () => {

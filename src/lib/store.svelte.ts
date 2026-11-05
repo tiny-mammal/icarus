@@ -50,6 +50,8 @@ import {
   setSavedAutoLock,
   getSavedLockWhenHidden,
   setSavedLockWhenHidden,
+  getSavedRememberFolder,
+  setSavedRememberFolder,
   type AutoLockMinutes,
   type WeekStart,
   type DateFormat,
@@ -125,6 +127,8 @@ class AppStore {
   autoLockMinutes = $state<AutoLockMinutes>(15);
   /** Lock as soon as the window is hidden. User preference. */
   lockWhenHidden = $state(false);
+  /** Desktop reopens the current folder on launch. Per-folder preference. */
+  rememberFolder = $state(true);
   encryptionSetupOpen = $state(false);
   /** Bumped on every open, so each run of the setup starts from a fresh state. */
   encryptionSetupRun = $state(0);
@@ -219,21 +223,17 @@ class AppStore {
   );
 
   // --- boot ---------------------------------------------------------------
-  /** Desktop asks for a folder; browser reopens its IndexedDB vault. */
+  /** Reopen the remembered diary (desktop: its folder), else show Welcome. */
   async init(): Promise<void> {
-    if (this.storageKind === 'folder') {
-      // The desktop session has no host-side remembered path or settings.
-      // Pick the data folder before reading any persisted state.
-      this.ready = true;
-      this.view = 'welcome';
-      return;
+    if (this.storageKind !== 'folder') {
+      // Desktop settings live in the folder, read once it is selected.
+      void this.loadDraftsFromDisk();
+      void this.loadWeekStart();
+      void this.loadDateFormat();
+      void this.loadSpellcheck();
+      void this.loadSpellWords();
+      void this.loadLockPreferences();
     }
-    void this.loadDraftsFromDisk();
-    void this.loadWeekStart();
-    void this.loadDateFormat();
-    void this.loadSpellcheck();
-    void this.loadSpellWords();
-    void this.loadLockPreferences();
     try {
       const saved = await storage.getRememberedVault();
       if (saved && (await storage.vaultExists(saved))) {
@@ -433,6 +433,7 @@ class AppStore {
       this.loadSpellcheck(),
       this.loadSpellWords(),
       this.loadLockPreferences(),
+      this.loadRememberFolder(),
       updates.load(),
     ]);
   }
@@ -654,6 +655,28 @@ class AppStore {
       ]);
     } catch (err) {
       devError('loadLockPreferences: could not read the lock preferences', err);
+    }
+  }
+
+  private async loadRememberFolder(): Promise<void> {
+    if (this.storageKind !== 'folder') return;
+    try {
+      this.rememberFolder = await getSavedRememberFolder();
+    } catch (err) {
+      devError('loadRememberFolder: could not read the preference', err);
+    }
+  }
+
+  /** Reopen this folder on launch, or ask for a folder every time. */
+  async setRememberFolder(enabled: boolean): Promise<void> {
+    this.rememberFolder = enabled;
+    try {
+      await setSavedRememberFolder(enabled);
+      // Re-selecting the open folder writes or erases the record on the computer.
+      await storage.rememberVault(this.vault);
+    } catch (err) {
+      devError('setRememberFolder: could not persist the preference', err);
+      this.toast('error', 'Could not save settings to the diary folder.');
     }
   }
 
@@ -1255,11 +1278,19 @@ class AppStore {
   async forgetVault(): Promise<void> {
     if (this.vault && !(await this.flushDraftNow())) return;
     const ref = this.vault ?? this.lockedVault;
+    // Erase the remembered location first: if that fails nothing else has
+    // changed, so the open diary (and its keys) stay usable.
+    try {
+      await storage.rememberVault(null);
+    } catch (err) {
+      devError('forgetVault: could not erase the remembered folder', err);
+      this.toast('error', 'Could not close the folder: the remembered location could not be erased.');
+      return;
+    }
     if (ref?.kind === 'app') {
       for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
     }
     if (ref) await storage.forgetVault(ref);
-    await storage.rememberVault(null);
     storage.encryption.keepSessionFor(null);
     this.clearDiaryFromMemory();
     this.vault = null;
