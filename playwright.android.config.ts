@@ -9,6 +9,9 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   timeout: 180_000,
+  // The shared CI emulator is occasionally unreliable, and a failure here
+  // blocks a release, so retry once; the report still marks it as flaky.
+  retries: process.env.CI ? 1 : 0,
   expect: { timeout: 15_000 },
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
 });
