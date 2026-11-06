@@ -25,7 +25,8 @@
     {:else}
       The diary saved {app.appPlaceIn}
     {/if}
-    will be replaced{app.replaceRequest.source === 'new' ? ' by an empty one' : ' by the imported file'}.
+    will be replaced{app.replaceRequest.source === 'new' ? ' by an empty one' : ' by the imported file'},
+    and its drafts and personal dictionary erased.
     {#if keepsCopy}
       A copy from earlier today is kept, but export a backup first to keep your latest changes.
     {:else}

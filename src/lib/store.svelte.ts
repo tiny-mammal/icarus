@@ -88,6 +88,11 @@ export interface PendingDiary {
   ref: VaultRef;
   text: string;
   source: 'new' | 'import';
+  /**
+   * The user agreed to replace a saved diary: its private items (drafts,
+   * dictionary) go with it once this one is written.
+   */
+  replaces?: boolean;
 }
 
 function groupByDay(entries: DiaryEntry[]): Map<string, DiaryEntry[]> {
@@ -276,8 +281,13 @@ class AppStore {
    * `ref` the current vault. `save` writes a new or imported diary to storage
    * first; a diary read from storage is shown as it is.
    */
-  private async adoptVault(ref: VaultRef, text: string, save: boolean): Promise<boolean> {
-    if (isEncryptedVault(text)) return this.adoptEncryptedFile(ref, text);
+  private async adoptVault(
+    ref: VaultRef,
+    text: string,
+    save: boolean,
+    replaces = false,
+  ): Promise<boolean> {
+    if (isEncryptedVault(text)) return this.adoptEncryptedFile(ref, text, replaces);
     const res = parseIcs(text);
     if (!res.ok) {
       this.toast('error', `Couldn't read this file — ${res.error}`);
@@ -292,6 +302,7 @@ class AppStore {
         return false;
       }
     }
+    if (save && replaces) await this.eraseReplacedItems();
     await this.enterVault(ref, res.entries);
     return true;
   }
@@ -320,15 +331,15 @@ class AppStore {
     ref: VaultRef,
     text: string,
     source: PendingDiary['source'],
-    replaceConfirmed = false,
+    replaces = false,
   ): Promise<void> {
-    if (!replaceConfirmed && (await storage.vaultExists(ref))) {
+    if (!replaces && (await storage.vaultExists(ref))) {
       this.settingsOpen = false;
       this.replaceRequest = { ref, text, source };
       return;
     }
     if (isEncryptedVault(text) || storage.encryption.isUnlocked(ref)) {
-      await this.adoptVault(ref, text, true);
+      await this.adoptVault(ref, text, true, replaces);
       return;
     }
     const res = parseIcs(text);
@@ -337,7 +348,7 @@ class AppStore {
       return;
     }
     this.settingsOpen = false;
-    this.pendingDiary = { ref, text, source };
+    this.pendingDiary = { ref, text, source, replaces };
     this.openEncryptionSetup();
   }
 
@@ -347,7 +358,7 @@ class AppStore {
     if (!diary) return false;
     this.busy = true;
     try {
-      if (!(await this.adoptVault(diary.ref, diary.text, true))) return false;
+      if (!(await this.adoptVault(diary.ref, diary.text, true, diary.replaces))) return false;
       this.pendingDiary = null;
       this.encryptionSetupOpen = false;
       return true;
@@ -381,15 +392,37 @@ class AppStore {
   }
 
   /**
-   * The user agreed to replace the saved diary with the requested one. Its
-   * previous version stays among the device's daily copies.
+   * The user agreed to replace the saved diary with the requested one. Busy
+   * throughout, so locking cannot interrupt the switch between diaries.
    */
   async confirmReplace(): Promise<void> {
     const request = this.replaceRequest;
     if (!request) return;
     this.replaceRequest = null;
-    if (this.vault && !(await this.flushDraftNow())) return;
-    await this.proposeDiary(request.ref, request.text, request.source, true);
+    this.busy = true;
+    try {
+      if (this.vault && !(await this.flushDraftNow())) return;
+      await this.proposeDiary(request.ref, request.text, request.source, true);
+    } catch (err) {
+      devError('confirmReplace: could not replace the diary', err);
+      this.toast('error', 'Could not replace the diary.');
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /**
+   * Once the new diary is written, erase the replaced one's drafts and
+   * dictionary: they may be sealed with a key the new diary does not have,
+   * and belong to the old diary anyway.
+   */
+  private async eraseReplacedItems(): Promise<void> {
+    try {
+      for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
+    } catch (err) {
+      devError('eraseReplacedItems: could not erase the old drafts', err);
+      this.toast('error', 'The diary was replaced, but the old drafts could not be erased.');
+    }
   }
 
   cancelReplace(): void {
@@ -400,7 +433,7 @@ class AppStore {
    * An imported or dropped file that is itself encrypted: store it as-is and
    * ask for its password. The current diary is closed first.
    */
-  private async adoptEncryptedFile(ref: VaultRef, text: string): Promise<boolean> {
+  private async adoptEncryptedFile(ref: VaultRef, text: string, replaces = false): Promise<boolean> {
     if (!this.encryptionSupported) {
       this.toast('error', 'Encrypted diaries need HTTPS or the desktop app.');
       return false;
@@ -414,6 +447,7 @@ class AppStore {
         : 'Could not save the diary in the selected location.');
       return false;
     }
+    if (replaces) await this.eraseReplacedItems();
     await this.showLockScreen(ref);
     return true;
   }
@@ -547,6 +581,7 @@ class AppStore {
     this.busy = true;
     try {
       await storage.encryption.enable(ref, serializeIcs(entries), pending.keys);
+      if (diary?.replaces) await this.eraseReplacedItems();
       this.pendingKeys = null;
       if (diary) {
         this.pendingDiary = null;

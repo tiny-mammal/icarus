@@ -210,4 +210,21 @@ describe('encrypted diary flow', () => {
     app.cancelReplace();
     expect(await backup.memory.readVault({ kind: 'app' })).toBe(before);
   });
+
+  it('replaces the diary together with its drafts, holding busy so nothing can lock midway', async () => {
+    const { app } = await encryptedApp();
+    const storage = backup.storage as import('../src/lib/storage').SecureStorage;
+    await storage.setItem('drafts', 'drafts', [{ id: 'old', title: 'Old draft' }]);
+
+    await app.importVault();
+    const replacing = app.confirmReplace();
+    expect(app.busy).toBe(true);
+    expect(await app.lock()).toBe(false);
+    await replacing;
+
+    expect(app.busy).toBe(false);
+    expect(app.encrypted).toBe(true);
+    expect(app.entries.map((entry) => entry.title)).toEqual(['Imported secret']);
+    expect(await storage.getItem('drafts', 'drafts')).toBeNull();
+  });
 });
