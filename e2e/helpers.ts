@@ -32,3 +32,11 @@ export async function importPlainIcs(page: Page, ics: string, name?: string): Pr
   await chooseNoPassword(page, 'Import without password');
   await expect(page.getByPlaceholder('Search entries…')).toBeVisible();
 }
+
+/**
+ * Hide notifications for the rest of the test. They sit above everything on
+ * purpose, so they can cover what a test points at or checks is on top.
+ */
+export async function hideToasts(page: Page): Promise<void> {
+  await page.addStyleTag({ content: '[aria-label="Notifications"] { display: none; }' });
+}

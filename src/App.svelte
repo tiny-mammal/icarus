@@ -117,8 +117,10 @@
     <LockScreen />
   {:else}
     <TopBar />
-    <!-- Main stage: calendar with the day pane (reading and writing) over it. -->
-    <main class="relative min-h-0 flex-1 overflow-hidden">
+    <!-- Main stage: calendar with the day pane (reading and writing) over it.
+         Isolated so nothing inside it, however high its z-index, can cover the
+         top bar's popovers (search results, drafts). -->
+    <main class="relative isolate min-h-0 flex-1 overflow-hidden">
       <Calendar />
       <DayPane />
     </main>

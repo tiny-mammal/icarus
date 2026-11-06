@@ -1,5 +1,5 @@
 import { devices, expect, test, type Locator } from '@playwright/test';
-import { startPlainDiary } from './helpers';
+import { hideToasts, startPlainDiary } from './helpers';
 
 for (const touch of [false, true]) {
   test.describe(touch ? 'touch popovers' : 'mouse popovers', () => {
@@ -107,6 +107,41 @@ for (const touch of [false, true]) {
       await press(trigger);
       await press(page.getByPlaceholder('Search entries…'));
       await expectClosed(trigger, menu);
+    });
+
+    test('top bar popovers stay above the open day pane', async ({ page }) => {
+      await startPlainDiary(page);
+      await page.getByRole('button', { name: 'New entry', exact: true }).click();
+      await page.getByPlaceholder('Title', { exact: true }).fill('Layering regression');
+      await page.getByRole('button', { name: 'Save as draft' }).click();
+      // Read a saved entry: the pane stays open and the top bar keeps Drafts.
+      await page.getByRole('button', { name: 'New entry', exact: true }).click();
+      await page.getByPlaceholder('Title', { exact: true }).fill('Read me');
+      await page.getByRole('button', { name: 'Save entry' }).click();
+      await page.getByPlaceholder('Search entries…').fill('Read me');
+      await page.getByText('Read me').first().click();
+      await expect(page.getByRole('complementary').getByRole('article')).toContainText('Read me');
+
+      await hideToasts(page);
+
+      // A popover is on top when the point at its centre hits it, not the pane.
+      async function expectOnTop(popover: Locator): Promise<void> {
+        await expect(popover).toBeVisible();
+        const onTop = await popover.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+          return !!hit && el.contains(hit) ? 'ok' : `${el.outerHTML.slice(0, 60)} -> ${hit?.outerHTML.slice(0, 160)}`;
+        });
+        expect(onTop).toBe('ok');
+      }
+
+      const drafts = page.getByRole('banner').getByRole('button', { name: 'Drafts', exact: true });
+      await press(drafts);
+      await expectOnTop(page.getByRole('dialog', { name: 'Saved drafts' }));
+      await press(drafts);
+
+      await page.getByPlaceholder('Search entries…').fill('zzzz');
+      await expectOnTop(page.getByText('No matching entries'));
     });
   });
 }
