@@ -27,9 +27,30 @@ test.beforeAll(async () => {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Every DevTools connection opened to the app. Playwright doesn't handle
+ * errors on its adb sockets, so writing to one whose app was killed throws an
+ * uncaught `EPIPE` that fails the test: close them all before killing the app.
+ */
+const connections = new Set<Page>();
+
+async function disconnectAll(): Promise<void> {
+  // A late attach can land while others close, so repeat until none is left.
+  while (connections.size > 0) {
+    const pages = [...connections];
+    connections.clear();
+    await Promise.all(pages.map((page) => page.context().close().catch(() => {})));
+  }
+}
+
 /** The page of `webview`, or null if it doesn't attach within `ms`. */
 async function attach(webview: AndroidWebView, ms: number): Promise<Page | null> {
-  const page = await Promise.race([webview.page().catch(() => null), sleep(ms).then(() => null)]);
+  // Track late attaches too, so the next restart closes them.
+  const pending = webview.page().then(
+    (page) => (connections.add(page), page),
+    () => null,
+  );
+  const page = await Promise.race([pending, sleep(ms).then(() => null)]);
   return page && !page.isClosed() ? page : null;
 }
 
@@ -41,6 +62,7 @@ async function attach(webview: AndroidWebView, ms: number): Promise<Page | null>
  * keep retrying until the WebView of the running process yields a live page.
  */
 async function launchApp(): Promise<Page> {
+  await disconnectAll();
   adb('shell', 'am', 'force-stop', APP_ID);
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
@@ -77,6 +99,7 @@ function privateFiles(): string[] {
 test.describe.configure({ mode: 'serial' });
 
 test.afterAll(async () => {
+  await disconnectAll();
   await device?.close();
 });
 

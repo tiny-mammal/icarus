@@ -239,6 +239,9 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
+      lightningcss:
+        specifier: ^1.32.0
+        version: 1.32.0
       svelte:
         specifier: ^5.57.2
         version: 5.57.2

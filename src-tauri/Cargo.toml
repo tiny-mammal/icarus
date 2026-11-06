@@ -1,6 +1,6 @@
 [package]
 name = "icarus-diary"
-version = "0.5.0"
+version = "0.5.1"
 description = "Icarus Diary — a local-first, air-gapped diarying app."
 authors = ["Icarus"]
 edition = "2021"

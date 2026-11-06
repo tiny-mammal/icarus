@@ -435,9 +435,9 @@
               <span
                 class="absolute top-0 text-[0.6rem] whitespace-nowrap text-muted
                   {tick.anchor === 'center'
-                    ? '-translate-x-1/2'
+                    ? '[transform:translateX(-50%)]'
                     : tick.anchor === 'end'
-                      ? '-translate-x-full'
+                      ? '[transform:translateX(-100%)]'
                       : ''}"
                 style:left="{tick.x}px"
               >
