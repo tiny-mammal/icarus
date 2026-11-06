@@ -35,8 +35,12 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 const connections = new Set<Page>();
 
 async function disconnectAll(): Promise<void> {
-  await Promise.all([...connections].map((page) => page.context().close().catch(() => {})));
-  connections.clear();
+  // A late attach can land while others close, so repeat until none is left.
+  while (connections.size > 0) {
+    const pages = [...connections];
+    connections.clear();
+    await Promise.all(pages.map((page) => page.context().close().catch(() => {})));
+  }
 }
 
 /** The page of `webview`, or null if it doesn't attach within `ms`. */
