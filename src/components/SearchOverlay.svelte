@@ -50,7 +50,7 @@
 
 <!-- Phones: spans the screen under the top bar; wider: hangs from the field. -->
 <div
-  class="fixed inset-x-3 top-14 z-popover mt-2 overflow-hidden rounded-xl border border-slate bg-surface shadow-2xl shadow-black/50 sm:absolute sm:inset-x-auto sm:left-1/2 sm:top-full sm:w-full sm:-translate-x-1/2"
+  class="fixed inset-x-3 top-14 z-popover mt-2 overflow-hidden rounded-xl border border-slate bg-surface shadow-2xl shadow-black/50 sm:absolute sm:inset-x-auto sm:left-1/2 sm:top-full sm:w-full sm:[transform:translateX(-50%)]"
   transition:fly={{ y: -6, duration: 150 }}
 >
   {#if hits.length === 0}
@@ -58,7 +58,7 @@
   {:else}
     <ul
       bind:this={listEl}
-      class="max-h-[min(60vh,calc(100dvh-6rem))] overflow-y-auto overscroll-contain py-1"
+      class="max-h-[min(60vh,calc(var(--screen-h)-6rem))] overflow-y-auto overscroll-contain py-1"
       onscroll={loadMoreIfNeeded}
     >
       {#each hits as hit, i (hit.entry.uid)}

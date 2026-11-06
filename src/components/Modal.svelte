@@ -91,7 +91,7 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     bind:this={card}
-    class="flex max-h-[calc(100dvh-1.5rem)] w-full {width} flex-col overflow-hidden rounded-t-2xl border border-b-0 border-slate bg-surface shadow-2xl shadow-black/50 focus:outline-none sm:max-h-[calc(100dvh-2rem)] sm:rounded-2xl sm:border-b"
+    class="flex max-h-[calc(var(--screen-h)-1.5rem)] w-full {width} flex-col overflow-hidden rounded-t-2xl border border-b-0 border-slate bg-surface shadow-2xl shadow-black/50 focus:outline-none sm:max-h-[calc(var(--screen-h)-2rem)] sm:rounded-2xl sm:border-b"
     transition:enter
     onclick={(e) => e.stopPropagation()}
     use:trapFocus={{ onClose: close, initial: 'container' }}

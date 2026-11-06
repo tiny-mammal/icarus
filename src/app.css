@@ -25,6 +25,22 @@
 /* Base layer                                                          */
 /* ------------------------------------------------------------------ */
 @layer base {
+  /*
+   * Screen height for full-height layouts. `dvh` follows mobile browser
+   * toolbars, but older Android WebViews (Chromium < 108) drop any rule that
+   * uses it, and the minifier merges a plain `100vh; 100dvh` fallback away,
+   * so choose it with @supports. Use `var(--screen-h)`, never `dvh` directly
+   * (the build checks this).
+   */
+  :root {
+    --screen-h: 100vh;
+  }
+  @supports (height: 100dvh) {
+    :root {
+      --screen-h: 100dvh;
+    }
+  }
+
   html,
   body {
     height: 100%;
@@ -46,9 +62,7 @@
   }
 
   #app {
-    /* dvh tracks mobile browser toolbars; vh is the fallback. */
-    height: 100vh;
-    height: 100dvh;
+    height: var(--screen-h);
     display: flex;
     flex-direction: column;
   }
