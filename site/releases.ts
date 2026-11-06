@@ -8,10 +8,10 @@
  * The manifest is written last, so a half-uploaded release is never served.
  */
 import { isVersion } from '../src/lib/semver.ts';
+import type { PlatformId } from '../src/lib/user-agent.ts';
 
 export { compareVersions } from '../src/lib/semver.ts';
-
-export type PlatformId = 'windows' | 'macos' | 'linux' | 'android';
+export type { PlatformId };
 
 export interface AssetSpec {
   /** Stable id in the public URL: `/download/<id>`. */

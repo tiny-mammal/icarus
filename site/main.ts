@@ -4,7 +4,7 @@
  * section of that page. iPhone and iPad have no download, so there the web app
  * becomes the main action instead.
  */
-import { PLATFORM_NAMES, detectPlatform, isAppleMobile } from './platform';
+import { PLATFORM_NAMES, detectPlatform, isAppleMobile } from '../src/lib/user-agent';
 
 const platform = detectPlatform();
 

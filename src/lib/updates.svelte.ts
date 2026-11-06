@@ -28,9 +28,7 @@ import { debugFlag } from './debug';
 import { devError } from './log';
 import { runningUnderTauri } from './runtime';
 import { compareVersions, isVersion } from './semver';
-import { openExternal } from './external';
-
-export const DOWNLOAD_PAGE = 'https://icarus.4oli.com/download';
+import { DOWNLOAD_PAGE, openExternal } from './external';
 
 const DAY = 86_400_000;
 /** Wait after the diary opens, so the check never competes with it. */

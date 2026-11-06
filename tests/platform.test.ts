@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isAppleMobile } from '../src/lib/user-agent';
-import { detectPlatform } from '../site/platform';
+import { detectPlatform, isAppleMobile } from '../src/lib/user-agent';
 
 /** A navigator with just the fields the sniffing reads. */
 const nav = (userAgent: string, maxTouchPoints = 0) => ({ userAgent, maxTouchPoints }) as Navigator;

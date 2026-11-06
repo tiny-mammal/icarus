@@ -25,6 +25,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   },
 }));
 vi.mock('../src/lib/external', () => ({
+  DOWNLOAD_PAGE: 'https://icarus.4oli.com/download',
   openExternal: async (url: string) => void state.opened.push(url),
 }));
 
@@ -99,10 +100,10 @@ describe('update checks', () => {
   });
 
   it('puts the notice away after a download but keeps the update known', async () => {
-    const { updates, DOWNLOAD_PAGE } = await freshUpdates();
+    const { updates } = await freshUpdates();
     await updates.check();
     await updates.download();
-    expect(state.opened).toEqual([`${DOWNLOAD_PAGE}?installed=0.2.0`]);
+    expect(state.opened).toEqual(['https://icarus.4oli.com/download?installed=0.2.0']);
     expect(updates.notice).toBe(null);
     expect(updates.available).toBe(true);
   });
@@ -159,12 +160,12 @@ describe('monthly reminder', () => {
 
   it('opens the download page on Android, which never goes online itself', async () => {
     state.userAgent = 'Mozilla/5.0 (Linux; Android 15; Pixel 9)';
-    const { updates, DOWNLOAD_PAGE } = await freshUpdates();
+    const { updates } = await freshUpdates();
     expect(updates.canCheck).toBe(false);
     await updates.load(built + 40 * DAY);
     expect(updates.notice).toBe('reminder');
     expect(await updates.lookForUpdate()).toBe('opened');
-    expect(state.opened).toEqual([`${DOWNLOAD_PAGE}?installed=0.2.0`]);
+    expect(state.opened).toEqual(['https://icarus.4oli.com/download?installed=0.2.0']);
     expect(updates.notice).toBe(null);
   });
 

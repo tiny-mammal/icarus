@@ -5,6 +5,7 @@
   import { SOURCE_REPO, openExternal } from '../lib/external';
   import { AUTO_LOCK_CHOICES } from '../lib/config';
   import { install } from '../lib/install.svelte';
+  import { PLATFORM_NAMES } from '../lib/user-agent';
   import { updates } from '../lib/updates.svelte';
   import { timeAgo } from '../lib/date';
   import UpdateMark from './UpdateMark.svelte';
@@ -58,17 +59,17 @@
     open();
   }
 
-  /** Hand over to the browser's install dialog, or to the instructions. */
+  /** Open the download page, the browser's install dialog, or the instructions. */
   function installApp() {
     app.settingsOpen = false;
     void install.start();
   }
 
   const installHint = $derived(
-    install.method === 'ios'
-      ? 'Add Icarus to your Home Screen and open it like any other app'
-      : install.method === 'mac-safari'
-        ? 'Add Icarus to your Dock and open it like any other app'
+    install.platform
+      ? `Download Icarus for ${PLATFORM_NAMES[install.platform]}`
+      : install.method === 'ios'
+        ? 'Add Icarus to your Home Screen and open it like any other app'
         : 'Open Icarus in its own window, like any other app, even offline',
   );
 
@@ -198,6 +199,10 @@
             <span class="block font-medium">Install the app</span>
             <span class="block text-xs text-muted">{installHint}</span>
           </span>
+          {#if install.platform}
+            <!-- Opens the download page in a new tab -->
+            <svg class="ml-auto shrink-0 text-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
+          {/if}
         </button>
       {/if}
 

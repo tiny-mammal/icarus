@@ -1,5 +1,8 @@
 import { openUrl } from '@tauri-apps/plugin-opener';
 
+/** The public download page, with every native build. */
+export const DOWNLOAD_PAGE = 'https://icarus.4oli.com/download';
+
 /** Public home of the project, linked from the settings dialog. */
 export const SOURCE_REPO = { label: 'tiny-mammal/icarus', url: 'https://github.com/tiny-mammal/icarus' };
 

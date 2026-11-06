@@ -4,15 +4,12 @@
   import Modal from './Modal.svelte';
 
   /**
-   * How to install Icarus as an app where the browser has no install button
-   * of its own to hand over: the Share sheet on iPhone and iPad, Add to Dock in
-   * Safari on a Mac, or the browser menu elsewhere.
+   * How to install Icarus as a web app where there is no native build and the
+   * browser has no install button of its own to hand over: the Share sheet on
+   * iPhone and iPad, or the browser menu elsewhere.
    */
 
-  const apple = $derived(install.method === 'ios' || install.method === 'mac-safari');
-  const title = $derived(
-    install.method === 'ios' ? 'Add to Home Screen' : install.method === 'mac-safari' ? 'Add to Dock' : 'Install the app',
-  );
+  const title = $derived(install.method === 'ios' ? 'Add to Home Screen' : 'Install the app');
 
   function close() {
     install.helpOpen = false;
@@ -52,12 +49,6 @@
           <li class="flex gap-3">{@render badge(2)}<span class="pt-0.5">Choose <span class="font-medium text-text">Add to Home Screen</span>. You may need to scroll down or tap <span class="text-text">View More</span> to find it.</span></li>
           <li class="flex gap-3">{@render badge(3)}<span class="pt-0.5">Tap <span class="font-medium text-text">Add</span>. Icarus appears on your Home Screen.</span></li>
         </ol>
-      {:else if install.method === 'mac-safari'}
-        <p>Icarus gets its own window and a place in your Dock, and works offline.</p>
-        <ol class="space-y-3">
-          <li class="flex gap-3">{@render badge(1)}<span class="pt-0.5">In the menu bar, choose <span class="font-medium text-text">File</span>, then <span class="font-medium text-text">Add to Dock</span>. The Share button {@render shareIcon()} in the toolbar has it too.</span></li>
-          <li class="flex gap-3">{@render badge(2)}<span class="pt-0.5">Click <span class="font-medium text-text">Add</span>. Open Icarus from the Dock or Launchpad.</span></li>
-        </ol>
       {:else}
         <p>Icarus can open in its own window, like any other app, and work offline.</p>
         <ol class="space-y-3">
@@ -67,12 +58,12 @@
         <p class="text-xs">Don't see it? Chrome, Edge and Safari can all install Icarus.</p>
       {/if}
 
-      {#if apple && app.entries.length > 0}
+      {#if install.method === 'ios' && app.entries.length > 0}
         <div class="rounded-lg border border-slate bg-slate-soft px-3.5 py-3">
           <p class="text-text">Bring your entries with you</p>
           <p class="mt-1 text-xs">
             The installed app keeps its own diary, separate from the one in
-            {install.method === 'ios' ? 'this browser' : 'Safari'}. Export a backup now, then import it
+            this browser. Export a backup now, then import it
             the first time you open the app.
           </p>
           <button

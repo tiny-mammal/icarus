@@ -12,7 +12,7 @@ import {
   type PlatformId,
   type ReleaseManifest,
 } from './releases';
-import { detectPlatform } from './platform';
+import { detectPlatform } from '../src/lib/user-agent';
 import { isVersion } from '../src/lib/semver';
 
 const platform = detectPlatform();
