@@ -81,13 +81,18 @@ export function trapFocus(
     }
   };
 
-  node.addEventListener('keydown', onKeydown);
-  // Move focus in once the popover has mounted.
-  requestAnimationFrame(() => {
+  const focusIn = () => {
     if (node.contains(document.activeElement)) return;
     if (initial === 'container') node.focus({ preventScroll: true });
     else focusable()[0]?.focus();
-  });
+  };
+
+  node.addEventListener('keydown', onKeydown);
+  // Move focus in right away: Escape only closes from inside, so deferring it
+  // would drop a keypress that follows the opening one. Retry on the next frame
+  // for content that only becomes focusable once laid out.
+  focusIn();
+  requestAnimationFrame(focusIn);
 
   return {
     update(next?: (() => void) | TrapFocusOptions) {

@@ -51,6 +51,22 @@ for (const touch of [false, true]) {
       await expect(trigger).toBeFocused();
     });
 
+    test('Escape closes a popover the moment it opens', async ({ page }) => {
+      await startPlainDiary(page);
+      // Freeze animation frames: nothing deferred may be needed to close it.
+      await page.evaluate(() => {
+        window.requestAnimationFrame = () => 0;
+      });
+      const trigger = page.locator('button[aria-haspopup="dialog"]').filter({ hasText: /\d{4}/ });
+      const picker = page.getByRole('dialog', { name: 'Select month and year' });
+
+      await trigger.focus();
+      await page.keyboard.press('Enter');
+      await expect(picker).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expectClosed(trigger, picker);
+    });
+
     test('date picker closes from its trigger', async ({ page }) => {
       await startPlainDiary(page);
       await page.getByRole('button', { name: 'New entry', exact: true }).click();
