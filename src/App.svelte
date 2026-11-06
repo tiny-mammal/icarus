@@ -10,6 +10,7 @@
   import StatsModal from './components/StatsModal.svelte';
   import DraftDeleteDialog from './components/DraftDeleteDialog.svelte';
   import EntryDeleteDialog from './components/EntryDeleteDialog.svelte';
+  import ConfirmDialog from './components/ConfirmDialog.svelte';
   import ReplaceDiaryDialog from './components/ReplaceDiaryDialog.svelte';
   import Toasts from './components/Toasts.svelte';
   import LockScreen from './components/LockScreen.svelte';
@@ -26,6 +27,10 @@
   // Development only (`?debug=gestures`): the gesture recorder, loaded on demand.
   const gestureRecorder =
     import.meta.env.DEV && gestureLog.enabled ? import('./components/GestureRecorder.svelte') : null;
+
+  // Set when a window close was refused because the draft could not be saved:
+  // the in-app prompt calls it to quit anyway.
+  let discardAndQuit = $state<(() => void) | null>(null);
 
   // The static splash in index.html covers the app until the first screen is
   // known; it is fixed-position, so uncovering it never shifts the layout.
@@ -89,11 +94,7 @@
             await win.destroy();
             return;
           }
-          const { confirm } = await import('@tauri-apps/plugin-dialog');
-          if (await confirm(
-            'The current draft could not be saved. Quit and discard the unsaved changes?',
-            { title: 'Unsaved draft', kind: 'warning' },
-          )) await win.destroy();
+          discardAndQuit = () => void win.destroy();
         });
       } catch {
         // Not running under Tauri (e.g. `pnpm dev`) — rely on the web handlers.
@@ -142,6 +143,17 @@
 {/if}
 
 <DraftDeleteDialog />
+{#if discardAndQuit}
+  <ConfirmDialog
+    title="Unsaved draft"
+    confirmLabel="Quit anyway"
+    onconfirm={discardAndQuit}
+    oncancel={() => (discardAndQuit = null)}
+  >
+    The current draft could not be saved to the diary folder. Quitting now discards the unsaved
+    changes.
+  </ConfirmDialog>
+{/if}
 <EntryDeleteDialog />
 <ReplaceDiaryDialog />
 <Toasts />
