@@ -74,8 +74,10 @@
   });
 </script>
 
+<!-- Three columns: the equal-width sides keep the search centred and still
+     while the actions on the right come and go. -->
 <header
-  class="relative z-40 flex h-14 shrink-0 items-center gap-2 border-b border-slate px-3 sm:gap-4 sm:px-6"
+  class="relative z-40 grid h-14 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate px-3 sm:grid-cols-[1fr_minmax(0,28rem)_1fr] sm:gap-4 sm:px-6"
 >
   <!-- Brand -->
   <div class="flex shrink-0 items-center gap-2 text-sm font-semibold tracking-tight text-text">
@@ -86,7 +88,7 @@
   </div>
 
   <!-- Centered search -->
-  <div class="relative mx-auto w-full max-w-md">
+  <div class="relative w-full">
     <div
       class="flex items-center gap-2 rounded-lg border border-slate bg-slate-soft px-3 py-2 transition-colors focus-within:border-faint sm:py-1.5"
     >
@@ -120,43 +122,48 @@
     {/if}
   </div>
 
-  <!-- Writing: saved drafts (only once there are any) and the "write" action -->
-  {#if app.drafts.length > 0}
-    <DraftsMenu compact />
-  {/if}
-  <WriteButton variant="header" />
-
-  <!-- Statistics -->
-  <button
-    class="grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text"
-    aria-label="Statistics"
-    onclick={() => (app.statsOpen = true)}
-  >
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-3"/></svg>
-  </button>
-
-  <!-- Lock (encrypted diaries only) -->
-  {#if app.encrypted}
-    <button
-      class="grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text disabled:opacity-50"
-      aria-label="Lock diary"
-      title="Lock diary"
-      onclick={() => app.lock()}
-      disabled={app.busy}
-    >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-    </button>
-  {/if}
-
-  <!-- Settings (a dot while an update waits) -->
-  <button
-    class="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text"
-    aria-label={updates.available ? 'Settings, update available' : 'Settings'}
-    onclick={() => (app.settingsOpen = true)}
-  >
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    {#if updates.available}
-      <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#f5b452] ring-2 ring-ink sm:right-0.5 sm:top-0.5" aria-hidden="true"></span>
+  <div class="flex items-center justify-end gap-2 sm:gap-4">
+    <!-- Writing: saved drafts (only once there are any) and the "write" action.
+         Hidden while the editor is open: it offers its own drafts menu. -->
+    {#if !app.editing}
+      {#if app.drafts.length > 0}
+        <DraftsMenu compact />
+      {/if}
+      <WriteButton variant="header" />
     {/if}
-  </button>
+
+    <!-- Statistics -->
+    <button
+      class="grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text"
+      aria-label="Statistics"
+      onclick={() => (app.statsOpen = true)}
+    >
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-3"/></svg>
+    </button>
+
+    <!-- Lock (encrypted diaries only) -->
+    {#if app.encrypted}
+      <button
+        class="grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text disabled:opacity-50"
+        aria-label="Lock diary"
+        title="Lock diary"
+        onclick={() => app.lock()}
+        disabled={app.busy}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </button>
+    {/if}
+
+    <!-- Settings (a dot while an update waits) -->
+    <button
+      class="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text"
+      aria-label={updates.available ? 'Settings, update available' : 'Settings'}
+      onclick={() => (app.settingsOpen = true)}
+    >
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      {#if updates.available}
+        <span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#f5b452] ring-2 ring-ink sm:right-0.5 sm:top-0.5" aria-hidden="true"></span>
+      {/if}
+    </button>
+  </div>
 </header>
