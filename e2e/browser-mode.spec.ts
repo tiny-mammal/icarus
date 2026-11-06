@@ -106,6 +106,25 @@ test('restores an autosaved draft after a reload', async ({ page }) => {
   await expect(page.getByPlaceholder('Title', { exact: true })).toHaveValue('Half-written');
 });
 
+test('the top bar leaves writing actions to the open editor', async ({ page }) => {
+  await startPlainDiary(page);
+  await startWriting(page);
+  await page.getByPlaceholder('Title', { exact: true }).fill('Parked');
+  await page.getByRole('button', { name: 'Save as draft' }).click();
+
+  const banner = page.getByRole('banner');
+  const search = page.getByPlaceholder('Search entries…');
+  await expect(banner.getByRole('button', { name: 'Drafts', exact: true })).toBeVisible();
+  const searchBefore = await search.boundingBox();
+
+  // While writing, only the editor offers drafts; the search stays put.
+  await startWriting(page);
+  await expect(page.getByRole('form', { name: 'New entry' }).getByRole('button', { name: 'Drafts', exact: true })).toBeVisible();
+  await expect(banner.getByRole('button', { name: 'Drafts', exact: true })).toHaveCount(0);
+  await expect(banner.getByRole('button', { name: /^(New entry|Continue draft)$/ })).toHaveCount(0);
+  expect((await search.boundingBox())?.x).toBe(searchBefore?.x);
+});
+
 test('imports an .ics file into browser storage', async ({ page }) => {
   await importPlainIcs(page, IMPORTED_ICS, 'imported.ics');
 
