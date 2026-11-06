@@ -130,7 +130,7 @@
         <button
           type="submit"
           class="rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-40
-            {kind === 'disable' ? 'bg-red-500 text-white hover:bg-red-500/90' : 'bg-text text-ink hover:bg-text/90'}"
+            {kind === 'disable' ? 'btn-danger' : 'bg-text text-ink hover:bg-text/90'}"
           disabled={!canSubmit || working}
         >
           {submitLabel}

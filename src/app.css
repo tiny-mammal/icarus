@@ -285,3 +285,9 @@
 @utility no-drag {
   -webkit-user-drag: none;
 }
+
+/* Filled button for destructive actions. red-600, not 500: white text on it
+   keeps WCAG AA contrast (4.9:1) for normal-size labels. */
+@utility btn-danger {
+  @apply bg-red-600 text-white hover:bg-red-600/90;
+}

@@ -37,7 +37,7 @@
       Cancel
     </button>
     <button
-      class="rounded-lg bg-red-500 px-3.5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-500/90 disabled:opacity-60 sm:py-2"
+      class="rounded-lg btn-danger px-3.5 py-2.5 text-sm font-medium transition-colors disabled:opacity-60 sm:py-2"
       onclick={onconfirm}
       disabled={busy}
     >
