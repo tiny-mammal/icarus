@@ -1,8 +1,15 @@
 name: CI
 
+# Branch pushes are covered by their pull request; only main runs on push.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# A newer push to the same pull request supersedes the running checks.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   web:
