@@ -2,13 +2,20 @@
  * Generates the app icons.
  *
  *   node scripts/gen-icon.mjs            writes `app-icon.png`, a 1024x1024
- *                                        source that `tauri icon` expands into
- *                                        every platform format.
+ *                                        rounded source that `tauri icon`
+ *                                        expands into every platform format.
  *   node scripts/gen-icon.mjs --android  rewrites the Android adaptive-icon
  *                                        layers that `tauri icon` produced.
+ *   node scripts/gen-icon.mjs --ios      rewrites the iOS icons that `tauri
+ *                                        icon` produced.
  *
- * `pnpm icon` runs both, in that order. Replace the artwork in `icon-mark.mjs`
- * any time and re-run it.
+ * `pnpm icon` runs all three, in that order. Replace the artwork in
+ * `icon-mark.mjs` any time and re-run it.
+ *
+ * Why the source is rounded: desktop platforms (Linux, Windows) show the icon
+ * as-is, so the rounding has to be baked in. iOS and Android apply their own
+ * mask and need a full-bleed square, which is what the `--ios` and `--android`
+ * steps restore.
  *
  * Why the Android step exists: an adaptive icon is a 108dp canvas of which
  * launchers show only a ~72dp mask (66%) and guarantee just the central 66dp.
@@ -16,7 +23,7 @@
  * launcher crops the ring and the icon looks zoomed in. Here the mark is drawn
  * on a transparent layer inside the safe zone, over an ink background.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { INK_HEX, encodePng, renderMark } from './icon-mark.mjs';
@@ -50,6 +57,14 @@ if (process.argv.includes('--android')) {
     `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n  <color name="ic_launcher_background">${INK_HEX}</color>\n</resources>\n`,
   );
   console.log('Wrote the adaptive icon background color');
+} else if (process.argv.includes('--ios')) {
+  const dir = join(root, 'src-tauri', 'icons', 'ios');
+  for (const file of readdirSync(dir)) {
+    // `AppIcon-<points>x<points>@<scale>x[-n].png`; the 1024px marketing icon is `AppIcon-512@2x.png`.
+    const match = file.match(/^AppIcon-(\d+(?:\.\d+)?)(?:x\d+(?:\.\d+)?)?@(\d)x/);
+    if (!match) continue;
+    write(join(dir, file), Math.round(Number(match[1]) * Number(match[2])));
+  }
 } else {
-  write(join(root, 'app-icon.png'), 1024);
+  write(join(root, 'app-icon.png'), 1024, { rounded: true });
 }

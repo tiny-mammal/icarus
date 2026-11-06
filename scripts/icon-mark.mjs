@@ -17,9 +17,19 @@ const R_OUTER = 360;
 const R_INNER = 300;
 const R_DOT = 70;
 const GRID = 1024;
+// Corner radius of the rounded-square icon, same as `rx` in `public/favicon.svg`.
+export const R_CORNER = 224;
 
 // Soft anti-aliased coverage for a circle boundary at radius `r`.
 const edge = (d, r) => Math.max(0, Math.min(1, r + 1.0 - d));
+
+// Anti-aliased coverage of a `size`-wide square whose corners have radius `r`,
+// for the pixel centered at (px, py).
+const roundedSquare = (px, py, size, r) => {
+  const dx = Math.max(r - px, px - (size - r), 0);
+  const dy = Math.max(r - py, py - (size - r), 0);
+  return edge(Math.hypot(dx, dy), r);
+};
 
 /**
  * Renders the mark into a `size`x`size` RGBA buffer.
@@ -28,9 +38,14 @@ const edge = (d, r) => Math.max(0, Math.min(1, r + 1.0 - d));
  * @param options.markScale  Mark size relative to the canvas (1 = the full-bleed
  *                           app icon; smaller leaves a margin).
  * @param options.transparent  Leave the background transparent instead of ink.
+ * @param options.rounded  Round the corners of the ink background (transparent
+ *                         outside them). For platforms that don't mask icons
+ *                         themselves; iOS and Android adaptive icons must stay
+ *                         square because the OS applies its own shape.
  */
-export function renderMark(size, { markScale = 1, transparent = false } = {}) {
+export function renderMark(size, { markScale = 1, transparent = false, rounded = false } = {}) {
   const k = (size / GRID) * markScale;
+  const rCorner = (R_CORNER * size) / GRID;
   const [rOuter, rInner, rDot] = [R_OUTER * k, R_INNER * k, R_DOT * k];
   const c = size / 2;
   const px = Buffer.alloc(size * size * 4);
@@ -53,6 +68,7 @@ export function renderMark(size, { markScale = 1, transparent = false } = {}) {
       } else {
         rgb = rgb.map((v, ch) => v + (CRISP[ch] - v) * ring);
         rgb = rgb.map((v, ch) => v + (MUTED[ch] - v) * dot);
+        if (rounded) alpha = Math.round(roundedSquare(x + 0.5, y + 0.5, size, rCorner) * 255);
       }
 
       px[i] = Math.round(rgb[0]);
