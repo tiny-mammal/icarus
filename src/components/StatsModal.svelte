@@ -277,7 +277,7 @@
     {/snippet}
 
     <!-- Headline totals -->
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <div class="rounded-xl border border-slate bg-slate-soft px-3.5 py-3">
         <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">
           Entries
@@ -296,7 +296,16 @@
         </p>
         <p class="mt-0.5 truncate text-[0.7rem] text-muted">{periodLabel}</p>
       </div>
-      <div class="col-span-2 rounded-xl border border-slate bg-slate-soft px-3.5 py-3 sm:col-span-1">
+      <div class="rounded-xl border border-slate bg-slate-soft px-3.5 py-3">
+        <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">
+          Avg. entry
+        </p>
+        <p class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-text">
+          {stats.totalEntries > 0 ? numberFmt.format(Math.round(stats.averageChars)) : '—'}
+        </p>
+        <p class="mt-0.5 truncate text-[0.7rem] text-muted">Characters per entry</p>
+      </div>
+      <div class="rounded-xl border border-slate bg-slate-soft px-3.5 py-3">
         <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">
           Best day
         </p>

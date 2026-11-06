@@ -43,6 +43,8 @@ export interface DiaryStats {
   period: StatsPeriod;
   totalEntries: number;
   totalChars: number;
+  /** Mean characters per entry in the period (0 when there are none). */
+  averageChars: number;
   /** Day with the most characters in the period (null when there are none). */
   bestDay: DayStat | null;
   /** Up to ten days with the most characters, descending. */
@@ -130,6 +132,7 @@ export function computeStats(
       period,
       totalEntries: 0,
       totalChars: 0,
+      averageChars: 0,
       bestDay: null,
       ranking: [],
       timeline: EMPTY_TIMELINE,
@@ -177,6 +180,7 @@ export function computeStats(
     period,
     totalEntries,
     totalChars,
+    averageChars: totalEntries > 0 ? totalChars / totalEntries : 0,
     bestDay: ranking[0] && ranking[0].chars > 0 ? ranking[0] : null,
     ranking,
     timeline: buildTimeline(totals, range.start, range.end, format),

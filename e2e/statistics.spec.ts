@@ -63,6 +63,7 @@ test('shows totals, chart and top days for the selected period', async ({ page }
   // All time is the default: 4 entries and 24 characters across three days.
   await expect(card(page, 'Entries')).toContainText('4');
   await expect(card(page, 'Characters')).toContainText('24');
+  await expect(card(page, 'Avg. entry')).toContainText('6');
   await expect(card(page, 'Best day')).toContainText('11 characters');
   await expect(
     dialog(page).getByRole('img', { name: 'Characters written over the selected period' }),
@@ -76,6 +77,7 @@ test('shows totals, chart and top days for the selected period', async ({ page }
   await switchPeriod(page, 'Last 30 days');
   await expect(card(page, 'Entries')).toContainText('2');
   await expect(card(page, 'Characters')).toContainText('11');
+  await expect(card(page, 'Avg. entry')).toContainText('6'); // 5.5 rounds up
 
   // The trailing year adds the entry from 40 days ago.
   await switchPeriod(page, 'Last year');

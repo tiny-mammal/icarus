@@ -52,6 +52,7 @@ describe('computeStats — last 30 days', () => {
     const stats = computeStats(entries, '30d', NOW);
     expect(stats.totalEntries).toBe(2);
     expect(stats.totalChars).toBe(13);
+    expect(stats.averageChars).toBe(6.5);
   });
 });
 
@@ -242,6 +243,7 @@ describe('computeStats — empty diary', () => {
       const stats = computeStats([], period, NOW);
       expect(stats.totalEntries).toBe(0);
       expect(stats.totalChars).toBe(0);
+      expect(stats.averageChars).toBe(0);
       expect(stats.bestDay).toBeNull();
       expect(stats.ranking).toEqual([]);
     }
