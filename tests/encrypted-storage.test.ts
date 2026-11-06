@@ -130,6 +130,24 @@ describe('encrypted storage', () => {
     expect(device.items.has('settings/copiesToErase')).toBe(false);
   });
 
+  it('completes protection when an encrypted backup replaces a plain diary', async () => {
+    const source = await encryptedDevice();
+    const backup = source.vault()!;
+
+    const device = deviceLikeBackend();
+    const storage = withEncryption(device.backend);
+    await storage.writeVault(APP, ICS);
+    await storage.writeVault(APP, ICS);
+    await storage.setItem('drafts', 'drafts', DRAFTS);
+
+    await storage.encryption.storeEncrypted(APP, backup);
+    expect(device.copies).toEqual([]);
+
+    await storage.encryption.unlock(APP, { password: PASSWORD });
+    expect(JSON.stringify([...device.items.values()])).not.toContain('secret');
+    expect(await storage.getItem('drafts', 'drafts')).toEqual(DRAFTS);
+  });
+
   it('removes encryption only with the right password', async () => {
     const { items, vault, storage } = await encryptedDevice();
     await expect(storage.encryption.disable(APP, ICS, 'nope nope nope')).rejects.toThrow();

@@ -52,7 +52,10 @@ export interface VaultEncryption {
    * items may be written in plain text again (for a plain diary).
    */
   keepSessionFor(ref: VaultRef | null): void;
-  /** Open the vault's keyring with a password or recovery key. */
+  /**
+   * Open the vault's keyring with a password or recovery key, then finish any
+   * protection left pending: seal plain private items, erase stale copies.
+   */
   unlock(ref: VaultRef, secret: UnlockSecret): Promise<void>;
   /**
    * Forget the key. Encrypted data becomes unreadable, and private items
@@ -74,7 +77,10 @@ export interface VaultEncryption {
   rekey(ref: VaultRef, ics: string, keys: VaultKeys): Promise<void>;
   /** An encrypted backup of `ics`, openable with the same password. */
   exportEncrypted(ics: string): Promise<string>;
-  /** Store an already-encrypted diary file as-is (import); it stays locked. */
+  /**
+   * Store an already-encrypted diary file as-is (import); it stays locked.
+   * Copies of the diary it replaces are erased.
+   */
   storeEncrypted(ref: VaultRef, text: string): Promise<void>;
   /**
    * Whether copies made under an older key (or none) are still waiting to be
@@ -173,6 +179,19 @@ export function withEncryption(base: StorageBackend): SecureStorage {
     }
   }
 
+  /**
+   * Seal private items still stored in plain text, e.g. drafts left by a plain
+   * diary that an encrypted import replaced. Needs the session's key.
+   */
+  async function sealPlainPrivateItems(): Promise<void> {
+    for (const item of PRIVATE_ITEMS) {
+      const value = await base.getItem<unknown>(item.store, item.key);
+      if (value !== null && !isSealedValue(value)) {
+        await storage.setItem(item.store, item.key, value);
+      }
+    }
+  }
+
   async function retryPendingDiscard(): Promise<void> {
     if (copiesToErase === null) {
       copiesToErase = (await base.getItem<boolean>(ERASE_STORE, ERASE_KEY).catch(() => null)) === true;
@@ -193,6 +212,11 @@ export function withEncryption(base: StorageBackend): SecureStorage {
         ? await unlockWithPassword(keyring, secret.password)
         : await unlockWithRecoveryKey(keyring, secret.recoveryKey);
       setSession({ ref, keys });
+      // Never lets a cleanup failure keep the user out of the diary; the next
+      // unlock tries again.
+      await sealPlainPrivateItems().catch((err: unknown) => {
+        devError('unlock: could not seal plain private items', err);
+      });
       await retryPendingDiscard();
     },
 
@@ -245,6 +269,9 @@ export function withEncryption(base: StorageBackend): SecureStorage {
     async storeEncrypted(ref, text) {
       parseEncryptedVault(text);
       await base.writeVault(ref, text);
+      // Copies of the diary it replaced may be readable, or open with another
+      // password; leftover plain private items are sealed on unlock.
+      await discardCopies();
     },
   };
 
