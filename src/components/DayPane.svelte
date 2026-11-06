@@ -5,7 +5,7 @@
   import { keyToDate } from '../lib/date';
   import { isPlainShortcut } from '../lib/keyboard';
   import { swipe } from '../lib/gestures';
-  import { splitTerms, countMatches } from '../lib/highlight';
+  import { queryTerms, countMatches } from '../lib/highlight';
   import { loadRichEditor } from '../lib/editor-loader';
   import { devError } from '../lib/log';
   import { visibleOffsetAt } from '../lib/caret';
@@ -40,7 +40,7 @@
   const entry = $derived(app.selectedEntries[safePage] ?? null);
 
   // Terms to highlight when this day was opened from a search hit.
-  const terms = $derived(splitTerms(app.searchHighlight));
+  const terms = $derived(queryTerms(app.searchHighlight));
   // Match count reported by the rendered Markdown body (title/location added).
   let contentMatches = $state(0);
   const matchCount = $derived(

@@ -2,7 +2,7 @@
   import { fly } from 'svelte/transition';
   import type { SearchHit } from '../lib/search';
   import type { DiaryEntry } from '../lib/types';
-  import { splitTerms, snippetAround } from '../lib/highlight';
+  import { queryTerms, snippetAround } from '../lib/highlight';
   import { longDayLabel } from '../lib/date';
   import { app } from '../lib/store.svelte';
   import Highlight from './Highlight.svelte';
@@ -23,7 +23,7 @@
     onselect: (entry: DiaryEntry) => void;
   } = $props();
 
-  const terms = $derived(splitTerms(query));
+  const terms = $derived(queryTerms(query));
   let listEl = $state<HTMLUListElement | null>(null);
 
   /** Load another batch whenever the rendered list is still near its end. */

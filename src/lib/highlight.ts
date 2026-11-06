@@ -5,9 +5,10 @@
  *  - `highlightElement` walks the already-rendered Markdown DOM and wraps
  *    matches in `<mark>` in place (the body is injected via `{@html}`, so Svelte
  *    doesn't track its internals — safe to mutate).
- * Matching is a plain case- and diacritic-insensitive substring match per query
- * term; it does not try to mirror Fuse.js fuzziness, only to surface what the
- * user typed.
+ * Matching follows the same rule as `search`, so every hit shows exactly what
+ * the user typed: case-insensitive, whitespace runs are interchangeable, and
+ * accents are asymmetric — an unaccented query letter matches any accented
+ * variant, while an accented one only matches itself. `ñ` is its own letter.
  */
 import { flattenText, truncateText } from './text';
 
@@ -34,7 +35,24 @@ interface MatchRange {
   end: number;
 }
 
-/** Remove letter decorations and casing while retaining original offsets. */
+const COMBINING_TILDE = '\u0303';
+const MARK = /\p{M}/u;
+
+/**
+ * Lowercase and decompose letters into base + combining marks, keeping the
+ * marks so the query decides how strictly they match. `ñ` is recomposed so it
+ * stays distinct from `n`, and final sigma joins the regular form so folding a
+ * whole string and folding it character by character agree.
+ */
+export function foldSearchText(text: string): string {
+  return (text ?? '')
+    .normalize('NFD')
+    .toLowerCase()
+    .replace(/ς/g, 'σ')
+    .replace(/n\u0303/g, 'ñ');
+}
+
+/** Fold character by character while retaining original offsets. */
 function foldText(text: string): FoldedText {
   let value = '';
   const starts: number[] = [];
@@ -43,10 +61,13 @@ function foldText(text: string): FoldedText {
 
   for (const character of text) {
     const end = offset + character.length;
-    const folded = character
-      .normalize('NFD')
-      .replace(/\p{M}/gu, '')
-      .toLowerCase();
+    let folded = foldSearchText(character);
+    // A standalone combining tilde after `n` turns it into `ñ`.
+    if (folded.startsWith(COMBINING_TILDE) && value.endsWith('n')) {
+      value = `${value.slice(0, -1)}ñ`;
+      ends[ends.length - 1] = end;
+      folded = folded.slice(COMBINING_TILDE.length);
+    }
     value += folded;
     for (let i = 0; i < folded.length; i++) {
       starts.push(offset);
@@ -58,26 +79,37 @@ function foldText(text: string): FoldedText {
   return { value, starts, ends };
 }
 
-function foldTerm(term: string): string {
-  return foldText(term).value;
+/**
+ * The terms a raw query searches and highlights: the whole query as a single
+ * exact phrase, or nothing when it is too short to be meaningful.
+ */
+export function queryTerms(query: string | null | undefined): string[] {
+  const phrase = foldSearchText(query ?? '').replace(/\s+/g, ' ').trim();
+  return phrase.replace(/\p{M}/gu, '').length >= 2 ? [phrase] : [];
 }
 
-/** Split a raw query into the individual terms we highlight (drops noise). */
-export function splitTerms(query: string): string[] {
-  return foldTerm(query ?? '')
-    .trim()
-    .split(/\s+/)
-    .filter((t) => t.length >= 2);
+/** Regex source for one folded term (see the matching rule above). */
+function termPattern(term: string): string {
+  let pattern = '';
+  for (const cluster of term.match(/\P{M}\p{M}*/gu) ?? []) {
+    if (/^\s+$/.test(cluster)) {
+      pattern += '\\s+';
+      continue;
+    }
+    const base = escapeRegExp(cluster[0]);
+    const marks = cluster.slice(1);
+    pattern += marks ? `${base}${marks}(?!\\p{M})` : `${base}\\p{M}*`;
+  }
+  return pattern;
 }
 
-/** Build a global regex matching any already-folded term. */
-function termsRegex(terms: string[]): RegExp | null {
-  const foldedTerms = [...new Set(terms.map(foldTerm).filter(Boolean))].sort(
-    (a, b) => b.length - a.length,
-  );
+/** Build a regex matching any term, or null when there is nothing to match. */
+export function termsRegex(terms: string[], flags = 'gu'): RegExp | null {
+  const foldedTerms = [
+    ...new Set(terms.map((t) => foldSearchText(t).replace(/\s+/g, ' ').trim()).filter(Boolean)),
+  ].sort((a, b) => b.length - a.length);
   if (!foldedTerms.length) return null;
-  const pattern = foldedTerms.map(escapeRegExp).join('|');
-  return new RegExp(`(${pattern})`, 'g');
+  return new RegExp(`(${foldedTerms.map(termPattern).join('|')})`, flags);
 }
 
 /** Locate folded matches and translate them back to exact source slices. */
@@ -98,7 +130,7 @@ function matchRanges(text: string, terms: string[]): MatchRange[] {
     // decorated letter is highlighted as a single visual unit.
     while (end < text.length) {
       const next = String.fromCodePoint(text.codePointAt(end) as number);
-      if (!/^\p{M}$/u.test(next)) break;
+      if (!MARK.test(next)) break;
       end += next.length;
     }
 
@@ -130,11 +162,6 @@ export function highlightSegments(text: string, terms: string[]): Segment[] {
 /** How many term occurrences appear in `text`. */
 export function countMatches(text: string, terms: string[]): number {
   return highlightSegments(text, terms).filter((s) => s.match).length;
-}
-
-/** Whether any term appears literally, ignoring case and diacritics. */
-export function hasTerm(text: string, terms: string[]): boolean {
-  return matchRanges(text ?? '', terms).length > 0;
 }
 
 /**

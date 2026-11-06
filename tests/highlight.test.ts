@@ -1,31 +1,26 @@
 import { describe, it, expect } from 'vitest';
 import {
   countMatches,
-  hasTerm,
   highlightSegments,
   snippetAround,
-  splitTerms,
+  queryTerms,
 } from '../src/lib/highlight';
 
-describe('splitTerms', () => {
-  it('lowercases, trims, and drops words shorter than 2 chars', () => {
-    expect(splitTerms('  Hello WORLD a I  ')).toEqual(['hello', 'world']);
+describe('queryTerms', () => {
+  it('keeps the whole query as one folded phrase', () => {
+    expect(queryTerms('  Not   YET  ')).toEqual(['not yet']);
+    expect(queryTerms('Año\tFinal')).toEqual(['año final']);
   });
 
-  it('returns an empty array for empty/whitespace input', () => {
-    expect(splitTerms('')).toEqual([]);
-    expect(splitTerms('   ')).toEqual([]);
-  });
-
-  it('collapses runs of whitespace into single separators', () => {
-    expect(splitTerms('foo\tbar\nbaz')).toEqual(['foo', 'bar', 'baz']);
+  it('drops empty and single-character queries', () => {
+    expect(queryTerms('')).toEqual([]);
+    expect(queryTerms('   ')).toEqual([]);
+    expect(queryTerms(' a ')).toEqual([]);
   });
 
   it('handles nullish input safely', () => {
-    // @ts-expect-error verifying runtime safety
-    expect(splitTerms(null)).toEqual([]);
-    // @ts-expect-error verifying runtime safety
-    expect(splitTerms(undefined)).toEqual([]);
+    expect(queryTerms(null)).toEqual([]);
+    expect(queryTerms(undefined)).toEqual([]);
   });
 });
 
@@ -86,34 +81,22 @@ describe('highlightSegments', () => {
 });
 
 describe('countMatches', () => {
+  it('matches accents asymmetrically and keeps ñ distinct', () => {
+    expect(countMatches('papa, papá, papà', queryTerms('papa'))).toBe(3);
+    expect(countMatches('papa, papá, papà', queryTerms('papá'))).toBe(1);
+    expect(countMatches('ano, año, AÑO, an\u0303o', queryTerms('año'))).toBe(3);
+    expect(countMatches('ano, año', queryTerms('ano'))).toBe(1);
+  });
+
+  it('counts a phrase only where it appears whole, across line breaks too', () => {
+    expect(countMatches('Not yet. Not now. not\n  yet', queryTerms('not yet'))).toBe(2);
+  });
+
+
   it('counts the number of matched segments', () => {
     expect(countMatches('the cat sat on the mat', ['the'])).toBe(2);
     expect(countMatches('the cat sat on the mat', ['cat', 'mat'])).toBe(2);
     expect(countMatches('nothing here', ['cat'])).toBe(0);
-  });
-});
-
-describe('hasTerm', () => {
-  it('returns true when any term appears literally', () => {
-    expect(hasTerm('Hello World', ['world'])).toBe(true);
-  });
-
-  it('ignores case and letter decorations', () => {
-    expect(hasTerm('Pingüino en Ávila', ['pinguino'])).toBe(true);
-    expect(hasTerm('Pingüino en Ávila', ['avila'])).toBe(true);
-  });
-
-  it('returns false when no term appears', () => {
-    expect(hasTerm('Hello World', ['foo'])).toBe(false);
-  });
-
-  it('returns false with no terms', () => {
-    expect(hasTerm('anything', [])).toBe(false);
-  });
-
-  it('treats nullish text safely', () => {
-    // @ts-expect-error verifying runtime safety
-    expect(hasTerm(null, ['x'])).toBe(false);
   });
 });
 
