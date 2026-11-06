@@ -6,7 +6,7 @@ name: Release
 # the R2 bucket served at https://icarus.4oli.com/download and switches
 # `latest.json` to the new version last, so visitors never see a partial
 # release. Desktop builds are unsigned for now; the Android APK is signed with
-# the project's own key (see README → Releases).
+# the project's own key (see docs/releases.md).
 #
 # Pull requests that touch the packaging or the Android app run the builds and
 # the Android smoke test without publishing.
@@ -38,7 +38,7 @@ env:
   ANDROID_NDK: 27.2.12479018
   # The emulator API for the smoke test; 34 boots more reliably on hosted runners.
   ANDROID_API: 34
-  # SHA-256 of the project's APK signing certificate (see README → Releases).
+  # SHA-256 of the project's APK signing certificate (see docs/releases.md).
   ANDROID_CERT_SHA256: 97f51af72e78130c742553eebf84081325f3883a274c7988126cf9b352478d68
 
 jobs:

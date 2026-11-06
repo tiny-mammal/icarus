@@ -14,7 +14,8 @@ Icarus runs as a desktop app for Windows, macOS and Linux, as an Android app (AP
 ## Source
 
 - [Source code](https://github.com/tiny-mammal/icarus): Canonical repository.
-- [README](https://raw.githubusercontent.com/tiny-mammal/icarus/main/README.md): Features, storage behavior, and development setup.
+- [README](https://raw.githubusercontent.com/tiny-mammal/icarus/main/README.md): Overview and development setup.
+- [Data and privacy](https://raw.githubusercontent.com/tiny-mammal/icarus/main/docs/privacy.md): Where data lives and what encryption protects.
 
 ## Optional
 
