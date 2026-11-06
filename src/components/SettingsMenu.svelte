@@ -1,6 +1,5 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
-  import { vaultFileName } from '../lib/storage';
   import { DATE_FORMATS, longDayLabel, type DateFormat } from '../lib/date';
   import { SOURCE_REPO, openExternal } from '../lib/external';
   import { AUTO_LOCK_CHOICES } from '../lib/config';
@@ -12,12 +11,6 @@
   import Switch from './Switch.svelte';
   import Modal from './Modal.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
-
-  // Show only the file name in the chip, but keep the full path as a tooltip.
-  const fileName = $derived(vaultFileName(app.vault));
-
-  // An app-owned vault (browser or device) has no other copy: "forget" deletes real data.
-  const isAppVault = $derived(app.vault?.kind === 'app');
 
   // Local confirmation step for the destructive vault action.
   let confirmForget = $state(false);
@@ -85,7 +78,7 @@
   );
 
   function saveUpdatePref(save: Promise<void>) {
-    save.catch(() => app.toast('error', 'Could not save settings to the diary folder.'));
+    save.catch(() => app.toast('error', 'Could not save settings.'));
   }
 
   function getUpdate() {
@@ -106,55 +99,21 @@
   <Modal title="Settings" onclose={() => (app.settingsOpen = false)} width="sm:max-w-lg" z="z-sheet">
     <!-- Current diary location -->
     <div class="mb-5 rounded-lg border border-slate bg-slate-soft px-3.5 py-3">
-      <p class="text-[0.7rem] font-medium uppercase tracking-wider text-muted">
-        {isAppVault ? 'Current diary' : 'Current folder'}
+      <p class="text-[0.7rem] font-medium uppercase tracking-wider text-muted">Current diary</p>
+      <p class="mt-1 text-sm text-text">{app.appPlace.charAt(0).toUpperCase() + app.appPlace.slice(1)}</p>
+      <p class="mt-0.5 text-xs text-muted">
+        {app.storageKind === 'device'
+          ? 'Stored privately inside the app, with a copy of each of the last 7 days. Export a backup to keep it safe elsewhere'
+          : 'Stored locally in IndexedDB. Export a backup to keep it safe'}
       </p>
-      {#if app.vault?.kind === 'file'}
-        <p class="mt-1 truncate text-sm text-text" title={app.vault.path}>{fileName}</p>
-        <p class="mt-0.5 truncate text-xs text-muted" title={app.vault.path}>{app.vault.path}</p>
-        <p class="mt-1 text-xs text-muted">Drafts and settings are saved beside this file.</p>
-      {:else}
-        <p class="mt-1 text-sm text-text">{app.appPlace.charAt(0).toUpperCase() + app.appPlace.slice(1)}</p>
-        <p class="mt-0.5 text-xs text-muted">
-          {app.storageKind === 'device'
-            ? 'Stored privately inside the app. Uninstalling it erases the diary, so export a backup to keep it safe'
-            : 'Stored locally in IndexedDB. Export a backup to keep it safe'}
-        </p>
-      {/if}
       <p class="mt-1 text-xs text-muted">
         {app.entries.length}
         {app.entries.length === 1 ? 'entry' : 'entries'}
       </p>
     </div>
 
-    {#if app.storageKind === 'folder'}
-      <div class="mb-5 flex items-center justify-between gap-4">
-        <span>
-          <span class="block text-sm text-text">Open this folder on launch</span>
-          <span class="block text-xs text-muted">
-            {app.rememberFolder
-              ? 'Only its location is saved on this computer'
-              : 'Nothing is saved on this computer; choose the folder each time'}
-          </span>
-        </span>
-        <Switch checked={app.rememberFolder} label="Open this folder on launch" onchange={(on) => app.setRememberFolder(on)} />
-      </div>
-    {/if}
-
     <!-- Actions -->
     <div class="space-y-2">
-      {#if app.storageKind === 'folder'}
-        <button
-          class="flex w-full items-center gap-3 rounded-lg border border-slate px-3.5 py-3 text-left text-sm text-text transition-colors hover:bg-slate"
-          onclick={() => app.openVaultFolder()}
-          disabled={app.busy}
-        >
-          <span>
-            <span class="block font-medium">Open another folder</span>
-            <span class="block text-xs text-muted">Open its diary or create diary.ics there</span>
-          </span>
-        </button>
-      {/if}
       <button
         class="flex w-full items-center gap-3 rounded-lg border border-slate px-3.5 py-3 text-left text-sm text-text transition-colors hover:bg-slate"
         onclick={() => app.importVault()}
@@ -163,11 +122,7 @@
         <svg class="text-muted" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
         <span>
           <span class="block font-medium">Import .ics</span>
-          <span class="block text-xs text-muted">
-            {app.storageKind === 'folder'
-              ? 'Copy an .ics into a folder you choose'
-              : 'Open a different diary file'}
-          </span>
+          <span class="block text-xs text-muted">Replace this diary with one from a file</span>
         </span>
       </button>
 
@@ -182,9 +137,9 @@
           <span class="block text-xs text-muted">
             {app.encrypted
               ? 'Encrypted by default, or a plain .ics'
-              : isAppVault
-                ? 'Download a .ics copy you can keep or re-import'
-                : 'Save a copy to any folder or USB drive'}
+              : app.storageKind === 'device'
+                ? 'Save a .ics copy to any folder or USB drive'
+                : 'Download a .ics copy you can keep or re-import'}
           </span>
         </span>
       </button>
@@ -214,13 +169,8 @@
         >
           <svg class="text-red-400/80" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><path d="M12 2v10"/></svg>
           <span>
-            {#if isAppVault}
-              <span class="block font-medium">Delete diary</span>
-              <span class="block text-xs text-red-400/70">Erase it from {app.appPlace}</span>
-            {:else}
-              <span class="block font-medium">Close folder</span>
-              <span class="block text-xs text-red-400/70">Leave all files in the chosen folder</span>
-            {/if}
+            <span class="block font-medium">Delete diary</span>
+            <span class="block text-xs text-red-400/70">Erase it from {app.appPlace}</span>
           </span>
         </button>
       {/if}
@@ -457,23 +407,17 @@
 
   {#if confirmForget}
     <ConfirmDialog
-      title={isAppVault ? 'Delete this diary?' : 'Close this folder?'}
-      confirmLabel={isAppVault ? 'Delete diary' : 'Close folder'}
+      title="Delete this diary?"
+      confirmLabel="Delete diary"
       onconfirm={forget}
       oncancel={() => (confirmForget = false)}
       busy={app.busy}
       z="z-dialog"
     >
-      {#if isAppVault}
-        All <span class="text-text">{app.entries.length}</span>
-        {app.entries.length === 1 ? 'entry' : 'entries'} stored in {app.appPlace}
-        and their drafts will be permanently erased. Export a backup first if you may want them
-        back. This can't be undone.
-      {:else}
-        Icarus will close
-        {#if fileName}<span class="text-text">{fileName}</span>{:else}this file{/if}
-        and return to the welcome screen. The diary, drafts and settings remain in the chosen folder.
-      {/if}
+      All <span class="text-text">{app.entries.length}</span>
+      {app.entries.length === 1 ? 'entry' : 'entries'} stored {app.appPlaceIn}, their drafts
+      and any daily copies will be permanently erased. Export a backup first if you may want them
+      back. This can't be undone.
     </ConfirmDialog>
   {/if}
 {/if}

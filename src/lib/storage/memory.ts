@@ -5,9 +5,7 @@
  * File pickers and exports are delegated to `base`, since they only move data
  * the user explicitly chooses.
  */
-import type { StorageBackend, StoreName, VaultRef } from './types';
-
-const MEMORY_VAULT: VaultRef = { kind: 'app' };
+import { APP_VAULT, type StorageBackend, type StoreName } from './types';
 
 export function createMemoryBackend(
   initialIcs: string | null,
@@ -21,9 +19,8 @@ export function createMemoryBackend(
     kind: base.kind,
 
     async getRememberedVault() {
-      return vault === null ? null : MEMORY_VAULT;
+      return vault === null ? null : APP_VAULT;
     },
-    async rememberVault() {},
     async vaultExists() {
       return vault !== null;
     },
@@ -37,18 +34,9 @@ export function createMemoryBackend(
     async forgetVault() {
       vault = null;
     },
-    async siblingVault() {
-      return MEMORY_VAULT;
-    },
-    async removeSupersededVault() {},
+    async discardVaultCopies() {},
 
-    async pickVaultLocation() {
-      return MEMORY_VAULT;
-    },
-    async pickDiaryText() {
-      const picked = await base.pickDiaryText();
-      return picked && { text: picked.text, ref: MEMORY_VAULT };
-    },
+    pickDiaryText: () => base.pickDiaryText(),
     async readDroppedPath() {
       return null;
     },

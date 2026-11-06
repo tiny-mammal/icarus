@@ -1,22 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { vaultFileName, type StorageBackend } from '../src/lib/storage';
+import type { StorageBackend } from '../src/lib/storage';
 import { createMemoryBackend } from '../src/lib/storage/memory';
-
-describe('vaultFileName', () => {
-  it('extracts the file name from desktop vault paths', () => {
-    expect(vaultFileName({ kind: 'file', path: '/home/oli/diary.ics' })).toBe(
-      'diary.ics',
-    );
-    expect(
-      vaultFileName({ kind: 'file', path: 'C:\\Users\\oli\\diary.ics' }),
-    ).toBe('diary.ics');
-  });
-
-  it('returns null for browser and blank vaults', () => {
-    expect(vaultFileName({ kind: 'app' })).toBeNull();
-    expect(vaultFileName(null)).toBeNull();
-  });
-});
 
 describe('createMemoryBackend', () => {
   const base = { kind: 'browser' } as StorageBackend;

@@ -4,12 +4,14 @@
   import { cubicOut } from 'svelte/easing';
   import { getCurrentWebview } from '@tauri-apps/api/webview';
   import { app } from '../lib/store.svelte';
+  import { runningOnAndroid, runningUnderTauri } from '../lib/runtime';
 
   let dragHover = $state(false);
 
-  // The two runtimes expose drops differently: Tauri delivers OS paths through
-  // webview events, a plain browser delivers File objects through HTML5 DnD.
-  const isDesktop = app.storageKind === 'folder';
+  // The two runtimes expose drops differently: the desktop app delivers OS
+  // paths through webview events, a browser delivers File objects through
+  // HTML5 DnD. Android has no drops.
+  const isDesktop = runningUnderTauri() && !runningOnAndroid();
 
   function onDragOver(e: DragEvent) {
     e.preventDefault();
@@ -66,23 +68,18 @@
       <h1 class="text-3xl font-semibold tracking-tight text-text">Icarus Diary</h1>
       <p class="mt-3 text-sm leading-relaxed text-muted">
         A quiet, local-first place for your days.<br />
-        {isDesktop
-          ? 'Choose where your diary, drafts and settings will live.'
-          : 'Start a new diary, or bring in one you already keep.'}
+        Start a new diary, or bring in one you already keep.
       </p>
     </div>
 
     <button
       class="mt-10 w-full rounded-xl border border-faint bg-slate-soft px-6 py-4 text-sm font-medium text-text transition-colors hover:bg-slate disabled:opacity-60"
-      onclick={() => (isDesktop ? app.openVaultFolder() : app.startNewDiary())}
+      onclick={() => app.startNewDiary()}
       disabled={app.busy}
       in:fly={{ y: 16, duration: 700, delay: 180, easing: cubicOut }}
     >
-      {isDesktop ? 'Open or create diary folder' : 'Start a new diary'}
+      Start a new diary
     </button>
-    {#if isDesktop}
-      <p class="mt-2 text-xs text-muted">Your diary, drafts and settings will be saved here.</p>
-    {/if}
 
     <!-- Drop zone / primary action -->
     <button
@@ -102,18 +99,12 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
       </span>
       <span class="text-sm font-medium text-text">
-        {dragHover
-          ? 'Release to open'
-          : isDesktop
-            ? 'Import an existing diary'
-            : 'Import a diary (.ics)'}
+        {dragHover ? 'Release to open' : 'Import a diary (.ics)'}
       </span>
       <span class="text-xs text-muted">
-        {isDesktop
-          ? 'Choose the file, then its new data folder'
-          : app.storageKind === 'device'
-            ? 'Tap to choose a .ics or .icarus file'
-            : 'Drag & drop a file here, or click to browse'}
+        {runningOnAndroid()
+          ? 'Tap to choose a .ics or .icarus file'
+          : 'Drag & drop a file here, or click to browse'}
       </span>
     </button>
 

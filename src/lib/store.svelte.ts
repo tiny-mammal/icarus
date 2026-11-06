@@ -3,7 +3,7 @@
  * is shared across components. It owns the entries, the current view, the
  * calendar position, and all the side-effecting actions (load / commit /
  * import / export / lock) — each of which keeps the in-memory model and the
- * vault (a file on desktop, IndexedDB in the browser) in sync.
+ * vault (the app's private files, or IndexedDB in the browser) in sync.
  */
 import type {
   DiaryEntry,
@@ -20,13 +20,14 @@ import {
   persistDrafts,
   upsertDraft,
 } from './drafts';
-import { isDiaryFileName, storage, type UnlockSecret, type VaultRef } from './storage';
+import { APP_VAULT, isDiaryFileName, storage, type UnlockSecret, type VaultRef } from './storage';
+import { BackupExistsError, VaultLockedError } from './storage/errors';
 import {
-  BackupExistsError,
-  FolderHasDiaryError,
-  VaultLockedError,
-} from './storage/errors';
-import { PRIVATE_ITEMS, appPlaceName, type StorageKind } from './storage/types';
+  PRIVATE_ITEMS,
+  appPlaceName,
+  appPlaceWithPreposition,
+  type StorageKind,
+} from './storage/types';
 import {
   CorruptVaultError,
   WrongSecretError,
@@ -50,8 +51,6 @@ import {
   setSavedAutoLock,
   getSavedLockWhenHidden,
   setSavedLockWhenHidden,
-  getSavedRememberFolder,
-  setSavedRememberFolder,
   type AutoLockMinutes,
   type WeekStart,
   type DateFormat,
@@ -89,6 +88,11 @@ export interface PendingDiary {
   ref: VaultRef;
   text: string;
   source: 'new' | 'import';
+  /**
+   * The user agreed to replace a saved diary: its private items (drafts,
+   * dictionary) go with it once this one is written.
+   */
+  replaces?: boolean;
 }
 
 function groupByDay(entries: DiaryEntry[]): Map<string, DiaryEntry[]> {
@@ -113,6 +117,8 @@ class AppStore {
   readonly storageKind: StorageKind = storage.kind;
   /** "this browser" or "this device": where an app-owned diary is kept. */
   readonly appPlace: string = appPlaceName(storage.kind);
+  /** "on this device" or "in this browser". */
+  readonly appPlaceIn: string = appPlaceWithPreposition(storage.kind);
   view = $state<View>('welcome');
   ready = $state(false); // finished the initial boot check
 
@@ -127,8 +133,6 @@ class AppStore {
   autoLockMinutes = $state<AutoLockMinutes>(15);
   /** Lock as soon as the window is hidden. User preference. */
   lockWhenHidden = $state(false);
-  /** Desktop reopens the current folder on launch. Per-folder preference. */
-  rememberFolder = $state(true);
   encryptionSetupOpen = $state(false);
   /** Bumped on every open, so each run of the setup starts from a fresh state. */
   encryptionSetupRun = $state(0);
@@ -136,6 +140,8 @@ class AppStore {
   privacyDialog = $state<'password' | 'recovery' | 'disable' | null>(null);
   /** A new or imported diary waiting on the protection choice. */
   pendingDiary = $state<PendingDiary | null>(null);
+  /** A new or imported diary waiting for consent to replace the saved one. */
+  replaceRequest = $state<PendingDiary | null>(null);
   // Keys that are only written once the user confirms the recovery key.
   private pendingKeys: PendingKeys | null = null;
 
@@ -223,30 +229,25 @@ class AppStore {
   );
 
   // --- boot ---------------------------------------------------------------
-  /** Reopen the remembered diary (desktop: its folder), else show Welcome. */
+  /** Reopen the saved diary, else show Welcome. */
   async init(): Promise<void> {
-    if (this.storageKind !== 'folder') {
-      // Desktop settings live in the folder, read once it is selected.
-      void this.loadDraftsFromDisk();
-      void this.loadWeekStart();
-      void this.loadDateFormat();
-      void this.loadSpellcheck();
-      void this.loadSpellWords();
-      void this.loadLockPreferences();
-    }
+    void this.loadDraftsFromDisk();
+    void this.loadWeekStart();
+    void this.loadDateFormat();
+    void this.loadSpellcheck();
+    void this.loadSpellWords();
+    void this.loadLockPreferences();
     try {
       const saved = await storage.getRememberedVault();
       if (saved && (await storage.vaultExists(saved))) {
-        const ok = await this.loadVault(saved, { remember: false });
+        const ok = await this.loadVault(saved);
         // An encrypted vault stops at the lock screen instead.
         if (ok || this.view === 'locked') return;
-      } else if (saved) {
-        // The remembered vault moved or was deleted — forget it gracefully.
-        await storage.rememberVault(null);
       }
     } catch (err) {
-      // Any boot failure simply falls through to the Welcome screen.
+      // Welcome still offers import; replacing a saved diary asks first.
       devError('init: failed to restore the saved vault', err);
+      this.toast('error', 'Could not open the saved diary.');
     } finally {
       this.ready = true;
     }
@@ -254,18 +255,12 @@ class AppStore {
   }
 
   // --- vault loading ------------------------------------------------------
-  /**
-   * Read and adopt the vault at `ref`. `remember: false` is used on boot so a
-   * restored vault is not re-persisted.
-   */
-  async loadVault(
-    ref: VaultRef,
-    opts: { remember?: boolean } = {},
-  ): Promise<boolean> {
+  /** Read and show the saved diary at `ref`, or its lock screen. */
+  async loadVault(ref: VaultRef): Promise<boolean> {
     this.busy = true;
     try {
       const text = await storage.readVault(ref);
-      return await this.adoptVault(ref, text, opts.remember !== false);
+      return await this.adoptVault(ref, text, false);
     } catch (err) {
       if (err instanceof VaultLockedError) {
         await this.showLockScreen(ref);
@@ -283,35 +278,31 @@ class AppStore {
 
   /**
    * Replace the in-memory diary with the parsed contents of `text` and make
-   * `ref` the current vault. In the browser there is no source file to keep,
-   * so an adopted vault is materialized into IndexedDB right away.
+   * `ref` the current vault. `save` writes a new or imported diary to storage
+   * first; a diary read from storage is shown as it is.
    */
   private async adoptVault(
     ref: VaultRef,
     text: string,
-    remember: boolean,
-    writeCopy = false,
+    save: boolean,
+    replaces = false,
   ): Promise<boolean> {
-    if (isEncryptedVault(text)) return this.adoptEncryptedFile(ref, text);
+    if (isEncryptedVault(text)) return this.adoptEncryptedFile(ref, text, replaces);
     const res = parseIcs(text);
     if (!res.ok) {
       this.toast('error', `Couldn't read this file — ${res.error}`);
       return false;
     }
-    const previousVault = this.vault;
-    try {
-      if (remember) await storage.rememberVault(ref);
-      if (writeCopy) {
-        await storage.writeVault(ref, text);
-      } else if (remember && ref.kind === 'app') {
+    if (save) {
+      try {
         await storage.writeVault(ref, serializeIcs(res.entries));
+      } catch (err) {
+        devError('adoptVault: could not save the diary', err);
+        this.toast('error', 'Could not save the diary.');
+        return false;
       }
-    } catch (err) {
-      if (remember) await storage.rememberVault(previousVault);
-      devError('adoptVault: could not persist the imported diary', err);
-      this.toast('error', 'Could not save the diary in the selected location.');
-      return false;
     }
+    if (save && replaces) await this.eraseReplacedItems();
     await this.enterVault(ref, res.entries);
     return true;
   }
@@ -336,10 +327,19 @@ class AppStore {
    * anything is written. Encrypted files go straight to the lock screen, and
    * an encrypted browser diary keeps protecting whatever replaces it.
    */
-  private async proposeDiary(ref: VaultRef, text: string, source: PendingDiary['source']): Promise<void> {
-    const writeCopy = this.storageKind === 'folder';
+  private async proposeDiary(
+    ref: VaultRef,
+    text: string,
+    source: PendingDiary['source'],
+    replaces = false,
+  ): Promise<void> {
+    if (!replaces && (await storage.vaultExists(ref))) {
+      this.settingsOpen = false;
+      this.replaceRequest = { ref, text, source };
+      return;
+    }
     if (isEncryptedVault(text) || storage.encryption.isUnlocked(ref)) {
-      await this.adoptVault(ref, text, true, writeCopy);
+      await this.adoptVault(ref, text, true, replaces);
       return;
     }
     const res = parseIcs(text);
@@ -348,7 +348,7 @@ class AppStore {
       return;
     }
     this.settingsOpen = false;
-    this.pendingDiary = { ref, text, source };
+    this.pendingDiary = { ref, text, source, replaces };
     this.openEncryptionSetup();
   }
 
@@ -358,9 +358,7 @@ class AppStore {
     if (!diary) return false;
     this.busy = true;
     try {
-      if (!(await this.adoptVault(diary.ref, diary.text, true, this.storageKind === 'folder'))) {
-        return false;
-      }
+      if (!(await this.adoptVault(diary.ref, diary.text, true, diary.replaces))) return false;
       this.pendingDiary = null;
       this.encryptionSetupOpen = false;
       return true;
@@ -383,33 +381,73 @@ class AppStore {
     this.encryptionSetupOpen = false;
   }
 
-  /** App-owned onboarding: start an empty diary in this browser or device. */
+  /** Start an empty diary. */
   async startNewDiary(): Promise<void> {
-    const ref = await storage.pickVaultLocation();
-    if (ref) await this.proposeDiary(ref, serializeIcs([]), 'new');
+    try {
+      await this.proposeDiary(APP_VAULT, serializeIcs([]), 'new');
+    } catch (err) {
+      devError('startNewDiary: could not reach the diary storage', err);
+      this.toast('error', 'Could not create the diary.');
+    }
+  }
+
+  /**
+   * The user agreed to replace the saved diary with the requested one. Busy
+   * throughout, so locking cannot interrupt the switch between diaries.
+   */
+  async confirmReplace(): Promise<void> {
+    const request = this.replaceRequest;
+    if (!request) return;
+    this.replaceRequest = null;
+    this.busy = true;
+    try {
+      if (this.vault && !(await this.flushDraftNow())) return;
+      await this.proposeDiary(request.ref, request.text, request.source, true);
+    } catch (err) {
+      devError('confirmReplace: could not replace the diary', err);
+      this.toast('error', 'Could not replace the diary.');
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  /**
+   * Once the new diary is written, erase the replaced one's drafts and
+   * dictionary: they may be sealed with a key the new diary does not have,
+   * and belong to the old diary anyway.
+   */
+  private async eraseReplacedItems(): Promise<void> {
+    try {
+      for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
+    } catch (err) {
+      devError('eraseReplacedItems: could not erase the old drafts', err);
+      this.toast('error', 'The diary was replaced, but the old drafts could not be erased.');
+    }
+  }
+
+  cancelReplace(): void {
+    this.replaceRequest = null;
   }
 
   /**
    * An imported or dropped file that is itself encrypted: store it as-is and
    * ask for its password. The current diary is closed first.
    */
-  private async adoptEncryptedFile(ref: VaultRef, text: string): Promise<boolean> {
+  private async adoptEncryptedFile(ref: VaultRef, text: string, replaces = false): Promise<boolean> {
     if (!this.encryptionSupported) {
       this.toast('error', 'Encrypted diaries need HTTPS or the desktop app.');
       return false;
     }
-    const previousVault = this.vault;
     try {
-      await storage.rememberVault(ref);
       await storage.encryption.storeEncrypted(ref, text);
     } catch (err) {
-      await storage.rememberVault(previousVault);
       devError('adoptEncryptedFile: could not store the encrypted diary', err);
       this.toast('error', err instanceof CorruptVaultError
         ? 'This encrypted diary is damaged or was modified.'
         : 'Could not save the diary in the selected location.');
       return false;
     }
+    if (replaces) await this.eraseReplacedItems();
     await this.showLockScreen(ref);
     return true;
   }
@@ -417,7 +455,7 @@ class AppStore {
   /**
    * Reload everything stored beside the diary: drafts, the personal
    * dictionary and preferences. Private items can only be read once an
-   * encrypted diary is unlocked, and each desktop folder has its own.
+   * encrypted diary is unlocked.
    */
   private async loadVaultState(): Promise<void> {
     this.drafts = [];
@@ -433,7 +471,6 @@ class AppStore {
       this.loadSpellcheck(),
       this.loadSpellWords(),
       this.loadLockPreferences(),
-      this.loadRememberFolder(),
       updates.load(),
     ]);
   }
@@ -472,8 +509,6 @@ class AppStore {
     this.lockedVault = ref;
     this.view = 'locked';
     this.ready = true;
-    // Preferences stay readable while locked (desktop: from the folder).
-    if (this.storageKind === 'folder') await this.loadLockPreferences();
   }
 
   /**
@@ -508,7 +543,7 @@ class AppStore {
     } finally {
       this.busy = false;
     }
-    if (!(await this.loadVault(ref, { remember: ref.kind === 'file' }))) {
+    if (!(await this.loadVault(ref))) {
       storage.encryption.lock();
       return 'failed';
     }
@@ -543,22 +578,21 @@ class AppStore {
     if (parsed && !parsed.ok) return false;
     const entries = parsed?.ok ? parsed.entries : this.entries;
     if (this.vault && !(await this.flushDraftNow())) return false;
-    const previousVault = this.vault;
     this.busy = true;
     try {
-      const encryptedRef = await storage.encryption.enable(ref, serializeIcs(entries), pending.keys);
+      await storage.encryption.enable(ref, serializeIcs(entries), pending.keys);
+      if (diary?.replaces) await this.eraseReplacedItems();
       this.pendingKeys = null;
       if (diary) {
         this.pendingDiary = null;
-        await this.enterVault(encryptedRef, entries);
+        await this.enterVault(ref, entries);
       } else {
-        this.vault = encryptedRef;
         this.encrypted = true;
       }
+      this.warnIfCopiesRemain();
       return true;
     } catch (err) {
       devError('confirmEncryption: could not encrypt the diary', err);
-      if (diary) await storage.rememberVault(previousVault).catch(() => undefined);
       this.toast('error', diary
         ? 'Could not save the encrypted diary. Nothing was written.'
         : 'Could not encrypt the diary. Nothing was changed.');
@@ -584,12 +618,25 @@ class AppStore {
     }
   }
 
+  /**
+   * After a key change, older daily copies must go. If they could not be
+   * erased yet, say so: the protection is not complete until they are.
+   */
+  private warnIfCopiesRemain(): void {
+    if (!storage.encryption.copiesRemain()) return;
+    this.toast(
+      'error',
+      `Older copies of the diary ${this.appPlaceIn} could not be erased yet and can still be read without the current password. Icarus retries on every save.`,
+    );
+  }
+
   /** Rewrite the open diary under rewrapped keys. Toasts on failure. */
   private async rekey(keys: VaultKeys): Promise<boolean> {
     if (!this.vault) return false;
     this.busy = true;
     try {
       await storage.encryption.rekey(this.vault, serializeIcs(this.entries), keys);
+      this.warnIfCopiesRemain();
       return true;
     } catch (err) {
       devError('rekey: could not rewrite the diary', err);
@@ -634,7 +681,7 @@ class AppStore {
     if (!(await this.flushDraftNow())) return 'failed';
     this.busy = true;
     try {
-      this.vault = await storage.encryption.disable(ref, serializeIcs(this.entries), password);
+      await storage.encryption.disable(ref, serializeIcs(this.entries), password);
       this.encrypted = false;
       return 'ok';
     } catch (err) {
@@ -658,35 +705,13 @@ class AppStore {
     }
   }
 
-  private async loadRememberFolder(): Promise<void> {
-    if (this.storageKind !== 'folder') return;
-    try {
-      this.rememberFolder = await getSavedRememberFolder();
-    } catch (err) {
-      devError('loadRememberFolder: could not read the preference', err);
-    }
-  }
-
-  /** Reopen this folder on launch, or ask for a folder every time. */
-  async setRememberFolder(enabled: boolean): Promise<void> {
-    this.rememberFolder = enabled;
-    try {
-      await setSavedRememberFolder(enabled);
-      // Re-selecting the open folder writes or erases the record on the computer.
-      await storage.rememberVault(this.vault);
-    } catch (err) {
-      devError('setRememberFolder: could not persist the preference', err);
-      this.toast('error', 'Could not save settings to the diary folder.');
-    }
-  }
-
   async setAutoLock(minutes: AutoLockMinutes): Promise<void> {
     this.autoLockMinutes = minutes;
     try {
       await setSavedAutoLock(minutes);
     } catch (err) {
       devError('setAutoLock: could not persist the auto-lock preference', err);
-      this.toast('error', 'Could not save settings to the diary folder.');
+      this.toast('error', 'Could not save settings.');
     }
   }
 
@@ -696,44 +721,25 @@ class AppStore {
       await setSavedLockWhenHidden(enabled);
     } catch (err) {
       devError('setLockWhenHidden: could not persist the preference', err);
-      this.toast('error', 'Could not save settings to the diary folder.');
-    }
-  }
-
-  /** Open an existing diary folder, or create diary.ics in an empty one. */
-  async openVaultFolder(): Promise<void> {
-    if (this.storageKind !== 'folder') return;
-    try {
-      if (this.vault && !(await this.flushDraftNow())) return;
-      const ref = await storage.pickVaultLocation();
-      if (!ref) return;
-      this.settingsOpen = false;
-      if (await storage.vaultExists(ref)) await this.loadVault(ref);
-      else await this.proposeDiary(ref, serializeIcs([]), 'new');
-    } catch (err) {
-      devError('openVaultFolder: could not open the folder', err);
-      this.toast('error', 'Could not open that folder.');
+      this.toast('error', 'Could not save settings.');
     }
   }
 
   /**
    * Import a diary (`.ics` or an encrypted backup): pick a file, parse it, and
-   * make it the current vault. On desktop the picked file is copied into a
-   * chosen folder. In the browser its contents are copied into IndexedDB; if
-   * the browser diary is encrypted, the imported entries stay encrypted.
+   * make it the diary, once the user agrees to replace any saved one. If the
+   * open diary is encrypted, the imported entries stay encrypted.
    */
   async importVault(): Promise<void> {
     this.settingsOpen = false;
     if (this.vault && !(await this.flushDraftNow())) return;
     this.busy = true;
     try {
-      const picked = await storage.pickDiaryText();
-      if (picked) await this.proposeDiary(picked.ref, picked.text, 'import');
+      const text = await storage.pickDiaryText();
+      if (text !== null) await this.proposeDiary(APP_VAULT, text, 'import');
     } catch (err) {
       devError('importVault: could not import the diary', err);
-      this.toast('error', err instanceof FolderHasDiaryError
-        ? 'That folder already has a diary. Open the folder instead.'
-        : 'Could not import that diary.');
+      this.toast('error', 'Could not import that diary.');
     } finally {
       this.busy = false;
     }
@@ -748,12 +754,11 @@ class AppStore {
     this.busy = true;
     try {
       if (this.vault && !(await this.flushDraftNow())) return;
-      const picked = await storage.readDroppedPath(path);
-      if (picked) await this.proposeDiary(picked.ref, picked.text, 'import');
+      const text = await storage.readDroppedPath(path);
+      if (text !== null) await this.proposeDiary(APP_VAULT, text, 'import');
     } catch (err) {
-      this.toast('error', err instanceof FolderHasDiaryError
-        ? 'That folder already has a diary. Open the folder instead.'
-        : 'Could not open that file.');
+      devError('openDroppedPath: could not read the file', err);
+      this.toast('error', 'Could not open that file.');
     } finally {
       this.busy = false;
     }
@@ -768,7 +773,7 @@ class AppStore {
     this.busy = true;
     try {
       if (this.vault && !(await this.flushDraftNow())) return;
-      await this.proposeDiary({ kind: 'app' }, await file.text(), 'import');
+      await this.proposeDiary(APP_VAULT, await file.text(), 'import');
     } catch {
       this.toast('error', 'Could not open that file.');
     } finally {
@@ -921,15 +926,14 @@ class AppStore {
   }
 
   // --- drafts -------------------------------------------------------------
-  /** Pull persisted drafts into memory after the folder is selected. */
+  /** Pull persisted drafts into memory. */
   async loadDraftsFromDisk(): Promise<void> {
     try {
       this.drafts = await loadDrafts();
     } catch (err) {
       devError('loadDraftsFromDisk: could not read persisted drafts', err);
-      if (this.storageKind === 'folder') {
-        this.toast('error', 'Could not read drafts from the diary folder.');
-      }
+      // Encrypted drafts wait for the unlock, which loads them again.
+      if (!(err instanceof VaultLockedError)) this.toast('error', 'Could not read your drafts.');
     }
   }
 
@@ -949,7 +953,7 @@ class AppStore {
       await setSavedWeekStart(weekStart);
     } catch (err) {
       devError('setWeekStart: could not persist the week-start preference', err);
-      this.toast('error', 'Could not save settings to the diary folder.');
+      this.toast('error', 'Could not save settings.');
     }
   }
 
@@ -969,7 +973,7 @@ class AppStore {
       await setSavedDateFormat(format);
     } catch (err) {
       devError('setDateFormat: could not persist the date-format preference', err);
-      this.toast('error', 'Could not save settings to the diary folder.');
+      this.toast('error', 'Could not save settings.');
     }
   }
 
@@ -989,7 +993,7 @@ class AppStore {
       await setSavedSpellcheck(enabled);
     } catch (err) {
       devError('setSpellcheck: could not persist the spell-check preference', err);
-      this.toast('error', 'Could not save settings to the diary folder.');
+      this.toast('error', 'Could not save settings.');
     }
   }
 
@@ -1008,7 +1012,7 @@ class AppStore {
     this.spellWords = addUserWord(word);
     void setSavedSpellWords(this.spellWords).catch((err) => {
       devError('addSpellWord: could not persist the personal dictionary', err);
-      this.toast('error', 'Could not save settings to the diary folder.');
+      this.toast('error', 'Could not save settings.');
     });
   }
 
@@ -1074,7 +1078,7 @@ class AppStore {
       return true;
     } catch (err) {
       devError('flushDraft: could not persist the draft list', err);
-      this.toast('error', 'Draft not saved — check that the diary folder is available.');
+      this.toast('error', 'Draft not saved — your text is still in the editor.');
       return false;
     }
   }
@@ -1094,7 +1098,7 @@ class AppStore {
     } catch (err) {
       this.drafts = previous;
       devError('removeDraft: could not persist the draft list', err);
-      this.toast('error', 'Could not update drafts in the diary folder.');
+      this.toast('error', 'Could not update drafts.');
       return false;
     }
   }
@@ -1253,10 +1257,7 @@ class AppStore {
     this.busy = true;
     try {
       await storage.writeVault(vault, serializeIcs(this.entries));
-      this.toast(
-        'success',
-        vault.kind === 'app' ? `Saved in ${this.appPlace}` : 'Saved to vault',
-      );
+      this.toast('success', `Saved ${this.appPlaceIn}`);
       return true;
     } catch {
       this.toast('error', 'Write failed — your changes are still in memory.');
@@ -1269,28 +1270,21 @@ class AppStore {
   // --- import / export ----------------------------------------------------
 
   /**
-   * Forget the current vault: drop the remembered link and the in-memory
-   * entries, then return to the Welcome screen. On desktop the `.ics` file on
-   * disk is left untouched — only the link is removed. In the browser the
-   * app-owned copy in IndexedDB is deleted. Also available from the lock
-   * screen, for a diary whose password and recovery key are both lost.
+   * Delete the diary, its copies and its private items, then return to the
+   * Welcome screen. Also available from the lock screen, for a diary whose
+   * password and recovery key are both lost.
    */
   async forgetVault(): Promise<void> {
     if (this.vault && !(await this.flushDraftNow())) return;
     const ref = this.vault ?? this.lockedVault;
-    // Erase the remembered location first: if that fails nothing else has
-    // changed, so the open diary (and its keys) stay usable.
     try {
-      await storage.rememberVault(null);
+      for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
+      if (ref) await storage.forgetVault(ref);
     } catch (err) {
-      devError('forgetVault: could not erase the remembered folder', err);
-      this.toast('error', 'Could not close the folder: the remembered location could not be erased.');
+      devError('forgetVault: could not delete the diary', err);
+      this.toast('error', 'Could not delete the diary.');
       return;
     }
-    if (ref?.kind === 'app') {
-      for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
-    }
-    if (ref) await storage.forgetVault(ref);
     storage.encryption.keepSessionFor(null);
     this.clearDiaryFromMemory();
     this.vault = null;

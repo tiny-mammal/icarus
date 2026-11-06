@@ -7,10 +7,13 @@
  * ciphertext. Without a session, encrypted data cannot be read at all: reads
  * throw `VaultLockedError` and the app shows the lock screen.
  *
- * The session is bound to one vault ref, so the diary of another folder can
- * never be sealed with this diary's key. Switching vaults keeps the session
- * until the app calls `keepSessionFor` with the new vault, so a failed switch
- * can fall back to the still-unlocked previous diary.
+ * The session is bound to the vault it unlocked, and ends when the app calls
+ * `keepSessionFor` with another (or none).
+ *
+ * Backends may keep copies of earlier versions (see `discardVaultCopies`).
+ * Those are erased whenever the key changes, so no copy stays readable without
+ * the current password. An erase that fails is recorded and retried on every
+ * unlock and save until it succeeds, and `copiesRemain` lets the UI say so.
  */
 import {
   CorruptVaultError,
@@ -25,8 +28,10 @@ import {
   unlockWithRecoveryKey,
   type VaultKeys,
 } from '../crypto/vault';
+import { devError } from '../log';
 import { VaultLockedError } from './errors';
 import {
+  COPIES_TO_ERASE_ITEM,
   PRIVATE_ITEMS,
   isPrivateItem,
   sameVault,
@@ -47,7 +52,10 @@ export interface VaultEncryption {
    * items may be written in plain text again (for a plain diary).
    */
   keepSessionFor(ref: VaultRef | null): void;
-  /** Open the vault's keyring with a password or recovery key. */
+  /**
+   * Open the vault's keyring with a password or recovery key, then finish any
+   * protection left pending: seal plain private items, erase stale copies.
+   */
   unlock(ref: VaultRef, secret: UnlockSecret): Promise<void>;
   /**
    * Forget the key. Encrypted data becomes unreadable, and private items
@@ -60,18 +68,25 @@ export interface VaultEncryption {
   currentKeys(): VaultKeys;
   /**
    * Encrypt a plain (or not yet written) vault with `keys`: write and verify
-   * the encrypted copy, seal private items, then delete any plain file.
-   * Returns the new ref, which becomes the remembered vault.
+   * the encrypted diary, seal private items, then erase readable copies.
    */
-  enable(ref: VaultRef, ics: string, keys: VaultKeys): Promise<VaultRef>;
-  /** The reverse of `enable`, once `password` is verified. Returns the new ref. */
-  disable(ref: VaultRef, ics: string, password: string): Promise<VaultRef>;
+  enable(ref: VaultRef, ics: string, keys: VaultKeys): Promise<void>;
+  /** The reverse of `enable`, once `password` is verified. */
+  disable(ref: VaultRef, ics: string, password: string): Promise<void>;
   /** Rewrite the unlocked vault under rewrapped `keys` (same master key). */
   rekey(ref: VaultRef, ics: string, keys: VaultKeys): Promise<void>;
   /** An encrypted backup of `ics`, openable with the same password. */
   exportEncrypted(ics: string): Promise<string>;
-  /** Store an already-encrypted diary file as-is (import); it stays locked. */
+  /**
+   * Store an already-encrypted diary file as-is (import); it stays locked.
+   * Copies of the diary it replaces are erased.
+   */
   storeEncrypted(ref: VaultRef, text: string): Promise<void>;
+  /**
+   * Whether copies made under an older key (or none) are still waiting to be
+   * erased, because the last attempt failed.
+   */
+  copiesRemain(): boolean;
 }
 
 export interface SecureStorage extends StorageBackend {
@@ -119,32 +134,69 @@ export function withEncryption(base: StorageBackend): SecureStorage {
   }
 
   /**
-   * Make the vault that replaces `from` current and write `contents` to it.
-   * The contents are proven to decode before anything is written, and read
-   * back afterwards; a refused sibling (e.g. a leftover file) or a failed check
-   * leaves `from` untouched. `from` may not exist yet (a brand-new diary).
+   * Replace the vault with `contents`, which are proven to decode before
+   * anything is written and read back afterwards.
    */
-  async function writeSibling(
-    from: VaultRef,
-    encrypted: boolean,
+  async function writeVerified(
+    ref: VaultRef,
     contents: string,
     decodes: (contents: string) => Promise<boolean>,
-  ): Promise<VaultRef> {
+  ): Promise<void> {
     if (!(await decodes(contents))) {
       throw new CorruptVaultError('The rewritten diary could not be verified');
     }
-    const target = await base.siblingVault(from, encrypted);
-    const replacesInPlace = sameVault(target, from);
-    if (!replacesInPlace && (await base.vaultExists(target))) {
-      throw new Error('The diary folder already contains a diary in the other format');
-    }
-    await base.rememberVault(target);
-    await base.writeVault(target, contents);
-    if ((await base.readVault(target)) !== contents) {
-      if (!replacesInPlace) await base.removeSupersededVault(target);
+    await base.writeVault(ref, contents);
+    if ((await base.readVault(ref)) !== contents) {
       throw new CorruptVaultError('The rewritten diary could not be verified');
     }
-    return target;
+  }
+
+  // Whether stale copies are known to remain; null until read from settings.
+  let copiesToErase: boolean | null = null;
+  const { store: ERASE_STORE, key: ERASE_KEY } = COPIES_TO_ERASE_ITEM;
+
+  /**
+   * Erase copies made under another key (or none). The diary itself is
+   * already safe, so a failure does not undo that: it is recorded, reported
+   * through `copiesRemain`, and retried on the next unlock or save.
+   */
+  async function discardCopies(): Promise<void> {
+    try {
+      await base.discardVaultCopies();
+    } catch (err) {
+      devError('discardCopies: could not erase earlier copies of the diary', err);
+      copiesToErase = true;
+      await base.setItem(ERASE_STORE, ERASE_KEY, true).catch((saveErr: unknown) => {
+        devError('discardCopies: could not record the pending erase', saveErr);
+      });
+      return;
+    }
+    if (copiesToErase !== false) {
+      copiesToErase = false;
+      await base.removeItem(ERASE_STORE, ERASE_KEY).catch((clearErr: unknown) => {
+        devError('discardCopies: could not clear the pending erase', clearErr);
+      });
+    }
+  }
+
+  /**
+   * Seal private items still stored in plain text, e.g. drafts left by a plain
+   * diary that an encrypted import replaced. Needs the session's key.
+   */
+  async function sealPlainPrivateItems(): Promise<void> {
+    for (const item of PRIVATE_ITEMS) {
+      const value = await base.getItem<unknown>(item.store, item.key);
+      if (value !== null && !isSealedValue(value)) {
+        await storage.setItem(item.store, item.key, value);
+      }
+    }
+  }
+
+  async function retryPendingDiscard(): Promise<void> {
+    if (copiesToErase === null) {
+      copiesToErase = (await base.getItem<boolean>(ERASE_STORE, ERASE_KEY).catch(() => null)) === true;
+    }
+    if (copiesToErase) await discardCopies();
   }
 
   const encryption: VaultEncryption = {
@@ -160,6 +212,12 @@ export function withEncryption(base: StorageBackend): SecureStorage {
         ? await unlockWithPassword(keyring, secret.password)
         : await unlockWithRecoveryKey(keyring, secret.recoveryKey);
       setSession({ ref, keys });
+      // Never lets a cleanup failure keep the user out of the diary; the next
+      // unlock tries again.
+      await sealPlainPrivateItems().catch((err: unknown) => {
+        devError('unlock: could not seal plain private items', err);
+      });
+      await retryPendingDiscard();
     },
 
     lock() {
@@ -174,43 +232,46 @@ export function withEncryption(base: StorageBackend): SecureStorage {
 
     async enable(ref, ics, keys) {
       if (sessionFor(ref)) throw new Error('The diary is already encrypted');
-      const target = await writeSibling(
+      await writeVerified(
         ref,
-        true,
         await encryptVaultText(keys, ics),
         async (sealed) => (await decryptVaultText(keys, sealed)) === ics,
       );
-      // Items of the target's folder, read before they are sealed.
+      // Read before they are sealed.
       const items = await readPrivateItems();
-      setSession({ ref: target, keys });
+      setSession({ ref, keys });
       await writePrivateItems(items);
-      if (!sameVault(target, ref)) await base.removeSupersededVault(ref);
-      return target;
+      await discardCopies();
     },
 
     async disable(ref, ics, password) {
       await encryption.verifyPassword(password);
-      const target = await writeSibling(ref, false, ics, async () => true);
+      await writeVerified(ref, ics, async () => true);
       const items = await readPrivateItems();
       setSession(null);
       await writePrivateItems(items);
-      if (!sameVault(target, ref)) await base.removeSupersededVault(ref);
-      return target;
     },
 
     async rekey(ref, ics, keys) {
       if (!sessionFor(ref)) throw new VaultLockedError();
       await base.writeVault(ref, await encryptVaultText(keys, ics));
       setSession({ ref, keys });
+      // Older copies still open with the previous password or recovery key.
+      await discardCopies();
     },
 
     async exportEncrypted(ics) {
       return encryptVaultText(requireSession().keys, ics);
     },
 
+    copiesRemain: () => copiesToErase === true,
+
     async storeEncrypted(ref, text) {
       parseEncryptedVault(text);
       await base.writeVault(ref, text);
+      // Copies of the diary it replaced may be readable, or open with another
+      // password; leftover plain private items are sealed on unlock.
+      await discardCopies();
     },
   };
 
@@ -234,6 +295,7 @@ export function withEncryption(base: StorageBackend): SecureStorage {
     async writeVault(ref, contents) {
       const active = sessionFor(ref);
       await base.writeVault(ref, active ? await encryptVaultText(active.keys, contents) : contents);
+      await retryPendingDiscard();
     },
 
     async getItem<T>(store: StoreName, key: string) {

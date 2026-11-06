@@ -1,11 +1,11 @@
 /**
  * Typed app preferences, persisted through the active storage backend:
- * the chosen folder on desktop, IndexedDB in the browser. Only preferences live
+ * the app's private files on desktop and Android, IndexedDB in the browser. Only preferences live
  * here — the diary itself lives in the vault.
  */
 import { storage } from './storage';
 import { parseDateFormat, type DateFormat, type WeekStart } from './date';
-import { REMEMBER_FOLDER_ITEM, SPELL_WORDS_ITEM, remembersFolder } from './storage/types';
+import { SPELL_WORDS_ITEM } from './storage/types';
 
 export type { DateFormat, WeekStart };
 
@@ -67,15 +67,6 @@ export async function getSavedLockWhenHidden(): Promise<boolean> {
 
 export async function setSavedLockWhenHidden(enabled: boolean): Promise<void> {
   await storage.setItem(STORE, 'lockWhenHidden', enabled);
-}
-
-/** Whether desktop reopens the current folder on launch. On by default. */
-export async function getSavedRememberFolder(): Promise<boolean> {
-  return remembersFolder(await storage.getItem(REMEMBER_FOLDER_ITEM.store, REMEMBER_FOLDER_ITEM.key));
-}
-
-export async function setSavedRememberFolder(enabled: boolean): Promise<void> {
-  await storage.setItem(REMEMBER_FOLDER_ITEM.store, REMEMBER_FOLDER_ITEM.key, enabled);
 }
 
 /** How day labels are written throughout the app (defaults to the system locale). */

@@ -26,7 +26,7 @@ import {
 } from './config';
 import { debugFlag } from './debug';
 import { devError } from './log';
-import { runningUnderTauri } from './runtime';
+import { runningOnAndroid, runningUnderTauri } from './runtime';
 import { compareVersions, isVersion } from './semver';
 import { DOWNLOAD_PAGE, openExternal } from './external';
 
@@ -93,7 +93,7 @@ function pickSource(): UpdateSource | null {
   if (debugFlag('updates-reminder')) return debugSource('reminder');
   if (debugFlag('updates-android')) return debugSource('android');
   if (!runningUnderTauri() || typeof navigator === 'undefined') return null;
-  return /android/i.test(navigator.userAgent) ? androidSource : desktopSource;
+  return runningOnAndroid() ? androidSource : desktopSource;
 }
 
 function isLatestRelease(value: unknown): value is LatestRelease {

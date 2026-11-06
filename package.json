@@ -1,6 +1,6 @@
 {
   "name": "icarus-diary",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Icarus Diary — a free, open-source, local-first diary app backed by iCalendar.",
   "type": "module",
   "private": true,

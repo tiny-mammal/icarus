@@ -8,7 +8,7 @@ Runs on desktop (Windows, macOS, Linux), Android, and in the browser at
 <https://icarus.4oli.com/download>.
 
 - Calendar view, Markdown editor, and instant search across years of entries.
-- Your diary is a file in a folder you choose, readable by any calendar app.
+- Your diary stays on your device, and imports from and exports to `.ics`.
 - Optional password protection with a recovery key.
 
 See [docs/privacy.md](docs/privacy.md) for where data lives and what

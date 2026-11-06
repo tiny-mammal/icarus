@@ -5,10 +5,10 @@
 //! dialogs and the system-opener used to launch
 //! external links from diary entries in the user's default browser). The app
 //! is fully local-first: the only network request is the opt-in update check
-//! in `updates.rs`, which is off unless the user turns it on. The only file it
-//! keeps outside the diary folder is that folder's path (`remembered.rs`).
+//! in `updates.rs`, which is off unless the user turns it on. The diary, drafts
+//! and settings live in the app's private data directory (`diary_dir.rs`).
 
-mod remembered;
+mod diary_dir;
 mod updates;
 
 #[cfg(target_os = "linux")]
@@ -41,8 +41,9 @@ fn private_runtime_dirs() -> std::io::Result<std::path::PathBuf> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let context = tauri::generate_context!();
-    // Resolved before Linux moves the XDG directories into tmpfs below.
-    let remembered = remembered::RememberedFolder::locate(&context.config().identifier);
+    // Resolved before Linux moves the XDG directories into tmpfs below, or the
+    // diary would be written to memory and lost on exit.
+    let diary_dir = diary_dir::DiaryDir::locate(&context.config().identifier);
 
     #[cfg(target_os = "linux")]
     let runtime_dir = private_runtime_dirs().expect("Icarus needs /dev/shm for private GTK data");
@@ -51,11 +52,13 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .manage(remembered)
+        .manage(diary_dir)
         .invoke_handler(tauri::generate_handler![
             updates::latest_release,
-            remembered::remembered_folder,
-            remembered::set_remembered_folder,
+            diary_dir::diary_dir,
+            diary_dir::write_diary_file,
+            diary_dir::remove_diary_file,
+            diary_dir::remove_diary_copies,
         ])
         .setup(|_app| {
             #[cfg(target_os = "linux")]
