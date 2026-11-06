@@ -101,6 +101,35 @@ describe('encrypted storage', () => {
     expect(copies).toEqual([]);
   });
 
+  it('reports copies it could not erase and retries until they are gone', async () => {
+    const device = deviceLikeBackend();
+    let failures = 1;
+    const backend: StorageBackend = {
+      ...device.backend,
+      discardVaultCopies: async () => {
+        if (failures-- > 0) throw new Error('read-only backups');
+        await device.backend.discardVaultCopies();
+      },
+    };
+    const storage = withEncryption(backend);
+    await storage.writeVault(APP, ICS);
+    await storage.writeVault(APP, ICS);
+    const { keys } = await createVaultKeys(PASSWORD, FAST);
+    await storage.encryption.enable(APP, ICS, keys);
+
+    // Readable copies remain, and that is reported and remembered.
+    expect(storage.encryption.copiesRemain()).toBe(true);
+    expect(device.copies.some((copy) => !isEncryptedVault(copy))).toBe(true);
+    expect(device.items.get('settings/copiesToErase')).toBe(true);
+
+    // After a restart, the unlock retries and clears the record.
+    const restarted = withEncryption(backend);
+    await restarted.encryption.unlock(APP, { password: PASSWORD });
+    expect(restarted.encryption.copiesRemain()).toBe(false);
+    expect(device.copies).toEqual([]);
+    expect(device.items.has('settings/copiesToErase')).toBe(false);
+  });
+
   it('removes encryption only with the right password', async () => {
     const { items, vault, storage } = await encryptedDevice();
     await expect(storage.encryption.disable(APP, ICS, 'nope nope nope')).rejects.toThrow();

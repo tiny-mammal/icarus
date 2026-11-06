@@ -41,6 +41,11 @@ export interface StoreItem {
 
 /** The persisted draft list. */
 export const DRAFTS_ITEM: StoreItem = { store: 'drafts', key: 'drafts' };
+/**
+ * Set while daily copies made under an older key (or none) could not be
+ * erased, so the erase is retried until it succeeds.
+ */
+export const COPIES_TO_ERASE_ITEM: StoreItem = { store: 'settings', key: 'copiesToErase' };
 /** The personal spell-check dictionary. */
 export const SPELL_WORDS_ITEM: StoreItem = { store: 'settings', key: 'spellWords' };
 /**

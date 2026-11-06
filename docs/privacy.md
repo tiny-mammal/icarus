@@ -45,7 +45,8 @@ The diary locks after a period of inactivity, and optionally when the window
 is hidden.
 
 Turning encryption on, or changing the password or recovery key, erases the
-daily copies, so none stays readable without the current password.
+daily copies, so none stays readable without the current password. If that
+fails, the app says so and retries on every unlock and save until it succeeds.
 
 Encryption protects data at rest: a stolen disk or a copied browser profile. It doesn't protect an unlocked diary from malware on the same
 machine, and it doesn't touch old unencrypted backups you made earlier.

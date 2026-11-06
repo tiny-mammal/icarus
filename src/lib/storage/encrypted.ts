@@ -12,7 +12,8 @@
  *
  * Backends may keep copies of earlier versions (see `discardVaultCopies`).
  * Those are erased whenever the key changes, so no copy stays readable without
- * the current password.
+ * the current password. An erase that fails is recorded and retried on every
+ * unlock and save until it succeeds, and `copiesRemain` lets the UI say so.
  */
 import {
   CorruptVaultError,
@@ -30,6 +31,7 @@ import {
 import { devError } from '../log';
 import { VaultLockedError } from './errors';
 import {
+  COPIES_TO_ERASE_ITEM,
   PRIVATE_ITEMS,
   isPrivateItem,
   sameVault,
@@ -74,6 +76,11 @@ export interface VaultEncryption {
   exportEncrypted(ics: string): Promise<string>;
   /** Store an already-encrypted diary file as-is (import); it stays locked. */
   storeEncrypted(ref: VaultRef, text: string): Promise<void>;
+  /**
+   * Whether copies made under an older key (or none) are still waiting to be
+   * erased, because the last attempt failed.
+   */
+  copiesRemain(): boolean;
 }
 
 export interface SecureStorage extends StorageBackend {
@@ -138,17 +145,39 @@ export function withEncryption(base: StorageBackend): SecureStorage {
     }
   }
 
+  // Whether stale copies are known to remain; null until read from settings.
+  let copiesToErase: boolean | null = null;
+  const { store: ERASE_STORE, key: ERASE_KEY } = COPIES_TO_ERASE_ITEM;
+
   /**
    * Erase copies made under another key (or none). The diary itself is
-   * already safe, so a failure is logged rather than undoing that; the copies
-   * stay in the app's private directory and expire within a week.
+   * already safe, so a failure does not undo that: it is recorded, reported
+   * through `copiesRemain`, and retried on the next unlock or save.
    */
   async function discardCopies(): Promise<void> {
     try {
       await base.discardVaultCopies();
     } catch (err) {
       devError('discardCopies: could not erase earlier copies of the diary', err);
+      copiesToErase = true;
+      await base.setItem(ERASE_STORE, ERASE_KEY, true).catch((saveErr: unknown) => {
+        devError('discardCopies: could not record the pending erase', saveErr);
+      });
+      return;
     }
+    if (copiesToErase !== false) {
+      copiesToErase = false;
+      await base.removeItem(ERASE_STORE, ERASE_KEY).catch((clearErr: unknown) => {
+        devError('discardCopies: could not clear the pending erase', clearErr);
+      });
+    }
+  }
+
+  async function retryPendingDiscard(): Promise<void> {
+    if (copiesToErase === null) {
+      copiesToErase = (await base.getItem<boolean>(ERASE_STORE, ERASE_KEY).catch(() => null)) === true;
+    }
+    if (copiesToErase) await discardCopies();
   }
 
   const encryption: VaultEncryption = {
@@ -164,6 +193,7 @@ export function withEncryption(base: StorageBackend): SecureStorage {
         ? await unlockWithPassword(keyring, secret.password)
         : await unlockWithRecoveryKey(keyring, secret.recoveryKey);
       setSession({ ref, keys });
+      await retryPendingDiscard();
     },
 
     lock() {
@@ -210,6 +240,8 @@ export function withEncryption(base: StorageBackend): SecureStorage {
       return encryptVaultText(requireSession().keys, ics);
     },
 
+    copiesRemain: () => copiesToErase === true,
+
     async storeEncrypted(ref, text) {
       parseEncryptedVault(text);
       await base.writeVault(ref, text);
@@ -236,6 +268,7 @@ export function withEncryption(base: StorageBackend): SecureStorage {
     async writeVault(ref, contents) {
       const active = sessionFor(ref);
       await base.writeVault(ref, active ? await encryptVaultText(active.keys, contents) : contents);
+      await retryPendingDiscard();
     },
 
     async getItem<T>(store: StoreName, key: string) {

@@ -554,6 +554,7 @@ class AppStore {
       } else {
         this.encrypted = true;
       }
+      this.warnIfCopiesRemain();
       return true;
     } catch (err) {
       devError('confirmEncryption: could not encrypt the diary', err);
@@ -582,12 +583,25 @@ class AppStore {
     }
   }
 
+  /**
+   * After a key change, older daily copies must go. If they could not be
+   * erased yet, say so: the protection is not complete until they are.
+   */
+  private warnIfCopiesRemain(): void {
+    if (!storage.encryption.copiesRemain()) return;
+    this.toast(
+      'error',
+      `Older copies of the diary ${this.appPlaceIn} could not be erased yet and can still be read without the current password. Icarus retries on every save.`,
+    );
+  }
+
   /** Rewrite the open diary under rewrapped keys. Toasts on failure. */
   private async rekey(keys: VaultKeys): Promise<boolean> {
     if (!this.vault) return false;
     this.busy = true;
     try {
       await storage.encryption.rekey(this.vault, serializeIcs(this.entries), keys);
+      this.warnIfCopiesRemain();
       return true;
     } catch (err) {
       devError('rekey: could not rewrite the diary', err);
