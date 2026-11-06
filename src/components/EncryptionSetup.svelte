@@ -18,8 +18,6 @@
   // Captured once: the pending diary is consumed when it is saved.
   const source = app.pendingDiary?.source ?? 'settings';
   const onboarding = source !== 'settings';
-  const isDesktop = app.storageKind === 'folder';
-  const where = isDesktop ? 'this folder' : app.appPlace;
 
   let step = $state<Step>(onboarding ? 'choice' : 'password');
   let choice = $state<'encrypt' | 'plain'>(app.encryptionSupported ? 'encrypt' : 'plain');
@@ -119,7 +117,7 @@
 >
   {#if step === 'choice'}
     <p class="mb-4 text-sm leading-relaxed text-muted">
-      Choose how the diary is stored in {where}. You can change this later in Settings.
+      Choose how the diary is stored {app.appPlaceIn}. You can change this later in Settings.
     </p>
 
     <div class="space-y-2" role="radiogroup" aria-label="Diary protection">
@@ -180,8 +178,8 @@
           <span class="min-w-0 flex-1">
             <span class="block text-sm font-medium text-text">Don't encrypt</span>
             <span class="mt-1 block text-[0.8rem] leading-relaxed text-muted">
-              Opens without a password{isDesktop ? ', and the file stays a standard .ics' : ''}.
-              Anyone with access to {isDesktop ? 'the folder' : app.appPlace} can read it.
+              Opens without a password.
+              Anyone with access to {app.appPlace} can read it.
             </span>
           </span>
           {@render radioDot(choice === 'plain')}
@@ -203,7 +201,7 @@
     <form onsubmit={choosePassword}>
       {#if !onboarding}
         <p class="mb-4 text-sm leading-relaxed text-muted">
-          Encrypts your entries, drafts and dictionary{isDesktop ? ' as diary.icarus' : ''}.
+          Encrypts your entries, drafts and dictionary.
         </p>
       {/if}
       <NewPasswordFields bind:password bind:valid={passwordValid} label="Password" autofocus />
@@ -245,9 +243,7 @@
   {:else}
     <div class="space-y-3 text-sm leading-relaxed text-muted">
       <p>
-        {#if source === 'settings' && isDesktop}
-          Drafts and your dictionary too. The plain diary.ics was removed.
-        {:else if source === 'settings'}
+        {#if source === 'settings'}
           Drafts and your dictionary are encrypted too.
         {:else}
           Entries, drafts and your dictionary are stored encrypted.
@@ -259,9 +255,7 @@
       {#if source === 'import'}
         {@render caution('The .ics you imported is unchanged and still readable. Delete it if you no longer need it.')}
       {:else if source === 'settings'}
-        {@render caution(isDesktop
-          ? 'Older copies (exports, backups, sync history) are still readable.'
-          : 'Backups you exported earlier are still readable.')}
+        {@render caution('Backups you exported earlier are still readable.')}
       {/if}
     </div>
     <div class="mt-5 flex justify-end">

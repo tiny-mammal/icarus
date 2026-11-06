@@ -9,7 +9,10 @@ const state = vi.hoisted(() => ({
   builtAt: '2026-11-01T10:00:00.000Z',
 }));
 
-vi.mock('../src/lib/runtime', () => ({ runningUnderTauri: () => true }));
+vi.mock('../src/lib/runtime', () => ({
+  runningUnderTauri: () => true,
+  runningOnAndroid: () => /android/i.test(navigator.userAgent),
+}));
 vi.mock('../src/lib/storage', () => ({
   storage: {
     getItem: async (_store: string, key: string) => state.settings.get(key),

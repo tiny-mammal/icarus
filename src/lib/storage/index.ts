@@ -1,7 +1,6 @@
 /**
  * Picks the storage backend once, at module load:
- *  - Tauri desktop → a user-selected folder (`./tauri.ts`).
- *  - Tauri on Android → the app's private storage (`./device.ts`).
+ *  - Tauri (desktop and Android) → the app's private storage (`./device.ts`).
  *  - Plain browser → IndexedDB (`./web.ts`), still exportable as `.ics`.
  *  - `pnpm dev:seed` → memory only (`./memory.ts`), preloaded with a sample
  *    diary. The mode check is static, so production builds drop it.
@@ -11,7 +10,6 @@
  * platform-agnostic.
  */
 import { runningUnderTauri } from '../runtime';
-import { tauriBackend } from './tauri';
 import { deviceBackend } from './device';
 import { webBackend } from './web';
 import { createMemoryBackend } from './memory';
@@ -21,9 +19,7 @@ import { seedEntries } from '../seed';
 import type { StorageBackend } from './types';
 
 function platformBackend(): StorageBackend {
-  if (!runningUnderTauri()) return webBackend;
-  // The Android WebView always names the OS in its user agent.
-  return /android/i.test(navigator.userAgent) ? deviceBackend : tauriBackend;
+  return runningUnderTauri() ? deviceBackend : webBackend;
 }
 
 export const storage: SecureStorage = withEncryption(
@@ -37,4 +33,4 @@ export const storage: SecureStorage = withEncryption(
 
 export type { StorageBackend, StoreName, VaultRef } from './types';
 export type { SecureStorage, UnlockSecret, VaultEncryption } from './encrypted';
-export { isDiaryFileName, sameVault, vaultFileName } from './types';
+export { APP_VAULT, isDiaryFileName, sameVault } from './types';

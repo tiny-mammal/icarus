@@ -18,16 +18,15 @@ import {
   idbSetItem,
 } from './idb';
 import {
+  APP_VAULT,
   ENCRYPTED_EXTENSION,
   PLAIN_EXTENSION,
   type StorageBackend,
   type StoreName,
-  type VaultRef,
 } from './types';
 
 // The key predates encryption: the record holds `.ics` or an encrypted container.
 const VAULT_KEY = 'ics';
-const BROWSER_VAULT: VaultRef = { kind: 'app' };
 
 interface BackupType {
   description: string;
@@ -101,12 +100,7 @@ export const webBackend: StorageBackend = {
   kind: 'browser',
 
   async getRememberedVault() {
-    return (await idbGet<string>(VAULT_KEY)) === undefined ? null : BROWSER_VAULT;
-  },
-
-  async rememberVault() {
-    // Nothing to do: the vault record itself is the memory. It disappears
-    // together with the data when the vault is forgotten.
+    return (await idbGet<string>(VAULT_KEY)) === undefined ? null : APP_VAULT;
   },
 
   async vaultExists(ref) {
@@ -138,22 +132,13 @@ export const webBackend: StorageBackend = {
     if (ref.kind === 'app') await idbDelete(VAULT_KEY);
   },
 
-  async siblingVault() {
-    return BROWSER_VAULT;
-  },
-
-  async removeSupersededVault() {
-    // The browser has a single vault slot, rewritten in place.
-  },
-
-  async pickVaultLocation() {
-    return BROWSER_VAULT;
+  async discardVaultCopies() {
+    // The browser keeps no copies.
   },
 
   async pickDiaryText() {
     const file = await pickFile(`.${PLAIN_EXTENSION},.${ENCRYPTED_EXTENSION},text/calendar`);
-    if (!file) return null;
-    return { text: await file.text(), ref: BROWSER_VAULT };
+    return file ? file.text() : null;
   },
 
   async readDroppedPath() {

@@ -5,7 +5,6 @@
   import NewPasswordFields from './NewPasswordFields.svelte';
   import PasswordField from './PasswordField.svelte';
   import { app } from '../lib/store.svelte';
-  import { vaultFileName } from '../lib/storage';
 
   /**
    * Shown instead of the diary while it is encrypted and locked: unlock with
@@ -20,8 +19,6 @@
   let working = $state(false);
   let confirmForget = $state(false);
 
-  const isDesktop = app.storageKind === 'folder';
-  const fileName = $derived(vaultFileName(app.lockedVault));
   const canSubmit = $derived(
     mode === 'password' ? password.length > 0 : recoveryKey.trim().length > 0 && newPasswordValid,
   );
@@ -66,7 +63,7 @@
     </div>
     <h1 class="text-2xl font-semibold tracking-tight text-text">Diary locked</h1>
     <p class="mt-2 text-center text-sm text-muted">
-      {#if fileName}<span class="font-mono text-text">{fileName}</span> is encrypted.{:else}This diary is encrypted.{/if}
+      This diary is encrypted.
     </p>
 
     {#if !app.encryptionSupported}
@@ -122,15 +119,9 @@
     {/if}
 
     <div class="mt-8 flex gap-4 text-xs text-muted">
-      {#if isDesktop}
-        <button class="underline-offset-4 transition-colors hover:text-text hover:underline" onclick={() => app.openVaultFolder()}>
-          Open another folder
-        </button>
-      {:else}
-        <button class="underline-offset-4 transition-colors hover:text-red-400 hover:underline" onclick={() => (confirmForget = true)}>
-          Delete this diary
-        </button>
-      {/if}
+      <button class="underline-offset-4 transition-colors hover:text-red-400 hover:underline" onclick={() => (confirmForget = true)}>
+        Delete this diary
+      </button>
     </div>
   </main>
 </div>

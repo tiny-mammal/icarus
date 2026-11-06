@@ -1,38 +1,37 @@
 /**
  * Platform-agnostic storage contract.
  *
- * The app is backed by `.ics` content either way, but the medium differs:
- *  - `folder` (desktop): a user-selected folder owns the diary and settings.
- *  - `browser`: IndexedDB owns the data.
- *  - `device` (Android): files in the app's private storage own the data.
- * The last two hold a single app-owned diary (`{ kind: 'app' }`). Everything
- * above this layer talks to a `StorageBackend` and never branches on the
- * platform, only on these storage models.
+ * The app owns a single diary, stored as `.ics` text (or an encrypted
+ * container) in one of two media:
+ *  - `browser`: IndexedDB.
+ *  - `device` (desktop and Android apps): files in the app's private data
+ *    directory, with daily copies of earlier versions.
+ * Everything above this layer talks to a `StorageBackend` and never branches
+ * on the platform.
  *
  * Encryption is layered on top of any backend (`./encrypted.ts`): backends
  * only store opaque text and values, and know nothing about keys.
  */
 
-/**
- * Where the diary currently lives: a file in a user-selected folder, or the
- * single diary the app owns (in the browser or the app's private storage).
- */
-export type VaultRef =
-  | { kind: 'file'; path: string }
-  | { kind: 'app' };
+/** The diary the app owns. */
+export type VaultRef = { kind: 'app' };
 
-/** How a backend stores the diary; see the module comment. */
-export type StorageKind = 'folder' | 'browser' | 'device';
+export const APP_VAULT: VaultRef = { kind: 'app' };
 
-/**
- * How UI copy names the place that holds an app-owned diary, as in
- * "stored in this browser". Folder backends name the folder instead.
- */
+/** Where a backend stores the diary; see the module comment. */
+export type StorageKind = 'browser' | 'device';
+
+/** How UI copy names the place that holds the diary, as in "erased from this device". */
 export function appPlaceName(kind: StorageKind): string {
   return kind === 'device' ? 'this device' : 'this browser';
 }
 
-/** Key-value namespaces for folder JSON files or browser IndexedDB stores. */
+/** The place with its preposition, as in "stored on this device" or "in this browser". */
+export function appPlaceWithPreposition(kind: StorageKind): string {
+  return `${kind === 'device' ? 'on' : 'in'} ${appPlaceName(kind)}`;
+}
+
+/** Key-value namespaces: JSON files beside the diary, or IndexedDB stores. */
 export type StoreName = 'settings' | 'drafts';
 
 export interface StoreItem {
@@ -44,14 +43,6 @@ export interface StoreItem {
 export const DRAFTS_ITEM: StoreItem = { store: 'drafts', key: 'drafts' };
 /** The personal spell-check dictionary. */
 export const SPELL_WORDS_ITEM: StoreItem = { store: 'settings', key: 'spellWords' };
-/** Whether desktop reopens this folder on launch. */
-export const REMEMBER_FOLDER_ITEM: StoreItem = { store: 'settings', key: 'rememberFolder' };
-
-/** Reading of `REMEMBER_FOLDER_ITEM`: on unless the user turned it off. */
-export function remembersFolder(value: unknown): boolean {
-  return value !== false;
-}
-
 /**
  * Items that contain the user's own writing (or reveal it). They are encrypted
  * whenever the diary is, and erased together with a browser diary. Plain UI
@@ -67,46 +58,28 @@ export function isPrivateItem(store: StoreName, key: string): boolean {
 export interface StorageBackend {
   readonly kind: StorageKind;
 
-  // --- vault lifecycle ----------------------------------------------------
-  /**
-   * The vault to reopen on boot, or null to show the Welcome screen. Desktop
-   * reopens the last folder unless that folder's settings turn it off.
-   */
+  // --- the diary ----------------------------------------------------------
+  /** The diary to reopen on boot, or null to show the Welcome screen. */
   getRememberedVault(): Promise<VaultRef | null>;
-  /**
-   * Select the active vault and remember it for the next launch; null forgets
-   * it. Desktop keeps only the folder's path on the computer, and only while
-   * `REMEMBER_FOLDER_ITEM` allows it.
-   */
-  rememberVault(ref: VaultRef | null): Promise<void>;
-  /** Whether the vault's data is still present. */
+  /** Whether the diary's data is present. */
   vaultExists(ref: VaultRef): Promise<boolean>;
-  /** Read the raw text of a vault (`.ics`, or an encrypted container). */
+  /** Read the raw text of the diary (`.ics`, or an encrypted container). */
   readVault(ref: VaultRef): Promise<string>;
-  /** Replace the vault's contents (atomically on desktop). */
+  /** Replace the diary's contents atomically. */
   writeVault(ref: VaultRef, contents: string): Promise<void>;
-  /** Destroy the app-owned copy (browser). External files are left intact. */
+  /** Erase the diary and any copies of it. */
   forgetVault(ref: VaultRef): Promise<void>;
   /**
-   * Where the same diary lives once (un)encrypted. Desktop uses a distinct
-   * file name so a calendar app never mistakes ciphertext for `.ics`; the
-   * browser has a single slot, so the ref is unchanged.
+   * Erase the copies of earlier versions kept as a safety net, e.g. readable
+   * ones once the diary is encrypted. No-op where none are kept.
    */
-  siblingVault(ref: VaultRef, encrypted: boolean): Promise<VaultRef>;
-  /** Delete a vault file replaced by its sibling. No-op for the browser slot. */
-  removeSupersededVault(ref: VaultRef): Promise<void>;
+  discardVaultCopies(): Promise<void>;
 
   // --- user-facing file flows --------------------------------------------
-  /**
-   * Ask where a brand-new vault should live. Native folder dialog on desktop
-   * (yielding the diary already in that folder, if any); the browser has no
-   * location to choose, so it yields the browser vault.
-   */
-  pickVaultLocation(): Promise<VaultRef | null>;
-  /** Ask for a diary file (`.ics` or encrypted) to import, with its new ref. */
-  pickDiaryText(): Promise<{ text: string; ref: VaultRef } | null>;
+  /** Ask for a diary file (`.ics` or encrypted) to import and read it. */
+  pickDiaryText(): Promise<string | null>;
   /** Read a diary dropped onto the window (desktop only; null elsewhere). */
-  readDroppedPath(path: string): Promise<{ text: string; ref: VaultRef } | null>;
+  readDroppedPath(path: string): Promise<string | null>;
   /** Write a backup copy where the user chooses. False when cancelled. */
   saveBackup(contents: string, defaultName: string): Promise<boolean>;
 
@@ -117,9 +90,7 @@ export interface StorageBackend {
 }
 
 export function sameVault(a: VaultRef | null, b: VaultRef | null): boolean {
-  if (!a || !b) return a === b;
-  if (a.kind === 'file' && b.kind === 'file') return a.path === b.path;
-  return a.kind === b.kind;
+  return a === null || b === null ? a === b : a.kind === b.kind;
 }
 
 /** File extensions for the two diary formats. */
@@ -130,10 +101,4 @@ export const ENCRYPTED_EXTENSION = 'icarus';
 export function isDiaryFileName(name: string): boolean {
   const lower = name.toLowerCase();
   return lower.endsWith(`.${PLAIN_EXTENSION}`) || lower.endsWith(`.${ENCRYPTED_EXTENSION}`);
-}
-
-/** The diary file name to show for a vault, or null for browser/blank. */
-export function vaultFileName(ref: VaultRef | null): string | null {
-  if (ref?.kind !== 'file') return null;
-  return ref.path.split(/[\\/]/).pop() || ref.path;
 }

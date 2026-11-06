@@ -68,10 +68,10 @@ function installedVersion(): string | null {
 const UPDATE_STEPS: Record<PlatformId, string> = {
   android:
     "Download the APK below, open it and tap Update. Android keeps your diary. Don't uninstall the old version first: that erases the diary.",
-  windows: 'Run the new installer. It replaces this version, and your diary stays in its folder.',
-  macos: 'Open the disk image and drag Icarus to Applications, replacing the old one. Your diary stays in its folder.',
+  windows: 'Run the new installer. It replaces this version, and your diary stays where it was.',
+  macos: 'Open the disk image and drag Icarus to Applications, replacing the old one. Your diary stays where it was.',
   linux:
-    'Install the new package over the old one, or swap in the new AppImage and delete the old file. Your diary stays in its folder.',
+    'Install the new package over the old one, or swap in the new AppImage and delete the old file. Your diary stays where it was.',
 };
 
 /** Tell someone who came from the app whether there is anything new. */

@@ -27,10 +27,8 @@ async function freshStorage() {
       backup.saved.push({ contents, name });
       return true;
     },
-    pickDiaryText: async () => ({
-      ref: { kind: 'app' },
-      text: serializeIcs([{ uid: 'i1', title: 'Imported secret', content: 'Hush', date: new Date(2026, 5, 8) }]),
-    }),
+    pickDiaryText: async () =>
+      serializeIcs([{ uid: 'i1', title: 'Imported secret', content: 'Hush', date: new Date(2026, 5, 8) }]),
   } as unknown as import('../src/lib/storage/types').StorageBackend;
   backup.memory = createMemoryBackend(
     serializeIcs([{ uid: 'e1', title: 'First entry', content: 'Something private', date: new Date(2026, 9, 1) }]),
@@ -152,6 +150,9 @@ describe('encrypted diary flow', () => {
     const before = await backup.memory.readVault({ kind: 'app' });
 
     await app.importVault();
+    expect(app.replaceRequest?.source).toBe('import');
+    expect(await backup.memory.readVault({ kind: 'app' })).toBe(before);
+    await app.confirmReplace();
     expect(app.pendingDiary?.source).toBe('import');
     expect(app.encryptionSetupOpen).toBe(true);
     expect(await backup.memory.readVault({ kind: 'app' })).toBe(before);
@@ -169,10 +170,12 @@ describe('encrypted diary flow', () => {
     await app.init();
 
     await app.importVault();
+    await app.confirmReplace();
     app.cancelPendingDiary();
     expect(app.entries.map((entry) => entry.title)).toEqual(['First entry']);
 
     await app.importVault();
+    await app.confirmReplace();
     expect(await app.keepPendingDiaryPlain()).toBe(true);
     expect(app.encrypted).toBe(false);
     expect(app.encryptionSetupOpen).toBe(false);
@@ -182,9 +185,29 @@ describe('encrypted diary flow', () => {
   it('keeps an encrypted browser diary encrypted when importing into it', async () => {
     const { app } = await encryptedApp();
     await app.importVault();
+    await app.confirmReplace();
     expect(app.pendingDiary).toBeNull();
     expect(app.encrypted).toBe(true);
     expect(app.entries.map((entry) => entry.title)).toEqual(['Imported secret']);
     expect(await backup.memory.readVault({ kind: 'app' })).not.toContain('Imported secret');
+  });
+
+  it('never replaces a saved diary without consent', async () => {
+    const { app } = await import('../src/lib/store.svelte');
+    await app.init();
+    const before = await backup.memory.readVault({ kind: 'app' });
+
+    await app.importVault();
+    expect(app.replaceRequest).not.toBeNull();
+    app.cancelReplace();
+    expect(app.pendingDiary).toBeNull();
+    expect(app.entries.map((entry) => entry.title)).toEqual(['First entry']);
+
+    // Welcome after a diary failed to open: starting over must ask too.
+    app.view = 'welcome';
+    await app.startNewDiary();
+    expect(app.replaceRequest?.source).toBe('new');
+    app.cancelReplace();
+    expect(await backup.memory.readVault({ kind: 'app' })).toBe(before);
   });
 });

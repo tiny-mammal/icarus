@@ -10,6 +10,7 @@
   import StatsModal from './components/StatsModal.svelte';
   import DraftDeleteDialog from './components/DraftDeleteDialog.svelte';
   import EntryDeleteDialog from './components/EntryDeleteDialog.svelte';
+  import ReplaceDiaryDialog from './components/ReplaceDiaryDialog.svelte';
   import Toasts from './components/Toasts.svelte';
   import LockScreen from './components/LockScreen.svelte';
   import EncryptionSetup from './components/EncryptionSetup.svelte';
@@ -75,7 +76,7 @@
     window.addEventListener('beforeunload', flush);
 
     // The reliable path under Tauri: intercept the window close, finish the
-    // (async) flush, then actually close. If the folder is unavailable, ask
+    // (async) flush, then actually close. If the draft cannot be saved, ask
     // before discarding the unsaved editor content.
     let unlistenClose: (() => void) | undefined;
     void (async () => {
@@ -90,7 +91,7 @@
           }
           const { confirm } = await import('@tauri-apps/plugin-dialog');
           if (await confirm(
-            'The current draft could not be saved to the diary folder. Quit and discard the unsaved changes?',
+            'The current draft could not be saved. Quit and discard the unsaved changes?',
             { title: 'Unsaved draft', kind: 'warning' },
           )) await win.destroy();
         });
@@ -142,6 +143,7 @@
 
 <DraftDeleteDialog />
 <EntryDeleteDialog />
+<ReplaceDiaryDialog />
 <Toasts />
 
 {#if gestureRecorder}
