@@ -39,7 +39,7 @@
 
 {#if kind}
   <div
-    class="update-card fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-5 z-30 w-[22rem] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-xl border border-slate bg-surface/95 shadow-2xl shadow-black/60 backdrop-blur-xl sm:bottom-[calc(1.25rem+env(safe-area-inset-bottom))]"
+    class="update-card fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-5 z-float w-[22rem] max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-xl border border-slate bg-surface/95 shadow-2xl shadow-black/60 backdrop-blur-xl sm:bottom-[calc(1.25rem+env(safe-area-inset-bottom))]"
     class:quiet={kind === 'reminder'}
     role="status"
     aria-live="polite"

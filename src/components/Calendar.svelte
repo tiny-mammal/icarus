@@ -348,7 +348,7 @@
 
       {#if pickerOpen}
         <div
-          class="absolute left-0 top-full z-50 mt-2 w-72 origin-top-left rounded-2xl border border-slate bg-surface p-3 shadow-2xl shadow-black/50"
+          class="absolute left-0 top-full z-popover mt-2 w-72 origin-top-left rounded-2xl border border-slate bg-surface p-3 shadow-2xl shadow-black/50"
           transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
           use:trapFocus={() => (pickerOpen = false)}
           role="dialog"

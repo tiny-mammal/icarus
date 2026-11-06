@@ -102,7 +102,7 @@
 </script>
 
 {#if app.settingsOpen}
-  <Modal title="Settings" onclose={() => (app.settingsOpen = false)} width="sm:max-w-lg" z="z-50">
+  <Modal title="Settings" onclose={() => (app.settingsOpen = false)} width="sm:max-w-lg" z="z-sheet">
     <!-- Current diary location -->
     <div class="mb-5 rounded-lg border border-slate bg-slate-soft px-3.5 py-3">
       <p class="text-[0.7rem] font-medium uppercase tracking-wider text-muted">
@@ -457,7 +457,7 @@
       onconfirm={forget}
       oncancel={() => (confirmForget = false)}
       busy={app.busy}
-      z="z-[60]"
+      z="z-dialog"
     >
       {#if isAppVault}
         All <span class="text-text">{app.entries.length}</span>

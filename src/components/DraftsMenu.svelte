@@ -55,7 +55,7 @@
 
   {#if open}
     <div
-      class="absolute z-50 max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-slate bg-surface p-1.5 shadow-2xl shadow-black/50
+      class="absolute z-popover max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-slate bg-surface p-1.5 shadow-2xl shadow-black/50
         right-0 top-full mt-2 origin-top-right"
       transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
       use:trapFocus={() => (open = false)}

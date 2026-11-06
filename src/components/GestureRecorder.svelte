@@ -45,7 +45,7 @@
 </script>
 
 <div
-  class="fixed bottom-3 left-3 z-[100] w-64 select-none rounded-xl border border-slate bg-surface/95 p-3 text-xs text-text shadow-2xl shadow-black/50 backdrop-blur"
+  class="fixed bottom-3 left-3 z-debug w-64 select-none rounded-xl border border-slate bg-surface/95 p-3 text-xs text-text shadow-2xl shadow-black/50 backdrop-blur"
   data-no-swipe
 >
   <div class="flex items-center justify-between gap-2">

@@ -39,7 +39,7 @@
 {/snippet}
 
 {#if install.helpOpen}
-  <Modal {title} onclose={close} width="sm:max-w-md" z="z-[60]">
+  <Modal {title} onclose={close} width="sm:max-w-md">
     <div class="space-y-5 text-sm leading-relaxed text-muted">
       {#if install.method === 'ios'}
         <p>

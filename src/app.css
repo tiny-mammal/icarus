@@ -2,6 +2,25 @@
 
 @import './styles/theme.css';
 
+/*
+ * Stacking layers, lowest first: the single source for every z-index, so
+ * nothing ties by accident. Tailwind turns each into a `z-*` utility.
+ * <main> is isolated (App.svelte), so `pane` and anything opened inside the
+ * day pane only compete within the main stage, always below the top bar.
+ */
+@theme {
+  --z-index-tooltip: 10; /* hover labels inside a card                  */
+  --z-index-float: 30; /* floating write button, update notice        */
+  --z-index-pane: 40; /* day pane over the calendar (main stage)      */
+  --z-index-bar: 40; /* top bar, above the whole main stage          */
+  --z-index-popover: 50; /* menus and pickers hanging from a control  */
+  --z-index-sheet: 50; /* large top-level modals: Settings, Statistics */
+  --z-index-dialog: 60; /* default modal, also opened over a sheet    */
+  --z-index-confirm: 70; /* confirmations, over any dialog             */
+  --z-index-toast: 80; /* notifications, over everything              */
+  --z-index-debug: 100; /* developer tooling                          */
+}
+
 /* ------------------------------------------------------------------ */
 /* Base layer                                                          */
 /* ------------------------------------------------------------------ */

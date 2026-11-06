@@ -62,7 +62,7 @@
 
 <div
   bind:this={node}
-  class="fixed z-[70] w-56 origin-top-left overflow-hidden rounded-xl border border-slate bg-surface py-1.5 shadow-2xl shadow-black/50 {placed
+  class="fixed z-popover w-56 origin-top-left overflow-hidden rounded-xl border border-slate bg-surface py-1.5 shadow-2xl shadow-black/50 {placed
     ? ''
     : 'invisible'}"
   style="left: {left}px; top: {top}px;"

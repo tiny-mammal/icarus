@@ -149,7 +149,7 @@
 {#if app.selectedKey && dayDate}
   <!-- Backdrop -->
   <div
-    class="absolute inset-0 z-40 bg-ink/50 backdrop-blur-[1px]"
+    class="absolute inset-0 z-pane bg-ink/50 backdrop-blur-[1px]"
     transition:fade={{ duration: 180 }}
     onclick={() => app.closeDay()}
     role="presentation"
@@ -162,7 +162,7 @@
     so it can), so the pane grows from its edge as the text glides to centre.
   -->
   <aside
-    class="absolute right-0 top-0 z-40 flex h-full w-full flex-col border-l border-slate bg-surface shadow-2xl shadow-black/40 transition-[max-width,--pane-gutter-raw] duration-300 ease-glide motion-reduce:transition-none
+    class="absolute right-0 top-0 z-pane flex h-full w-full flex-col border-l border-slate bg-surface shadow-2xl shadow-black/40 transition-[max-width,--pane-gutter-raw] duration-300 ease-glide motion-reduce:transition-none
       [--pane-gutter:max(1.75rem,var(--pane-gutter-raw))]
       {app.paneExpanded
         ? 'max-w-full border-l-0 [--pane-gutter-raw:calc((100%-46rem)/2)]'

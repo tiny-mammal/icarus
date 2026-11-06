@@ -36,7 +36,7 @@
   </button>
 {:else if !app.selectedKey}
   <button
-    class="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-5 z-30 grid h-14 w-14 place-items-center rounded-full bg-text text-ink shadow-xl shadow-black/50 transition-transform active:scale-95 sm:hidden"
+    class="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-5 z-float grid h-14 w-14 place-items-center rounded-full bg-text text-ink shadow-xl shadow-black/50 transition-transform active:scale-95 sm:hidden"
     aria-label={label}
     onclick={() => app.resumeWriting()}
     transition:fade={{ duration: 150 }}

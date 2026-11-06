@@ -141,7 +141,6 @@
     confirmLabel="Delete diary"
     onconfirm={forget}
     oncancel={() => (confirmForget = false)}
-    z="z-[65]"
   >
     The encrypted diary and its drafts will be permanently erased from {app.appPlace}. Only do this
     if the password and recovery key are lost. This can't be undone.

@@ -24,7 +24,7 @@
     onclose,
     locked = false,
     width = 'sm:max-w-sm',
-    z = 'z-[65]',
+    z = 'z-dialog',
     divided = false,
     bodyClass = 'px-6',
     actions,
@@ -37,7 +37,7 @@
     locked?: boolean;
     /** Max width on wide screens (phones always use the full width). */
     width?: string;
-    /** Stacking layer, for dialogs that open over other dialogs. */
+    /** Stacking layer (a `z-*` token from app.css), e.g. `z-sheet` for top-level panels. */
     z?: string;
     /** Separate the header from the body with a rule. */
     divided?: boolean;

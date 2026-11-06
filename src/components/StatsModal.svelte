@@ -194,7 +194,7 @@
     title="Statistics"
     onclose={() => (app.statsOpen = false)}
     width="sm:max-w-2xl"
-    z="z-50"
+    z="z-sheet"
     divided
   >
     {#snippet actions()}
@@ -237,7 +237,7 @@
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
             bind:this={listEl}
-            class="absolute top-full right-0 z-30 mt-2 w-44 origin-top-right rounded-xl border border-slate bg-surface p-1 shadow-2xl shadow-black/50"
+            class="absolute top-full right-0 z-popover mt-2 w-44 origin-top-right rounded-xl border border-slate bg-surface p-1 shadow-2xl shadow-black/50"
             transition:scale={{ duration: 140, start: 0.96, easing: cubicOut }}
             role="listbox"
             aria-label="Statistics period"
@@ -398,7 +398,7 @@
 
           {#if hoverBin && tooltipBox}
             <div
-              class="pointer-events-none absolute z-10 rounded-lg border border-slate bg-surface/95 px-2.5 py-1.5 shadow-lg shadow-black/40 backdrop-blur-sm"
+              class="pointer-events-none absolute z-tooltip rounded-lg border border-slate bg-surface/95 px-2.5 py-1.5 shadow-lg shadow-black/40 backdrop-blur-sm"
               style:left="{tooltipBox.left}px"
               style:top="{tooltipBox.top}px"
               bind:offsetWidth={tooltipWidth}

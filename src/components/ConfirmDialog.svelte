@@ -13,7 +13,7 @@
     onconfirm,
     oncancel,
     busy = false,
-    z = 'z-[70]',
+    z = 'z-confirm',
     children,
   }: {
     title: string;
