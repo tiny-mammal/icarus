@@ -4,6 +4,9 @@
   import Welcome from './components/Welcome.svelte';
   import TopBar from './components/TopBar.svelte';
   import Calendar from './components/Calendar.svelte';
+  import EntryFeed from './components/EntryFeed.svelte';
+  import Modal from './components/Modal.svelte';
+  import { viewport } from './lib/viewport.svelte';
   import DayPane from './components/DayPane.svelte';
   import WriteButton from './components/WriteButton.svelte';
   import SettingsMenu from './components/SettingsMenu.svelte';
@@ -128,9 +131,14 @@
          Isolated so nothing inside it, however high its z-index, can cover the
          top bar's popovers (search results, drafts). -->
     <main class="relative isolate min-h-0 flex-1 overflow-hidden">
-      <Calendar />
+      {#if viewport.compact}<EntryFeed />{:else}<Calendar />{/if}
       <DayPane />
     </main>
+    {#if viewport.compact && app.calendarOpen}
+      <Modal title="Calendar" onclose={() => (app.calendarOpen = false)} bodyClass="">
+        <Calendar />
+      </Modal>
+    {/if}
     <WriteButton variant="floating" />
     <SettingsMenu />
     <StatsModal />

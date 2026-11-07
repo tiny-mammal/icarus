@@ -2,9 +2,9 @@ import { devices, expect, test, type CDPSession, type Page } from '@playwright/t
 import { importPlainIcs, openSearch, startPlainDiary } from './helpers';
 
 /**
- * Phone layout: the month's entries listed under a compact calendar, swipes
- * that page through months and days, and bottom sheets that close on a
- * pull-down. Touches go through CDP so they are real touch events.
+ * Phone layout: every entry in one feed with a calendar sheet to jump around,
+ * swipes that page through months and days, and bottom sheets that close on
+ * a pull-down. Touches go through CDP so they are real touch events.
  */
 
 const { defaultBrowserType: _, ...pixel } = devices['Pixel 7'];
@@ -41,37 +41,18 @@ async function drag(cdp: CDPSession, from: [number, number], to: [number, number
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
 
-const monthButton = (page: Page) => page.locator('button[aria-haspopup="dialog"]').filter({ hasText: /\d{4}/ });
-
-test('lists the month, swipes between months and days, and pulls sheets down', async ({ page, context }) => {
+test('lists every entry, jumps through the calendar sheet and swipes days', async ({ page, context }) => {
   await importPlainIcs(page, DIARY_ICS);
   const cdp = await context.newCDPSession(page);
 
-  // Bring June 2026 into view through the month picker.
-  await monthButton(page).click();
-  const picker = page.getByRole('dialog', { name: 'Select month and year' });
-  while (!(await picker.getByText('2026', { exact: true }).isVisible())) {
-    const year = Number(await picker.locator('span.tabular-nums').innerText());
-    await picker.getByRole('button', { name: year > 2026 ? 'Previous year' : 'Next year' }).click();
-  }
-  await picker.getByRole('button', { name: 'Jun' }).click();
-  await expect(monthButton(page)).toContainText('June 2026');
+  // Every entry, newest first, under its month.
+  const feed = page.getByRole('region', { name: 'Entries' });
+  const entries = feed.getByRole('listitem').getByRole('button');
+  await expect(entries).toHaveText([/Midsummer/, /Morning walk/]);
+  await expect(entries.nth(1)).toContainText('Lisbon');
 
-  // The month's entries are listed under the grid.
-  const listed = page
-    .getByRole('region', { name: 'Entries this month' })
-    .getByRole('button', { name: /Morning walk$/ });
-  await expect(listed).toBeVisible();
-  await expect(listed).toContainText('Lisbon');
-
-  // Swipe left for the next month, right to come back.
-  await drag(cdp, [340, 300], [60, 310]);
-  await expect(monthButton(page)).toContainText('July 2026');
-  await drag(cdp, [60, 300], [340, 310]);
-  await expect(monthButton(page)).toContainText('June 2026');
-
-  // Opening an entry from the list, then swiping to the next day with entries.
-  await listed.click();
+  // Opening an entry from the feed, then swiping to the next day with entries.
+  await entries.nth(1).click();
   const pane = page.getByRole('complementary');
   await expect(pane.getByRole('article')).toContainText('Morning walk');
   // Let the pane finish sliding in before swiping across it.
@@ -80,14 +61,34 @@ test('lists the month, swipes between months and days, and pulls sheets down', a
   await expect(pane.getByRole('article')).toContainText('Midsummer');
   await pane.getByRole('button', { name: 'Close' }).click();
 
+  // The pinned month opens the calendar on it; it pages with a swipe.
+  await feed.getByRole('button', { name: 'June 2026, open calendar' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Calendar' });
+  await sheet.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  const month = sheet.locator('button[aria-haspopup="dialog"]');
+  await expect(month).toContainText('June 2026');
+  const grid = (await sheet.locator('[data-daykey]').first().boundingBox())!;
+  await drag(cdp, [340, grid.y + 60], [60, grid.y + 70]);
+  await expect(month).toContainText('July 2026');
+  await drag(cdp, [60, grid.y + 60], [340, grid.y + 70]);
+  await expect(month).toContainText('June 2026');
+
+  // Picking a day closes the sheet and opens it. A tap right after a swipe
+  // counts as the finger lifting, so wait for the page to settle first.
+  await page.waitForTimeout(450);
+  await sheet.getByRole('button', { name: /Midsummer$/ }).click();
+  await expect(sheet).toBeHidden();
+  await expect(pane.getByRole('article')).toContainText('Midsummer');
+  await pane.getByRole('button', { name: 'Close' }).click();
+
   // Settings opens as a bottom sheet that closes when pulled down.
   await page.getByRole('button', { name: 'Settings' }).click();
-  const sheet = page.getByRole('dialog', { name: 'Settings' });
-  await expect(sheet).toBeVisible();
-  await sheet.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
-  const box = (await sheet.boundingBox())!;
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  await expect(settings).toBeVisible();
+  await settings.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  const box = (await settings.boundingBox())!;
   await drag(cdp, [200, box.y + 16], [200, box.y + 260], 320);
-  await expect(sheet).toBeHidden();
+  await expect(settings).toBeHidden();
 });
 
 test('search unfolds from its icon over the whole top bar', async ({ page }) => {

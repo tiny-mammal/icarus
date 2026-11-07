@@ -1,4 +1,4 @@
-import { devices, expect, test, type Locator } from '@playwright/test';
+import { devices, expect, test, type Locator, type Page } from '@playwright/test';
 import { hideToasts, startPlainDiary, openSearch } from './helpers';
 
 for (const touch of [false, true]) {
@@ -13,6 +13,19 @@ for (const touch of [false, true]) {
       else await target.click();
     }
 
+    // Phones keep the calendar, and so its month picker, in a sheet over the feed.
+    async function monthPicker(page: Page): Promise<{ trigger: Locator; picker: Locator }> {
+      let scope: Page | Locator = page;
+      if (touch) {
+        await press(page.getByRole('button', { name: /open calendar$/ }));
+        scope = page.getByRole('dialog', { name: 'Calendar' });
+      }
+      return {
+        trigger: scope.locator('button[aria-haspopup="dialog"]').filter({ hasText: /\d{4}/ }),
+        picker: page.getByRole('dialog', { name: 'Select month and year' }),
+      };
+    }
+
     async function expectClosed(trigger: Locator, popover: Locator): Promise<void> {
       await expect(popover).toBeHidden();
       await expect(trigger).toHaveAttribute('aria-expanded', 'false');
@@ -20,8 +33,7 @@ for (const touch of [false, true]) {
 
     test('month picker closes from its chevron and label', async ({ page }) => {
       await startPlainDiary(page);
-      const trigger = page.locator('button[aria-haspopup="dialog"]').filter({ hasText: /\d{4}/ });
-      const picker = page.getByRole('dialog', { name: 'Select month and year' });
+      const { trigger, picker } = await monthPicker(page);
 
       // The SVG is part of the trigger, even though it is outside the dialog.
       for (const target of [trigger.locator('svg'), trigger]) {
@@ -39,9 +51,12 @@ for (const touch of [false, true]) {
       await expectClosed(trigger, picker);
       await expect(trigger).toContainText('January');
 
-      await press(trigger);
-      await openSearch(page, press);
-      await expectClosed(trigger, picker);
+      // The search sits under the calendar sheet on phones.
+      if (!touch) {
+        await press(trigger);
+        await openSearch(page, press);
+        await expectClosed(trigger, picker);
+      }
 
       await trigger.focus();
       await page.keyboard.press('Enter');
@@ -57,8 +72,7 @@ for (const touch of [false, true]) {
       await page.evaluate(() => {
         window.requestAnimationFrame = () => 0;
       });
-      const trigger = page.locator('button[aria-haspopup="dialog"]').filter({ hasText: /\d{4}/ });
-      const picker = page.getByRole('dialog', { name: 'Select month and year' });
+      const { trigger, picker } = await monthPicker(page);
 
       await trigger.focus();
       await page.keyboard.press('Enter');

@@ -15,15 +15,12 @@
     monthShortLabels,
     weekdayLabels,
     longDayLabel,
-    weekdayShortLabel,
   } from '../lib/date';
   import { dragPager, turnPage } from '../lib/gestures';
-  import { truncateText } from '../lib/text';
   import { viewport } from '../lib/viewport.svelte';
   import type { DiaryEntry } from '../lib/types';
 
   const today = new Date();
-  const grid = $derived(monthGrid(app.currentMonth, app.weekStart));
   const weekdays = $derived(weekdayLabels(app.weekStart));
   const monthsShort = monthShortLabels();
 
@@ -151,15 +148,6 @@
     };
   }
 
-  // Phones can't fit titles in the cells, so the month's entries are listed
-  // under the grid instead, grouped by day.
-  const daysWithEntries = $derived(
-    grid
-      .filter(inCurrentMonth)
-      .map((day) => ({ day, entries: entriesOn(day) }))
-      .filter((d) => d.entries.length > 0),
-  );
-
   // --- day cell titles -----------------------------------------------------
   // How many entry titles fit in a day cell depends on the cell height, which
   // varies with the window size. All cells share one height (grid-rows-6), so
@@ -223,9 +211,6 @@
   function visibleTitles(entries: DiaryEntry[]): DiaryEntry[] {
     if (entries.length <= fitAll) return entries;
     return entries.slice(0, fitWithMore);
-  }
-  function inCurrentMonth(d: Date): boolean {
-    return d.getMonth() === app.currentMonth.getMonth();
   }
   function inMonth(d: Date, month: Date): boolean {
     return d.getMonth() === month.getMonth();
@@ -315,11 +300,11 @@
 {/snippet}
 
 <!--
-  Phones: a fixed, compact calendar that pages with the finger, and the
-  month's entries scrolling below it. Wider screens: the grid fills the stage
-  and shows titles in its cells.
+  Phones: a compact calendar that pages with the finger, shown in a sheet over
+  the entry feed. Wider screens: the grid fills the stage and shows titles in
+  its cells.
 -->
-<section class="flex h-full flex-col px-3 pt-2 sm:px-10 sm:pb-6 sm:pt-3">
+<section class="flex flex-col px-3 sm:h-full sm:px-10 sm:pb-6 sm:pt-3">
   <!-- Month header -->
   <header class="relative mb-3 flex shrink-0 items-center justify-between sm:mb-5">
     <!-- Month navigation: arrows flanking the month/year picker -->
@@ -439,46 +424,4 @@
     </div>
   </div>
 
-  <!-- Phones: this month's entries, tap one to read it. The only scroller. -->
-  <div
-    class="-mx-3 mt-3 min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-slate px-3 pt-3 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:hidden"
-    role="region"
-    aria-label="Entries this month"
-  >
-    {#if daysWithEntries.length === 0}
-      <p class="py-6 text-center text-sm text-muted">No entries this month.</p>
-    {:else}
-      <ol class="space-y-1">
-        {#each daysWithEntries as { day, entries } (dateKey(day))}
-          <li class="flex gap-3">
-            <div
-              class="w-10 shrink-0 pt-2.5 text-center leading-none {isSameDay(day, today) ? 'text-text' : 'text-muted'}"
-              aria-hidden="true"
-            >
-              <span class="block text-[0.6rem] font-medium uppercase tracking-wider">{weekdayShortLabel(day)}</span>
-              <span class="mt-1 block text-lg font-semibold tabular-nums">{day.getDate()}</span>
-            </div>
-            <ul class="min-w-0 flex-1 space-y-1">
-              {#each entries as entry (entry.uid)}
-                <li>
-                  <button
-                    class="block w-full rounded-xl px-3 py-2.5 text-left transition-colors active:bg-slate hover:bg-slate-soft"
-                    aria-label="{longDayLabel(day, app.dateFormat)}: {entryTitle(entry)}"
-                    onclick={() => app.jumpToEntry(entry)}
-                  >
-                    <span class="block truncate text-sm font-medium text-text">{entryTitle(entry)}</span>
-                    {#if entry.location || entry.content}
-                      <span class="mt-0.5 block truncate text-xs text-muted">
-                        {[entry.location, truncateText(entry.content, 140)].filter(Boolean).join(' · ')}
-                      </span>
-                    {/if}
-                  </button>
-                </li>
-              {/each}
-            </ul>
-          </li>
-        {/each}
-      </ol>
-    {/if}
-  </div>
 </section>

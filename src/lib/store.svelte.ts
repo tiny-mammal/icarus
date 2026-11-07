@@ -168,6 +168,8 @@ class AppStore {
    */
   editing = $state(false);
   settingsOpen = $state(false);
+  /** Phones: the calendar sheet over the entry feed. */
+  calendarOpen = $state(false);
   statsOpen = $state(false);
   busy = $state(false);
   toasts = $state<Toast[]>([]);
@@ -1391,7 +1393,13 @@ class AppStore {
   selectDay(key: string): void {
     this.stopEditing();
     this.clearSearchFocus();
+    this.calendarOpen = false;
     this.selectedKey = key;
+  }
+  /** Phones: open the calendar sheet on `month`. */
+  openCalendar(month: Date): void {
+    this.currentMonth = startOfMonth(month);
+    this.calendarOpen = true;
   }
   /** Open a specific day and bring the calendar to its month. */
   openDay(key: string): void {
@@ -1432,6 +1440,7 @@ class AppStore {
   goToToday(): void {
     this.stopEditing();
     this.clearSearchFocus();
+    this.calendarOpen = false;
     this.currentMonth = startOfMonth(new Date());
     this.selectedKey = dateKey(new Date());
   }
