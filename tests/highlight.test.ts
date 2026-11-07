@@ -139,3 +139,42 @@ describe('snippetAround', () => {
     expect(snippetAround('', ['x'])).toBe('');
   });
 });
+
+describe('windowed snippets', () => {
+  // The straightforward versions: flatten everything, then slice.
+  const flat = (text: string) => text.replace(/\s+/g, ' ').trim();
+  const truncateWhole = (text: string, max: number) => {
+    const clean = flat(text);
+    return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
+  };
+  const snippetWhole = (text: string, terms: string[], radius: number) => {
+    const clean = flat(text);
+    if (!clean) return '';
+    const match = highlightSegments(clean, terms).findIndex((s) => s.match);
+    if (match === -1) return truncateWhole(clean, radius * 2);
+    const segments = highlightSegments(clean, terms);
+    const start = segments.slice(0, match).reduce((n, s) => n + s.text.length, 0);
+    const end = start + segments[match].text.length;
+    const from = Math.max(0, start - radius);
+    const to = Math.min(clean.length, end + radius);
+    return `${from > 0 ? '…' : ''}${clean.slice(from, to)}${to < clean.length ? '…' : ''}`;
+  };
+
+  it('match flattening the whole text first', () => {
+    let seed = 3;
+    const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const pieces = ['a', 'b', 'Á', 'ñ', ' ', '  ', '\n', '\n\n', '\t', 'not', 'yet', 'café'];
+    for (let run = 0; run < 400; run++) {
+      const length = Math.floor(random() * 120);
+      const text = Array.from({ length }, () => pieces[Math.floor(random() * pieces.length)]).join('');
+      const radius = 1 + Math.floor(random() * 12);
+      for (const query of ['not yet', 'cafe', 'ab', 'zz']) {
+        const terms = queryTerms(query);
+        expect(snippetAround(text, terms, radius), JSON.stringify({ text, query, radius })).toBe(
+          snippetWhole(text, terms, radius),
+        );
+      }
+      expect(snippetAround(text, [], radius)).toBe(truncateWhole(text, radius * 2));
+    }
+  });
+});

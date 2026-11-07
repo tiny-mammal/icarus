@@ -55,12 +55,7 @@ import {
   type WeekStart,
   type DateFormat,
 } from './config';
-import {
-  buildSearchIndex,
-  indexAddEntry,
-  indexRemoveEntry,
-  indexUpdateEntry,
-} from './search';
+import { resetSearch, warmSearch } from './search';
 import { addMonths, adjacentKey, dateKey, keyToDate, startOfMonth } from './date';
 import { addUserWord, setUserWords } from './spellcheck';
 import { updates } from './updates.svelte';
@@ -118,7 +113,9 @@ let toastSeq = 0;
 
 class AppStore {
   // --- core reactive state ------------------------------------------------
-  entries = $state<DiaryEntry[]>([]);
+  // Raw: entries are replaced, never mutated, and years of them are too many
+  // to wrap in deep proxies.
+  entries = $state.raw<DiaryEntry[]>([]);
   /** Where the open diary lives (null while on the welcome or lock screen). */
   vault = $state<VaultRef | null>(null);
   /** Which backend this session runs on — drives platform-aware UI copy. */
@@ -329,7 +326,7 @@ class AppStore {
     this.lockedVault = null;
     storage.encryption.keepSessionFor(ref);
     this.encrypted = storage.encryption.isUnlocked(ref);
-    buildSearchIndex(this.entries);
+    warmSearch(entries);
     this.view = 'main';
     this.ready = true;
     await this.loadVaultState();
@@ -497,7 +494,7 @@ class AppStore {
     this.drafts = [];
     this.spellWords = [];
     setUserWords([]);
-    buildSearchIndex([]);
+    resetSearch();
     this.selectedKey = null;
     this.paneExpanded = false;
     this.searchHighlight = '';
@@ -827,12 +824,10 @@ class AppStore {
       }
       const updated: DiaryEntry = { ...previous, ...fields };
       this.entries = this.entries.map((e) => (e.uid === uid ? updated : e));
-      indexUpdateEntry(updated);
       if (this.vault && !(await this.persist())) {
         // Keep the autosaved revision open and restore the committed in-memory
         // value. A retry can safely attempt the vault write again later.
         this.entries = this.entries.map((e) => (e.uid === uid ? previous : e));
-        indexUpdateEntry(previous);
         await this.flushDraftNow();
         return;
       }
@@ -844,11 +839,9 @@ class AppStore {
     } else {
       const entry: DiaryEntry = { uid: generateUid(), ...fields };
       this.entries = [...this.entries, entry];
-      indexAddEntry(entry);
 
       if (!(await this.persist())) {
         this.entries = this.entries.filter((candidate) => candidate.uid !== entry.uid);
-        indexRemoveEntry(entry.uid);
         await this.flushDraftNow();
         return;
       }
@@ -1251,10 +1244,8 @@ class AppStore {
     const removed = this.entries[index];
     const previousEntries = this.entries;
     this.entries = this.entries.filter((e) => e.uid !== uid);
-    indexRemoveEntry(uid);
     if (this.vault && !(await this.persist())) {
       this.entries = previousEntries;
-      indexAddEntry(removed);
       return;
     }
     // If we were editing this entry, drop the editor state.
@@ -1285,18 +1276,13 @@ class AppStore {
     if (exists) {
       // Revert an edit: swap the current version back to the snapshot.
       this.entries = this.entries.map((e) => (e.uid === entry.uid ? entry : e));
-      indexUpdateEntry(entry);
     } else {
       // Re-insert a deleted entry at (or near) its former position.
       const next = [...this.entries];
       next.splice(Math.min(index ?? next.length, next.length), 0, entry);
       this.entries = next;
-      indexAddEntry(entry);
     }
-    if (this.vault && !(await this.persist())) {
-      this.entries = previousEntries;
-      buildSearchIndex(previousEntries);
-    }
+    if (this.vault && !(await this.persist())) this.entries = previousEntries;
   }
 
   /** Write current entries to the current vault. Toasts on failure. */

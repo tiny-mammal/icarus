@@ -10,7 +10,7 @@
  * accents are asymmetric — an unaccented query letter matches any accented
  * variant, while an accented one only matches itself. `ñ` is its own letter.
  */
-import { flattenText, plainText, truncateText } from './text';
+import { clipHead, clipTail, flattenText, plainText, truncateText } from './text';
 
 const HL_CLASS = 'search-hl';
 
@@ -52,15 +52,28 @@ export function foldSearchText(text: string): string {
     .replace(/n\u0303/g, 'ñ');
 }
 
-/** Fold character by character while retaining original offsets. */
-function foldText(text: string): FoldedText {
+/**
+ * Fold character by character while retaining original offsets, stopping once
+ * at least `stopAt` folded code units are produced.
+ */
+function foldText(text: string, stopAt = Infinity): FoldedText {
   let value = '';
   const starts: number[] = [];
   const ends: number[] = [];
   let offset = 0;
 
   for (const character of text) {
+    if (value.length >= stopAt) break;
     const end = offset + character.length;
+    const code = character.charCodeAt(0);
+    // ASCII folds to itself (lowercased): skip the costly Unicode path.
+    if (code < 0x80) {
+      value += code >= 65 && code <= 90 ? String.fromCharCode(code + 32) : character;
+      starts.push(offset);
+      ends.push(end);
+      offset = end;
+      continue;
+    }
     let folded = foldSearchText(character);
     // A standalone combining tilde after `n` turns it into `ñ`.
     if (folded.startsWith(COMBINING_TILDE) && value.endsWith('n')) {
@@ -112,11 +125,30 @@ export function termsRegex(terms: string[], flags = 'gu'): RegExp | null {
   return new RegExp(`(${foldedTerms.map(termPattern).join('|')})`, flags);
 }
 
-/** Locate folded matches and translate them back to exact source slices. */
-function matchRanges(text: string, terms: string[]): MatchRange[] {
-  const folded = foldText(text);
+// Folded code units kept past a match so its trailing marks and the
+// lookahead after an accented letter still see the real text.
+const FOLD_MARGIN = 16;
+
+/**
+ * Locate folded matches and translate them back to exact source slices. With
+ * `limit`, only the first matches are wanted: a native scan of the folded
+ * text finds where they end, so only that prefix pays for offset tracking.
+ */
+function matchRanges(text: string, terms: string[], limit = Infinity): MatchRange[] {
   const re = termsRegex(terms);
-  if (!folded.value || !re) return [];
+  if (!text || !re) return [];
+  let stopAt = Infinity;
+  if (limit !== Infinity) {
+    const whole = foldSearchText(text);
+    let found: RegExpExecArray | null = null;
+    for (let n = 0; n < limit && (found = re.exec(whole)); n++) {
+      stopAt = found.index + found[0].length + FOLD_MARGIN;
+      if (found.index === re.lastIndex) re.lastIndex++;
+    }
+    if (stopAt === Infinity) return [];
+    re.lastIndex = 0;
+  }
+  const folded = foldText(text, stopAt);
 
   const ranges: MatchRange[] = [];
   let match: RegExpExecArray | null;
@@ -135,6 +167,7 @@ function matchRanges(text: string, terms: string[]): MatchRange[] {
     }
 
     ranges.push({ start, end });
+    if (ranges.length >= limit) break;
     if (match.index === re.lastIndex) re.lastIndex++;
   }
   return ranges;
@@ -171,13 +204,18 @@ export function countMatches(text: string, terms: string[]): number {
  * lines). Falls back to the start of the text when nothing matches literally.
  */
 export function snippetAround(text: string, terms: string[], radius = 70): string {
-  const clean = flattenText(plainText(text));
+  const clean = plainText(text);
   if (!clean) return '';
-  const match = matchRanges(clean, terms)[0];
+  const match = matchRanges(clean, terms, 1)[0];
   if (!match) return truncateText(clean, radius * 2);
-  const start = Math.max(0, match.start - radius);
-  const end = Math.min(clean.length, match.end + radius);
-  return `${start > 0 ? '…' : ''}${clean.slice(start, end)}${end < clean.length ? '…' : ''}`;
+  // Flatten only the text around the match, never the whole body.
+  const before = clipTail(clean.slice(0, match.start), radius);
+  const after = clipHead(clean.slice(match.end), radius);
+  return [
+    before.cut ? `…${before.text}` : before.text.trimStart(),
+    flattenText(clean.slice(match.start, match.end)),
+    after.cut ? `${after.text}…` : after.text.trimEnd(),
+  ].join('');
 }
 
 /** Strip previously injected highlight marks, restoring plain text nodes. */

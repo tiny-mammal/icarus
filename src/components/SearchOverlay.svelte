@@ -26,25 +26,39 @@
   const terms = $derived(queryTerms(query));
   let listEl = $state<HTMLUListElement | null>(null);
 
-  /** Load another batch whenever the rendered list is still near its end. */
+  /**
+   * Load another batch while the rendered list is within a screen of its end,
+   * so a fling never runs out of rows.
+   */
   function loadMoreIfNeeded() {
     if (!listEl || hits.length >= total) return;
     const remaining = listEl.scrollHeight - listEl.scrollTop - listEl.clientHeight;
-    if (remaining < 80) onloadmore();
+    if (remaining < listEl.clientHeight) onloadmore();
   }
 
+  // A new query starts at the top.
+  $effect(() => {
+    void query;
+    if (listEl) listEl.scrollTop = 0;
+  });
+
+  // Keyboard navigation keeps the active row in view. Only on a change of
+  // row: following the list's own growth would yank a scrolled list back up.
   $effect(() => {
     void activeIndex;
-    void hits.length;
-    void total;
     requestAnimationFrame(() => {
       listEl
         ?.querySelector<HTMLElement>('[data-active="true"]')
         ?.scrollIntoView({ block: 'nearest' });
-      // This also covers tall viewports where the first batch has no scrollbar
-      // and therefore cannot emit a scroll event to request the next batch.
-      loadMoreIfNeeded();
     });
+  });
+
+  // Also covers tall viewports where a batch has no scrollbar and therefore
+  // cannot emit a scroll event to request the next one.
+  $effect(() => {
+    void hits.length;
+    void total;
+    requestAnimationFrame(loadMoreIfNeeded);
   });
 </script>
 

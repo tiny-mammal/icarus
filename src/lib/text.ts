@@ -73,13 +73,54 @@ export function flattenText(text: string): string {
   return (text ?? '').replace(/\s+/g, ' ').trim();
 }
 
+export interface Clip {
+  /** The kept characters, whitespace runs collapsed but not trimmed. */
+  text: string;
+  /** Whether visible text was left out. */
+  cut: boolean;
+}
+
+// How much raw text to read per kept character before reading more: enough
+// for the common case in one pass, without flattening a whole long entry.
+const READ_AHEAD = 4;
+
+const collapse = (text: string) => text.replace(/\s+/g, ' ');
+const hasVisible = (text: string) => /\S/.test(text);
+
+/**
+ * The first (or last) `max` characters of `text` with whitespace collapsed,
+ * reading only as much of it as that takes.
+ */
+function clip(text: string, max: number, fromEnd: boolean): Clip {
+  for (let n = Math.max(max, 1) * READ_AHEAD; ; n *= READ_AHEAD) {
+    const whole = n >= text.length;
+    const read = whole ? text : fromEnd ? text.slice(-n) : text.slice(0, n);
+    const flat = collapse(read);
+    if (!whole && flat.length <= max) continue;
+    const kept = fromEnd ? flat.slice(-max || flat.length) : flat.slice(0, max);
+    const dropped = fromEnd ? flat.slice(0, flat.length - kept.length) : flat.slice(max);
+    const unread = whole ? '' : fromEnd ? text.slice(0, -n) : text.slice(n);
+    return { text: kept, cut: hasVisible(dropped) || hasVisible(unread) };
+  }
+}
+
+/** The leading `max` characters of `text`, whitespace collapsed. */
+export function clipHead(text: string, max: number): Clip {
+  return clip(text, max, false);
+}
+
+/** The trailing `max` characters of `text`, whitespace collapsed. */
+export function clipTail(text: string, max: number): Clip {
+  return clip(text, max, true);
+}
+
 /**
  * Flatten `text` and clip it to at most `max` characters, appending an ellipsis
- * where it was cut. Already-flat input is fine — flattening is idempotent.
+ * where it was cut. Only the head is read, so long bodies stay cheap.
  */
 export function truncateText(text: string, max: number): string {
-  const flat = flattenText(text);
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+  const head = clipHead((text ?? '').trimStart(), max);
+  return head.cut ? `${head.text.slice(0, max - 1)}…` : head.text.trimEnd();
 }
 
 /** A one-line preview of a Markdown body, at most `max` characters. */

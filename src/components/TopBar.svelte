@@ -22,9 +22,25 @@
   // the whole bar, so it never has to share the width with the actions.
   let searchExpanded = $state(false);
 
-  const hits = $derived<SearchHit[]>(search(query));
+  // The query actually searched trails the field by a task: the keystroke
+  // paints first, and a burst of them on a slow phone runs one search, not one
+  // per key. Clearing the field applies at once.
+  let searched = $state('');
+  $effect(() => {
+    const next = query;
+    if (!next.trim()) {
+      searched = next;
+      return;
+    }
+    const timer = setTimeout(() => (searched = next));
+    return () => clearTimeout(timer);
+  });
+
+  const hits = $derived<SearchHit[]>(search(app.entries, searched));
   const shownHits = $derived(hits.slice(0, shownCount));
-  const open = $derived(focused && query.trim().length > 0);
+  // Follows the searched query, so results never flash "no matches" while the
+  // search catches up with the field.
+  const open = $derived(focused && searched.trim().length > 0);
 
   // Back closes the results, then the unfolded search (Escape on the input),
   // instead of the app.
@@ -34,7 +50,7 @@
 
   // Keep the active row in range as results change.
   $effect(() => {
-    void query;
+    void searched;
     activeIndex = 0;
     shownCount = 50;
   });
@@ -95,7 +111,7 @@
   }
 
   function choose(entry: DiaryEntry) {
-    app.jumpToEntry(entry, query);
+    app.jumpToEntry(entry, searched);
     query = '';
     searchExpanded = false;
     inputEl?.blur();
@@ -186,7 +202,7 @@
       hits={shownHits}
       total={hits.length}
       {activeIndex}
-      {query}
+      query={searched}
       onloadmore={showMore}
       onselect={choose}
     />

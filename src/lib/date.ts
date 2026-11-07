@@ -89,13 +89,24 @@ const DAY_LABEL_OPTIONS: Record<DayLabelStyle, Intl.DateTimeFormatOptions> = {
   compact: { day: 'numeric', month: 'short', year: 'numeric' },
 };
 
+// Building a formatter is far costlier than using one (lists of hundreds of
+// days notice it on slow phones), so each is built once and reused.
+const dayFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function dayFormatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = JSON.stringify(options);
+  let formatter = dayFormatters.get(key);
+  if (!formatter) dayFormatters.set(key, (formatter = new Intl.DateTimeFormat(undefined, options)));
+  return formatter;
+}
+
 /** Format a day in the requested style and user-chosen field order. */
 function formatDay(d: Date, style: DayLabelStyle, format: DateFormat, withYear = true): string {
   const options = withYear ? DAY_LABEL_OPTIONS[style] : { ...DAY_LABEL_OPTIONS[style], year: undefined };
-  if (format === 'auto') return d.toLocaleDateString(undefined, options);
+  if (format === 'auto') return dayFormatter(options).format(d);
 
   const part = (type: 'weekday' | 'day' | 'month' | 'year') =>
-    new Intl.DateTimeFormat(undefined, { [type]: options[type] })
+    dayFormatter({ [type]: options[type] })
       .formatToParts(d)
       .find((p) => p.type === type)?.value ?? '';
   const weekday = options.weekday ? part('weekday') : '';
