@@ -2,7 +2,8 @@
  * The iCalendar layer. All `.ics` reading/writing goes through here so the rest
  * of the app only ever deals with the clean {@link DiaryEntry} model.
  *
- * Uses `ical.js` (per spec). Parsing is fully defensive: a corrupt or partial
+ * Reads with `ical.js` (per spec) and writes its own few properties directly.
+ * Parsing is fully defensive: a corrupt or partial
  * file yields a typed error rather than throwing, so the UI can stay alive and
  * keep whatever data is already in memory.
  */
@@ -24,60 +25,70 @@ function str(value: unknown): string | undefined {
   return s.length ? s : undefined;
 }
 
+type JCalProperty = [name: string, params: object, type: string, ...values: unknown[]];
+type JCalComponent = [name: string, properties: JCalProperty[], components: JCalComponent[]];
+
+/** The first value of property `name`, as ical.js decoded it. */
+function firstValue(properties: JCalProperty[], name: string): unknown {
+  return properties.find((p) => p[0] === name)?.[3];
+}
+
+const DATE_VALUE = /^(\d{4})-(\d{2})-(\d{2})/;
+
 /**
  * Read the calendar date off a DTSTART value. We pull the literal calendar
- * components (year/month/day) rather than `toJSDate()` to avoid any timezone
- * drift across midnight — the diary is day-granular by design.
+ * components (year/month/day) rather than converting through a timezone to
+ * avoid drift across midnight — the diary is day-granular by design.
  *
  * Returns `null` if the value is missing or unparseable. Callers MUST handle
  * that case explicitly (we never want to silently re-date a corrupt entry to
  * "today" — the original day would be lost the next time we persist).
  */
-function dtToDate(value: unknown): Date | null {
-  const t = value as { year?: number; month?: number; day?: number } | null;
-  if (t && typeof t === 'object' && typeof t.year === 'number') {
-    return new Date(t.year, (t.month ?? 1) - 1, t.day ?? 1);
-  }
-  return null;
+function dtToDate(property: JCalProperty | undefined): Date | null {
+  if (!property || (property[2] !== 'date' && property[2] !== 'date-time')) return null;
+  const match = typeof property[3] === 'string' ? DATE_VALUE.exec(property[3]) : null;
+  return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
 }
 
 /**
  * Parse raw `.ics` text into entries. Never throws — returns a typed result.
+ *
+ * Reads ical.js's jCal arrays directly: wrapping every property of years of
+ * entries in `ICAL.Component`/`Property`/`Time` objects costs more than the
+ * parse itself, and opening the diary waits on this.
  */
 export function parseIcs(text: string): ParseResult {
   // An empty / whitespace-only file is a valid "no entries yet" state.
   if (!text || !text.trim()) return { ok: true, entries: [] };
 
   try {
-    const jcal = ICAL.parse(text);
-    const root = new ICAL.Component(jcal);
-    const vevents = root.getAllSubcomponents('vevent');
+    const jcal = ICAL.parse(text) as JCalComponent | JCalComponent[];
+    // Several calendars concatenated into one file parse as a list of them.
+    const roots = typeof jcal[0] === 'string' ? [jcal as JCalComponent] : (jcal as JCalComponent[]);
 
     let invalidDates = 0;
-    const entries: DiaryEntry[] = vevents.map((ve) => {
-      const parsed = dtToDate(ve.getFirstPropertyValue('dtstart'));
-      if (parsed) {
-        return {
-          uid: str(ve.getFirstPropertyValue('uid')) ?? generateUid(),
-          title: str(ve.getFirstPropertyValue('summary')) ?? 'Untitled',
-          content: str(ve.getFirstPropertyValue('description')) ?? '',
-          location: str(ve.getFirstPropertyValue('location')),
-          date: parsed,
-        };
+    const entries: DiaryEntry[] = [];
+    for (const root of roots) {
+      for (const [name, props] of root[2] ?? []) {
+        if (name !== 'vevent') continue;
+        let date = dtToDate(props.find((p) => p[0] === 'dtstart'));
+        if (!date) {
+          // Unreadable DTSTART: keep the entry (so the user doesn't lose its
+          // title/content) but flag it with a sentinel date and bump a counter.
+          // `serializeIcs` writes the sentinel back out as-is rather than
+          // silently rewriting it to "today" on the next save.
+          invalidDates++;
+          date = new Date(INVALID_DATE_SENTINEL);
+        }
+        entries.push({
+          uid: str(firstValue(props, 'uid')) ?? generateUid(),
+          title: str(firstValue(props, 'summary')) ?? 'Untitled',
+          content: str(firstValue(props, 'description')) ?? '',
+          location: str(firstValue(props, 'location')),
+          date,
+        });
       }
-      // Unreadable DTSTART: keep the entry (so the user doesn't lose its
-      // title/content) but flag it with a sentinel date and bump a counter.
-      // `serializeIcs` writes the sentinel back out as-is rather than
-      // silently rewriting it to "today" on the next save.
-      invalidDates++;
-      return {
-        uid: str(ve.getFirstPropertyValue('uid')) ?? generateUid(),
-        title: str(ve.getFirstPropertyValue('summary')) ?? 'Untitled',
-        content: str(ve.getFirstPropertyValue('description')) ?? '',
-        location: str(ve.getFirstPropertyValue('location')),
-        date: new Date(INVALID_DATE_SENTINEL),
-      };
-    });
+    }
 
     if (invalidDates > 0) {
       // Surface the warning on the console so the operator can see it; the
@@ -112,35 +123,81 @@ export function isInvalidDate(date: Date): boolean {
   return date.getFullYear() === INVALID_DATE_SENTINEL_YEAR;
 }
 
+// --- writing ---------------------------------------------------------------
+// The diary is written whole on every save, so this is a direct writer for
+// the few properties Icarus uses instead of ical.js's general one (which
+// builds an object per property and folds lines in quadratic time). Its
+// output is byte-for-byte what ical.js writes; the tests hold it to that.
+
+const CRLF = '\r\n';
+/** Longest content line in UTF-8 bytes before folding (RFC 5545 §3.1). */
+const FOLD_BYTES = 75;
+const TEXT_SPECIALS = /[\\;,\n]/g;
+
+function escapeText(value: string): string {
+  return value.replace(TEXT_SPECIALS, (c) => (c === '\n' ? '\\n' : `\\${c}`));
+}
+
+/** Split `line` into segments of at most FOLD_BYTES, never inside a character. */
+function fold(line: string): string {
+  // Short lines can't reach the limit even at 4 bytes per character.
+  if (line.length <= FOLD_BYTES / 4) return line;
+  let out = '';
+  let start = 0;
+  let bytes = 0;
+  for (let i = 0; i < line.length; ) {
+    const cp = line.codePointAt(i)!;
+    const size = cp < 0x80 ? 1 : cp < 0x800 ? 2 : cp < 0x10000 ? 3 : 4;
+    if (bytes + size > FOLD_BYTES) {
+      out += (start ? CRLF + ' ' : '') + line.slice(start, i);
+      start = i;
+      bytes = 0;
+    }
+    bytes += size;
+    i += cp > 0xffff ? 2 : 1;
+  }
+  return start ? `${out}${CRLF} ${line.slice(start)}` : line;
+}
+
+function textLine(name: string, value: string): string {
+  return fold(`${name}:${escapeText(value)}`);
+}
+
+const pad = (n: number, width = 2) => String(n).padStart(width, '0');
+
+function icsDate(d: Date): string {
+  return `${pad(d.getFullYear(), 4)}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+}
+
+/** Local "floating" date-time, as ical.js writes `ICAL.Time.now()`. */
+function icsDateTime(d: Date): string {
+  return `${icsDate(d)}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+}
+
 /**
  * Serialize entries to valid `.ics` text. DTSTART is written as a date-only
  * value (VALUE=DATE) since entries belong to a day, not a moment.
  */
 export function serializeIcs(entries: DiaryEntry[]): string {
-  const vcal = new ICAL.Component(['vcalendar', [], []]);
-  vcal.updatePropertyWithValue('version', '2.0');
-  vcal.updatePropertyWithValue('prodid', PRODID);
-  vcal.updatePropertyWithValue('calscale', 'GREGORIAN');
-
+  const stamp = `DTSTAMP:${icsDateTime(new Date())}`;
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    textLine('PRODID', PRODID),
+    'CALSCALE:GREGORIAN',
+  ];
   for (const e of entries) {
-    const ve = new ICAL.Component('vevent');
-    ve.updatePropertyWithValue('uid', e.uid);
-    ve.updatePropertyWithValue('dtstamp', ICAL.Time.now());
-
-    const dt = ICAL.Time.fromData({
-      year: e.date.getFullYear(),
-      month: e.date.getMonth() + 1,
-      day: e.date.getDate(),
-      isDate: true,
-    });
-    ve.updatePropertyWithValue('dtstart', dt);
-
-    ve.updatePropertyWithValue('summary', e.title);
-    if (e.content) ve.updatePropertyWithValue('description', e.content);
-    if (e.location) ve.updatePropertyWithValue('location', e.location);
-
-    vcal.addSubcomponent(ve);
+    lines.push(
+      'BEGIN:VEVENT',
+      textLine('UID', e.uid),
+      stamp,
+      `DTSTART;VALUE=DATE:${icsDate(e.date)}`,
+      textLine('SUMMARY', e.title),
+    );
+    if (e.content) lines.push(textLine('DESCRIPTION', e.content));
+    if (e.location) lines.push(textLine('LOCATION', e.location));
+    lines.push('END:VEVENT');
   }
-
-  return vcal.toString();
+  lines.push('END:VCALENDAR');
+  return lines.join(CRLF);
 }
