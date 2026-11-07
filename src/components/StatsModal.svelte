@@ -332,7 +332,7 @@
           <svg
             width={chartWidth}
             height={CHART_HEIGHT}
-            class="block touch-pan-y"
+            class="block [touch-action:pan-y]"
             onpointermove={onChartMove}
             onpointerdown={onChartMove}
             onpointerleave={() => (hoverIndex = null)}

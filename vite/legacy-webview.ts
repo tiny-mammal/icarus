@@ -23,6 +23,13 @@ const UNSUPPORTED: { pattern: RegExp; fix: string }[] = [
     pattern: /[{;]translate:/,
     fix: 'use [transform:translate…] instead of translate-* utilities (Chromium 104+)',
   },
+  {
+    // Tailwind composes touch-pan-* from custom properties, which older
+    // WebViews ignore: the browser then claims every drag and cancels the
+    // pointer stream, so the month pager and chart tooltips stop following.
+    pattern: /touch-action:[^;}]*var\(/,
+    fix: 'use [touch-action:pan-y] instead of touch-pan-* utilities',
+  },
 ];
 
 /**

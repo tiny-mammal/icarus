@@ -422,7 +422,7 @@
   <!-- Day grid. Edge to edge, so the neighbouring month slides in from the edge. -->
   <!-- On phones the open day covers the calendar, so it doesn't page underneath. -->
   <div
-    class="-mx-3 shrink-0 touch-pan-y overflow-hidden sm:-mx-10 sm:min-h-0 sm:flex-1"
+    class="-mx-3 shrink-0 [touch-action:pan-y] overflow-hidden sm:-mx-10 sm:min-h-0 sm:flex-1"
     use:dragPager={{
       track: trackEl,
       onpage: showMonth,

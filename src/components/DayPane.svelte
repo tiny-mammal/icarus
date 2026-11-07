@@ -231,7 +231,7 @@
       {/if}
 
       <div
-        class="min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain px-5 pt-5 pb-[calc(4rem+env(safe-area-inset-bottom))] [scroll-padding-block:2rem] sm:px-[var(--pane-gutter)] sm:pt-6"
+        class="min-h-0 flex-1 [touch-action:pan-y] overflow-y-auto overscroll-contain px-5 pt-5 pb-[calc(4rem+env(safe-area-inset-bottom))] [scroll-padding-block:2rem] sm:px-[var(--pane-gutter)] sm:pt-6"
         use:swipe={daySwipe}
       >
         {#if !entry}
