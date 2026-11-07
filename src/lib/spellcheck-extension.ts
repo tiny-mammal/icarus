@@ -9,7 +9,7 @@
  */
 import { Extension, type Editor } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { docMisspellings, misspelledRanges, spellingWindow } from './spellcheck';
 
@@ -137,6 +137,17 @@ export const Spellcheck = Extension.create<SpellcheckOptions>({
               if (!word) return false;
 
               event.preventDefault();
+              // A touch long-press has already selected the word natively, and
+              // its selection handles are drawn by the OS above all page
+              // content, so they'd sit on top of the menu. Drop the native
+              // selection and leave a caret after the word, which refocusing
+              // the editor restores once the menu closes.
+              view.dispatch(
+                view.state.tr.setSelection(
+                  TextSelection.create(view.state.doc, hit.to),
+                ),
+              );
+              view.dom.ownerDocument.getSelection()?.removeAllRanges();
               onHit({
                 from: hit.from,
                 to: hit.to,

@@ -148,5 +148,32 @@ for (const touch of [false, true]) {
       await (await openSearch(page)).fill('zzzz');
       await expectOnTop(page.getByText('No matching entries'));
     });
+
+    test('spelling menu drops the long-press selection so its handles do not cover it', async ({ page }) => {
+      await startPlainDiary(page);
+      await page.getByRole('button', { name: 'New entry', exact: true }).click();
+      const body = page.locator('.ProseMirror');
+      await body.fill('Hello toos');
+      const word = body.locator('.spell-misspelled', { hasText: 'toos' });
+      await expect(word).toBeVisible();
+
+      // A touch long-press selects the word natively, then fires contextmenu.
+      await word.evaluate((el) => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        getSelection()!.removeAllRanges();
+        getSelection()!.addRange(range);
+        const r = el.getBoundingClientRect();
+        el.dispatchEvent(new MouseEvent('contextmenu', {
+          bubbles: true,
+          cancelable: true,
+          clientX: r.x + r.width / 2,
+          clientY: r.y + r.height / 2,
+        }));
+      });
+
+      await expect(page.getByRole('menu', { name: 'Spelling suggestions' })).toBeVisible();
+      expect(await page.evaluate(() => getSelection()?.isCollapsed ?? true)).toBe(true);
+    });
   });
 }
