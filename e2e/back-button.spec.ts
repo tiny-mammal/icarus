@@ -72,3 +72,20 @@ test('closing from the UI leaves no extra history entry behind', async ({ page }
   await page.goBack();
   await expect(page).toHaveURL('about:blank');
 });
+
+test('back from writing started on the calendar returns to the calendar', async ({ page }) => {
+  await importPlainIcs(page, DIARY_ICS);
+  await page.getByRole('button', { name: /^New entry$/ }).click();
+  const title = page.getByPlaceholder('Title', { exact: true });
+  await expect(title).toBeVisible();
+  await title.fill('Unfinished');
+
+  // One back closes the editor and the pane it opened in, keeping the draft.
+  await page.goBack();
+  await expect(title).toBeHidden();
+  await expect(dayPane(page)).toBeHidden();
+  await expect(page.getByRole('button', { name: /Drafts/ })).toBeVisible();
+
+  await page.goBack();
+  await expect(page).toHaveURL('about:blank');
+});

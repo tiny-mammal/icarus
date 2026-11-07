@@ -95,6 +95,14 @@ export interface PendingDiary {
   replaces?: boolean;
 }
 
+/** The reading state behind the editor, restored when it closes. */
+interface ReadingView {
+  selectedKey: string | null;
+  currentMonth: Date;
+  focusEntryUid: string | null;
+  searchHighlight: string;
+}
+
 function groupByDay(entries: DiaryEntry[]): Map<string, DiaryEntry[]> {
   const map = new Map<string, DiaryEntry[]>();
   for (const e of entries) {
@@ -197,6 +205,8 @@ class AppStore {
   draftLocation = $state('');
   draftContent = $state('');
   draftDateKey = $state(dateKey(new Date()));
+  // What was on screen when the editor opened, so closing it goes back there.
+  private editorOrigin: ReadingView | null = null;
 
   /** All persisted drafts, newest first. */
   drafts = $state<StoredDraft[]>([]);
@@ -903,8 +913,37 @@ class AppStore {
     void this.flushDraftNow();
   }
 
+  /**
+   * Close the editor (X, Escape, back) and return to what was on screen when
+   * it opened: the calendar, or the day being read. Work in progress is kept
+   * as in `stopEditing`.
+   */
+  closeEditor(): void {
+    const origin = this.editorOrigin;
+    this.stopEditing();
+    if (!origin) return;
+    this.editorOrigin = null;
+    if (origin.selectedKey) {
+      this.selectedKey = origin.selectedKey;
+      this.focusEntryUid = origin.focusEntryUid;
+      this.searchHighlight = origin.searchHighlight;
+    } else {
+      this.hidePane();
+    }
+    this.currentMonth = origin.currentMonth;
+  }
+
   /** Show the editor in the day pane, on the day the draft is dated. */
   private openEditor(): void {
+    // Swapping drafts inside the editor keeps the original place to return to.
+    if (!this.editing) {
+      this.editorOrigin = {
+        selectedKey: this.selectedKey,
+        currentMonth: this.currentMonth,
+        focusEntryUid: this.focusEntryUid,
+        searchHighlight: this.searchHighlight,
+      };
+    }
     this.clearSearchFocus();
     this.selectedKey = this.draftDateKey;
     this.currentMonth = startOfMonth(keyToDate(this.draftDateKey));

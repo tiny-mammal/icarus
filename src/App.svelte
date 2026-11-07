@@ -65,7 +65,7 @@
       if (e.key !== 'Escape') return;
       if (app.statsOpen) app.statsOpen = false;
       else if (app.settingsOpen) app.settingsOpen = false;
-      else if (app.editing) app.stopEditing();
+      else if (app.editing) app.closeEditor();
       else if (app.selectedKey) app.closeDay();
     };
     window.addEventListener('keydown', onKey);

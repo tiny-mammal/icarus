@@ -150,4 +150,37 @@ describe('writing in the day pane', () => {
     expect(app.selectedKey).toBe('2026-10-01');
     await vi.waitFor(() => expect(app.drafts.map((d) => d.title)).toEqual(['In progress']));
   });
+  it('closing the editor returns to the calendar when it was opened from there', async () => {
+    const app = await openApp();
+    await app.openDay('2026-10-01');
+    app.draftContent = 'Notes for another day';
+    app.draftDateKey = '2026-11-03';
+    app.closeDay();
+    const month = app.currentMonth;
+
+    // Resuming the work in progress opens it on its own day…
+    app.resumeWriting();
+    expect(app.selectedKey).toBe('2026-11-03');
+
+    // …but closing goes back to the calendar, not to that day's pane.
+    app.closeEditor();
+    expect(app.editing).toBe(false);
+    expect(app.selectedKey).toBeNull();
+    expect(app.currentMonth).toBe(month);
+    expect(app.draftContent).toBe('Notes for another day'); // still loaded
+  });
+
+  it('closing the editor returns to the day that was being read', async () => {
+    const app = await openApp();
+    app.jumpToEntry(app.entries[0], 'Original');
+
+    await app.newEntryOn('2026-10-01');
+    app.draftDateKey = '2026-12-24';
+    app.closeEditor();
+
+    expect(app.selectedKey).toBe('2026-10-01');
+    expect(app.focusEntryUid).toBe('e1');
+    expect(app.searchHighlight).toBe('Original');
+    expect(app.currentMonth.getMonth()).toBe(9);
+  });
 });
