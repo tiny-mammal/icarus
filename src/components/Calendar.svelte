@@ -164,7 +164,7 @@
   let remPx = $state(16);
 
   function measureTitleSpace(): void {
-    const cell = gridEl?.querySelector<HTMLElement>('[data-daykey]');
+    const cell = trackEl?.querySelector<HTMLElement>('[data-daykey]');
     // Measure the day number, not its column: the dots below it only show when
     // titles do not, so including them would make the measurement oscillate.
     const dayNumber = cell?.querySelector<HTMLElement>('[data-day-number]');
@@ -179,12 +179,13 @@
       LIST_OFFSET_REM * remPx;
   }
 
-  // Re-measure whenever the current grid is replaced (month change) or resized.
+  // Every month's cells share the track's size, so it is only re-measured when
+  // the track resizes, never on a page turn. The observer reports after layout
+  // (including once on start), so reading sizes there forces no extra layout.
   $effect(() => {
-    if (!gridEl) return;
-    measureTitleSpace();
+    if (!trackEl) return;
     const ro = new ResizeObserver(measureTitleSpace);
-    ro.observe(gridEl);
+    ro.observe(trackEl);
     return () => ro.disconnect();
   });
 
@@ -416,8 +417,13 @@
     }}
   >
     <div bind:this={trackEl} class="flex will-change-transform sm:h-full" style="transform: translateX(-100%)">
-      {#each panelMonths as month, i (i)}
-        <div class="w-full shrink-0 px-3 sm:h-full sm:px-10" inert={i !== 1} aria-hidden={i === 1 ? undefined : 'true'}>
+      <!-- Keyed by month, so a page turn keeps the two months already drawn
+           and only builds the one sliding in. -->
+      {#each panelMonths as month, i (month.getTime())}
+        <!-- The neighbours are off screen and their days untabbable, so
+             aria-hidden is enough. Not `inert`: moving it between panels on
+             every page turn restyles all of their days. -->
+        <div class="w-full shrink-0 px-3 sm:h-full sm:px-10" aria-hidden={i === 1 ? undefined : 'true'}>
           {@render dayGrid(month, i === 1)}
         </div>
       {/each}
