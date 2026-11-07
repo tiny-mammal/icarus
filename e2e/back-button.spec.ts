@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { importPlainIcs } from './helpers';
+import { importPlainIcs, searchResult } from './helpers';
 
 /**
  * Back (browser, PWA or Android) closes the top-most open layer instead of
@@ -27,7 +27,7 @@ const search = (page: Page) => page.getByPlaceholder('Search entries…');
 async function openDay(page: Page): Promise<void> {
   await importPlainIcs(page, DIARY_ICS);
   await search(page).fill('Midsummer');
-  await page.getByText('Midsummer').first().click();
+  await searchResult(page, 'Midsummer').click();
   await expect(dayPane(page).getByRole('article').getByText('Midsummer')).toBeVisible();
 }
 

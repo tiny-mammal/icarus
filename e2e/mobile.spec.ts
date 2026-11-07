@@ -1,5 +1,5 @@
 import { devices, expect, test, type CDPSession, type Page } from '@playwright/test';
-import { importPlainIcs, openSearch, startPlainDiary } from './helpers';
+import { importPlainIcs, openSearch, startPlainDiary, searchResult } from './helpers';
 
 /**
  * Phone layout: every entry in one feed with a calendar sheet to jump around,
@@ -104,7 +104,7 @@ test('search unfolds from its icon over the whole top bar', async ({ page }) => 
   expect((await field.boundingBox())!.width).toBeGreaterThan(width / 2);
 
   await field.fill('walk');
-  await page.getByText('Morning walk').first().tap();
+  await searchResult(page, 'Morning walk').tap();
   await expect(page.getByRole('article').getByText('Morning walk')).toBeVisible();
   await expect(field).toHaveCount(0);
 

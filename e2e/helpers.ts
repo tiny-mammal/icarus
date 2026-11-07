@@ -50,6 +50,14 @@ export async function openSearch(
 }
 
 /**
+ * A row of the search results. They show a moment after the query is typed,
+ * so a bare text lookup could settle on the same words elsewhere on the page.
+ */
+export function searchResult(page: Page, text: string): Locator {
+  return page.getByRole('banner').getByRole('listitem').filter({ hasText: text }).first();
+}
+
+/**
  * Hide notifications for the rest of the test. They sit above everything on
  * purpose, so they can cover what a test points at or checks is on top.
  */

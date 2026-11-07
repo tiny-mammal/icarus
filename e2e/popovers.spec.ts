@@ -1,5 +1,5 @@
 import { devices, expect, test, type Locator, type Page } from '@playwright/test';
-import { hideToasts, startPlainDiary, openSearch } from './helpers';
+import { hideToasts, startPlainDiary, openSearch, searchResult } from './helpers';
 
 for (const touch of [false, true]) {
   test.describe(touch ? 'touch popovers' : 'mouse popovers', () => {
@@ -138,7 +138,7 @@ for (const touch of [false, true]) {
       await page.getByRole('button', { name: 'Stop editing' }).click();
       // Read a saved entry: the pane stays open and the top bar keeps Drafts.
       await (await openSearch(page)).fill('Read me');
-      await page.getByText('Read me').first().click();
+      await searchResult(page, 'Read me').click();
       await expect(page.getByRole('complementary').getByRole('article')).toContainText('Read me');
 
       await hideToasts(page);
