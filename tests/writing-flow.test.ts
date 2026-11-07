@@ -93,17 +93,30 @@ describe('writing in the day pane', () => {
     expect(app.drafts).toEqual([]);
   });
 
-  it('"Save as draft" parks the work and goes back to the calendar', async () => {
+  it('shows when the work is saved, and says where it went on closing', async () => {
     const app = await openApp();
     await app.newEntryOn('2026-12-05');
     app.draftTitle = 'Half-written';
+    expect(app.draftSaved).toBe(false);
 
-    await app.saveDraftAndReset();
+    expect(await app.flushDraftNow()).toBe(true);
+    expect(app.draftSaved).toBe(true);
+
+    app.closeEditor();
     expect(app.editing).toBe(false);
-    expect(app.selectedKey).toBeNull();
-    expect(app.currentMonth).toEqual(new Date(2026, 11, 1));
+    await vi.waitFor(() =>
+      expect(app.toasts.map((t) => t.message)).toContain('Saved to drafts'),
+    );
     expect(app.drafts.map((d) => d.title)).toEqual(['Half-written']);
-    expect(app.hasEditorContent()).toBe(false);
+  });
+
+  it('closes an empty editor quietly', async () => {
+    const app = await openApp();
+    await app.newEntryOn('2026-12-05');
+    app.closeEditor();
+    await Promise.resolve();
+    expect(app.toasts).toEqual([]);
+    expect(app.drafts).toEqual([]);
   });
 
   it('discarding the open draft goes back to the calendar', async () => {

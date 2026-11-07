@@ -90,8 +90,8 @@ const DAY_LABEL_OPTIONS: Record<DayLabelStyle, Intl.DateTimeFormatOptions> = {
 };
 
 /** Format a day in the requested style and user-chosen field order. */
-function formatDay(d: Date, style: DayLabelStyle, format: DateFormat): string {
-  const options = DAY_LABEL_OPTIONS[style];
+function formatDay(d: Date, style: DayLabelStyle, format: DateFormat, withYear = true): string {
+  const options = withYear ? DAY_LABEL_OPTIONS[style] : { ...DAY_LABEL_OPTIONS[style], year: undefined };
   if (format === 'auto') return d.toLocaleDateString(undefined, options);
 
   const part = (type: 'weekday' | 'day' | 'month' | 'year') =>
@@ -101,18 +101,26 @@ function formatDay(d: Date, style: DayLabelStyle, format: DateFormat): string {
   const weekday = options.weekday ? part('weekday') : '';
   const day = part('day');
   const month = part('month');
-  const year = part('year');
+  const year = options.year ? part('year') : '';
 
   let body: string;
   if (format === 'iso') body = dateKey(d);
-  else if (format === 'mdy') body = `${month} ${day}, ${year}`;
-  else body = `${day} ${month} ${year}`;
+  else if (format === 'mdy') body = year ? `${month} ${day}, ${year}` : `${month} ${day}`;
+  else body = [day, month, year].filter(Boolean).join(' ');
   return weekday ? `${weekday}, ${body}` : body;
 }
 
 /** Long, readable label for a specific day, e.g. "Monday, 8 June 2026". */
 export function longDayLabel(d: Date, format: DateFormat = 'auto'): string {
   return formatDay(d, 'long', format);
+}
+
+/**
+ * `shortDayLabel` without the year when it is the current one, e.g. "Thu, Sep
+ * 24"; days of other years keep it. ISO dates always show it.
+ */
+export function nearDayLabel(d: Date, format: DateFormat = 'auto', today = new Date()): string {
+  return formatDay(d, 'short', format, d.getFullYear() !== today.getFullYear());
 }
 
 /** Compact label for a specific day, e.g. "Thu, Sep 24, 2026". */

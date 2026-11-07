@@ -195,9 +195,10 @@
 
 <!-- Three columns: the equal-width sides keep the search centred and still
      while the actions on the right come and go. Positioned: on phones the
-     drafts list spans this bar. -->
+     drafts list spans this bar. Phones hide it while writing, leaving the
+     screen to the entry; closing the editor brings it back. -->
 <header
-  class="relative z-bar grid h-14 shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate px-3 sm:grid-cols-[1fr_minmax(0,28rem)_1fr] sm:gap-4 sm:px-6"
+  class="relative z-bar grid h-14 shrink-0 {app.editing ? 'max-sm:hidden' : ''} grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate px-3 sm:grid-cols-[1fr_minmax(0,28rem)_1fr] sm:gap-4 sm:px-6"
 >
   <!-- Brand -->
   <div class="flex shrink-0 items-center gap-2 text-sm font-semibold tracking-tight text-text">

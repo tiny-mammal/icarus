@@ -85,7 +85,7 @@ for (const touch of [false, true]) {
       await startPlainDiary(page);
       await page.getByRole('button', { name: 'New entry', exact: true }).click();
       const pane = page.getByRole('complementary');
-      const trigger = pane.locator('button[aria-haspopup="dialog"]').filter({ hasText: /\d{4}/ });
+      const trigger = pane.getByRole('button', { name: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun), / });
       const picker = page.getByRole('dialog', { name: 'Pick a date' });
 
       await press(trigger);
@@ -100,7 +100,7 @@ for (const touch of [false, true]) {
       await expectClosed(trigger, picker);
 
       await press(trigger);
-      await press(pane.getByText('New entry', { exact: true }));
+      await press(pane.getByTestId('entry-status')); // outside, and never under the picker
       await expectClosed(trigger, picker);
     });
 
@@ -108,7 +108,7 @@ for (const touch of [false, true]) {
       await startPlainDiary(page);
       await page.getByRole('button', { name: 'New entry', exact: true }).click();
       await page.getByPlaceholder('Title', { exact: true }).fill('Popover regression');
-      await page.getByRole('button', { name: 'Save as draft' }).click();
+      await page.getByRole('button', { name: 'Stop editing' }).click();
       await expect(page.getByRole('complementary')).toBeHidden();
       const trigger = page.getByRole('banner').getByRole('button', { name: 'Drafts', exact: true });
       const menu = page.getByRole('dialog', { name: 'Saved drafts' });
@@ -131,12 +131,12 @@ for (const touch of [false, true]) {
     test('top bar popovers stay above the open day pane', async ({ page }) => {
       await startPlainDiary(page);
       await page.getByRole('button', { name: 'New entry', exact: true }).click();
-      await page.getByPlaceholder('Title', { exact: true }).fill('Layering regression');
-      await page.getByRole('button', { name: 'Save as draft' }).click();
-      // Read a saved entry: the pane stays open and the top bar keeps Drafts.
-      await page.getByRole('button', { name: 'New entry', exact: true }).click();
       await page.getByPlaceholder('Title', { exact: true }).fill('Read me');
       await page.getByRole('button', { name: 'Save entry' }).click();
+      await page.getByRole('button', { name: 'New entry', exact: true }).click();
+      await page.getByPlaceholder('Title', { exact: true }).fill('Layering regression');
+      await page.getByRole('button', { name: 'Stop editing' }).click();
+      // Read a saved entry: the pane stays open and the top bar keeps Drafts.
       await (await openSearch(page)).fill('Read me');
       await page.getByText('Read me').first().click();
       await expect(page.getByRole('complementary').getByRole('article')).toContainText('Read me');

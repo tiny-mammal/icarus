@@ -197,9 +197,10 @@ class AppStore {
   // The live contents of the editor. Kept here (not in the component) so
   // it can be autosaved and swapped between drafts from one place.
   draftId = $state<string | null>(null); // null = a fresh, unsaved draft
-  // True only when the editor was loaded from a previously saved draft (not a
-  // brand-new entry that merely got autosaved). Gates the "Discard" action.
-  draftOpened = $state(false);
+  // True once the editor's work is in the persisted drafts list, so the editor
+  // can say so: seeing it saved is what makes closing feel safe. It stays true
+  // while the next autosave is pending (under a second; leaving flushes it).
+  draftSaved = $state(false);
   // When set, the editor is revising this existing committed entry in place
   // (preserving its UID) rather than creating a new one.
   editingUid = $state<string | null>(null);
@@ -869,7 +870,7 @@ class AppStore {
     this.editingUid = entry.uid;
     const saved = findEntryDraft(this.drafts, entry.uid);
     this.draftId = saved?.id ?? randomId();
-    this.draftOpened = !!saved;
+    this.draftSaved = !!saved;
     this.draftTitle = saved?.title ?? entry.title;
     this.draftLocation = saved?.location ?? entry.location ?? '';
     this.draftContent = saved?.content ?? entry.content;
@@ -912,7 +913,12 @@ class AppStore {
       if (id && this.drafts.some((d) => d.id === id)) void this.removeDraft(id);
       return;
     }
-    void this.flushDraftNow();
+    // Say where the work went: with no "save as draft" button, this is what
+    // tells the user that closing kept it.
+    if (!this.hasEditorContent()) return;
+    void this.flushDraftNow().then((saved) => {
+      if (saved) this.toast('success', 'Saved to drafts');
+    });
   }
 
   /**
@@ -1070,7 +1076,7 @@ class AppStore {
   resetEditor(): void {
     this.editingUid = null;
     this.draftId = null;
-    this.draftOpened = false;
+    this.draftSaved = false;
     this.draftTitle = '';
     this.draftLocation = '';
     this.draftContent = '';
@@ -1100,7 +1106,10 @@ class AppStore {
    */
   async flushDraft(): Promise<boolean> {
     // An untouched revision is not a draft: the entry itself already holds it.
-    if (!this.hasEditorContent() || this.revisionUnchanged()) return true;
+    if (!this.hasEditorContent() || this.revisionUnchanged()) {
+      this.draftSaved = false;
+      return true;
+    }
     if (!this.draftId) this.draftId = randomId();
 
     const draft: StoredDraft = {
@@ -1116,8 +1125,11 @@ class AppStore {
     this.drafts = upsertDraft(this.drafts, draft);
     try {
       await this.persistDraftList(this.drafts);
+      // Unless the editor moved on to other work meanwhile.
+      if (this.draftId === draft.id) this.draftSaved = true;
       return true;
     } catch (err) {
+      if (this.draftId === draft.id) this.draftSaved = false;
       devError('flushDraft: could not persist the draft list', err);
       this.toast('error', 'Draft not saved — your text is still in the editor.');
       return false;
@@ -1135,6 +1147,7 @@ class AppStore {
     this.drafts = this.drafts.filter((d) => d.id !== id);
     try {
       await this.persistDraftList(this.drafts);
+      if (id === this.draftId) this.draftSaved = false;
       return true;
     } catch (err) {
       this.drafts = previous;
@@ -1155,24 +1168,12 @@ class AppStore {
         ? d.editingUid
         : null;
     this.draftId = d.id;
-    this.draftOpened = true;
+    this.draftSaved = true;
     this.draftTitle = d.title;
     this.draftLocation = d.location;
     this.draftContent = d.content;
     this.draftDateKey = d.dateKey;
     this.openEditor();
-  }
-
-  /** "Save as draft" — park the current work in drafts and go back to the calendar. */
-  async saveDraftAndReset(): Promise<void> {
-    this.cancelDraftSave();
-    if (!this.hasEditorContent()) {
-      this.toast('info', 'Write something first.');
-      return;
-    }
-    if (!(await this.flushDraft())) return;
-    this.leaveEditorForCalendar();
-    this.toast('success', 'Saved to drafts');
   }
 
   /** Open the shared confirmation dialog for deleting/discarding a draft. */
@@ -1209,7 +1210,7 @@ class AppStore {
   }
 
   /**
-   * Finish a writing session (saved, parked as a draft or discarded): clear
+   * Finish a writing session (saved or discarded): clear
    * the editor and return to the calendar, on the month the entry was dated.
    */
   private leaveEditorForCalendar(): void {

@@ -17,6 +17,7 @@
   import { devError } from '../lib/log';
   import { loadRichEditor } from '../lib/editor-loader';
   import { indexAfterVisible } from '../lib/caret';
+  import { countChars, countWords } from '../lib/text-count';
   import DraftsMenu from './DraftsMenu.svelte';
   import DatePicker from './DatePicker.svelte';
   import PaneSizeToggle from './PaneSizeToggle.svelte';
@@ -24,8 +25,8 @@
   /**
    * The day pane in writing mode: the entry being written or revised, laid
    * out like the reader (title, location, body) so switching between the two
-   * feels like the text simply became editable. Work autosaves to drafts;
-   * "Save" commits it to the diary, "Save as draft" parks it for later.
+   * feels like the text simply became editable. Work autosaves to drafts, and
+   * says so, so closing is how to park it; "Save" commits it to the diary.
    */
   let { focus = null }: { focus?: EditorFocus } = $props();
 
@@ -58,6 +59,11 @@
       : 'Write this day’s chapter… Markdown is welcome.',
   );
 
+  const chars = $derived(countChars(app.draftContent));
+  const words = $derived(countWords(app.draftContent));
+  const plural = (n: number, one: string, many: string) =>
+    `${n.toLocaleString()} ${n === 1 ? one : many}`;
+
   // Autosave: whenever a field changes, schedule a debounced write to the
   // persisted draft store, so an unsaved entry survives a crash, a power cut,
   // or quitting the app mid-sentence.
@@ -73,10 +79,6 @@
     saving = true;
     await app.commit();
     saving = false;
-  }
-
-  function askDiscard() {
-    if (app.draftId) app.requestDeleteDraft(app.draftId);
   }
 
   function onKeydown(e: KeyboardEvent) {
@@ -100,12 +102,7 @@
   <header
     class="relative flex items-center justify-between gap-2 border-b border-slate py-3 pr-2 pl-4 sm:gap-3 sm:py-5 sm:pr-[var(--pane-gutter)] sm:pl-[calc(var(--pane-gutter)-0.25rem)]"
   >
-    <div class="flex min-w-0 items-center gap-2">
-      <DatePicker bind:value={app.draftDateKey} align="left" />
-      <span class="truncate text-xs font-medium text-muted">
-        {app.editingUid ? 'Editing' : 'New entry'}
-      </span>
-    </div>
+    <DatePicker bind:value={app.draftDateKey} align="left" />
     <div class="flex shrink-0 items-center gap-1">
       {#if !app.editingUid && app.drafts.length > 0}
         <DraftsMenu compact />
@@ -159,44 +156,32 @@
   </div>
 
   <footer
-    class="flex items-center justify-between gap-3 border-t border-slate px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-[var(--pane-gutter)]"
+    class="flex items-center justify-between gap-3 border-t border-slate px-4 max-[359px]:gap-2 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-[var(--pane-gutter)]"
   >
-    <div class="min-w-0">
-      {#if app.editingUid}
-        <span class="hidden text-xs text-muted sm:inline">Changes autosave to drafts</span>
-      {:else if app.draftOpened}
-        <button
-          class="rounded-lg px-2.5 py-2 text-xs font-medium text-muted transition-colors hover:bg-red-400/10 hover:text-red-400"
-          onclick={askDiscard}
-        >
-          Discard
-        </button>
+    <!--
+      Autosave made visible, so closing feels as safe as it is ("draft", so it
+      isn't mistaken for the entry being saved); then the body's length,
+      counted like the statistics.
+    -->
+    <p class="min-w-0 truncate text-xs text-muted tabular-nums" data-testid="entry-status">
+      {#if app.draftSaved}
+        <span class="text-text/70">✓ <span class="max-[359px]:hidden">Draft saved</span><span class="min-[360px]:hidden">Saved</span></span><span aria-hidden="true">{' · '}</span>
       {/if}
-    </div>
+      {plural(words, 'word', 'words')}{' · '}{plural(chars, 'char', 'chars')}
+    </p>
 
-    <div class="flex items-center gap-2">
-      {#if !app.editingUid}
-        <button
-          class="whitespace-nowrap rounded-lg border border-slate px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-slate hover:text-text disabled:opacity-50"
-          onclick={() => app.saveDraftAndReset()}
-          disabled={saving}
-        >
-          Save as draft
-        </button>
-      {/if}
-      <button
-        class="flex items-center gap-2 whitespace-nowrap rounded-lg bg-text px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
-        aria-label="Save entry"
-        title="Save entry (⌘/Ctrl+Enter)"
-        onclick={commit}
-        disabled={saving}
-      >
-        <span>{saving ? 'Saving…' : 'Save'}</span>
-        <span class="hidden items-center gap-1 text-ink/60 sm:flex">
-          <kbd class="font-mono text-xs">⌘/Ctrl</kbd>
-          <kbd class="font-mono text-xs">↵</kbd>
-        </span>
-      </button>
-    </div>
+    <button
+      class="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-text px-4 py-2 max-[359px]:px-3 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
+      aria-label="Save entry"
+      title="Save entry (⌘/Ctrl+Enter)"
+      onclick={commit}
+      disabled={saving}
+    >
+      <span>{saving ? 'Saving…' : 'Save'}</span>
+      <span class="hidden items-center gap-1 text-ink/60 sm:flex">
+        <kbd class="font-mono text-xs">⌘/Ctrl</kbd>
+        <kbd class="font-mono text-xs">↵</kbd>
+      </span>
+    </button>
   </footer>
 </div>

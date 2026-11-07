@@ -12,7 +12,7 @@
     addMonths,
     startOfMonth,
     weekdayLabels,
-    shortDayLabel,
+    nearDayLabel,
   } from '../lib/date';
 
   // Bound to a local `YYYY-MM-DD` key (e.g. app.draftDateKey).
@@ -34,8 +34,9 @@
 
   const grid = $derived(monthGrid(viewMonth, app.weekStart));
 
-  // Compact, locale-aware label for the trigger, e.g. "Mon, 8 Jun 2026".
-  const triggerLabel = $derived(shortDayLabel(selected, app.dateFormat));
+  // Compact, locale-aware label for the trigger, e.g. "Mon, 8 Jun" (the year
+  // only when it isn't this one).
+  const triggerLabel = $derived(nearDayLabel(selected, app.dateFormat, today));
 
   function toggle() {
     // Re-anchor the view on the selected day each time we open.

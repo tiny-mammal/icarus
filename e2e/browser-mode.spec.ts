@@ -95,7 +95,7 @@ test('restores an autosaved draft after a reload', async ({ page }) => {
   await startWriting(page);
   await page.getByPlaceholder('Title', { exact: true }).fill('Half-written');
   await page.locator('.ProseMirror').fill('Draft body');
-  await page.getByRole('button', { name: 'Save as draft' }).click();
+  await page.getByRole('button', { name: 'Stop editing' }).click();
   await expect(page.getByText('Saved to drafts')).toBeVisible();
 
   await page.reload();
@@ -110,7 +110,7 @@ test('the top bar leaves writing actions to the open editor', async ({ page }) =
   await startPlainDiary(page);
   await startWriting(page);
   await page.getByPlaceholder('Title', { exact: true }).fill('Parked');
-  await page.getByRole('button', { name: 'Save as draft' }).click();
+  await page.getByRole('button', { name: 'Stop editing' }).click();
 
   const banner = page.getByRole('banner');
   const search = page.getByRole('textbox', { name: 'Search entries' });

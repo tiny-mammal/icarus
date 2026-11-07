@@ -109,7 +109,7 @@ test('writes a new entry on the open day, including empty days', async ({ page }
   await page.waitForTimeout(350); // let the pane slide in for the screenshot
   await page.screenshot({ path: 'test-results/day-compose-header.png' });
   await page.getByRole('button', { name: 'New entry on this day' }).click();
-  await expect(page.getByRole('button', { name: /^Sat, .*20.*2026$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Sat, \D*20\b/ })).toBeVisible();
   await page.keyboard.press('Escape'); // back to reading
   await page.keyboard.press('Escape'); // close the day pane
 
@@ -119,7 +119,7 @@ test('writes a new entry on the open day, including empty days', async ({ page }
   await page.waitForTimeout(350); // let the pane slide in for the screenshot
   await page.screenshot({ path: 'test-results/day-compose-empty.png' });
   await page.getByRole('button', { name: 'Write an entry for this day' }).click();
-  await expect(page.getByRole('button', { name: /^Tue, .*16.*2026$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Tue, \D*16\b/ })).toBeVisible();
   await page.waitForTimeout(350); // let the editor settle for the screenshot
   await page.screenshot({ path: 'test-results/day-compose-editor.png' });
 });

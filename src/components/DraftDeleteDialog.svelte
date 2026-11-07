@@ -9,7 +9,7 @@
       ? (app.drafts.find((d) => d.id === app.confirmDeleteId) ?? null)
       : null,
   );
-  // Same action either way; the editor's "Discard" button gets matching words.
+  // Same action either way; deleting the draft open in the editor discards it.
   const verb = $derived(app.discardingOpenDraft ? 'Discard' : 'Delete');
 </script>
 
