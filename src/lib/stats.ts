@@ -12,6 +12,7 @@ import {
   type DateFormat,
 } from './date';
 import { isInvalidDate } from './ical';
+import { countChars } from './text-count';
 import { EMPTY_TIMELINE, buildTimeline, type DayTotal, type Timeline } from './timeline';
 
 /** The time windows the statistics modal can show. */
@@ -63,12 +64,22 @@ const MAX_RANKING = 10;
 const MAX_YEARS_FROM_TODAY = 200;
 
 /**
- * Characters that count towards the statistics: the body of an entry. Titles
- * and locations are ignored so the metric tracks actual writing volume.
+ * Characters that count towards the statistics: the visible body of an entry,
+ * counted like the editor's counter. Titles and locations are ignored so the
+ * metric tracks actual writing volume.
  */
 export function entryChars(entry: DiaryEntry): number {
-  return entry.content.length;
+  const hit = charCache.get(entry);
+  if (hit?.content === entry.content) return hit.chars;
+  const chars = countChars(entry.content);
+  charCache.set(entry, { content: entry.content, chars });
+  return chars;
 }
+
+// Counting means stripping Markdown, too slow to redo over a many-year diary
+// every time the period changes. Keyed by entry, checked against its content
+// so an edit made in place still recounts.
+const charCache = new WeakMap<DiaryEntry, { content: string; chars: number }>();
 
 /** Inclusive day range a period covers. */
 interface StatsRange {
