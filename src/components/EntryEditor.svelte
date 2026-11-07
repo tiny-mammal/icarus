@@ -122,8 +122,14 @@
     </div>
   </header>
 
-  <!-- Same paddings and type as the reader, so text stays where it was. -->
-  <div class="flex min-h-0 flex-1 flex-col px-5 pt-5 sm:px-[var(--pane-gutter)] sm:pt-6">
+  <!--
+    Same paddings and type as the reader, so text stays where it was. Like the
+    reader, title and subtitle scroll away with the body instead of staying
+    pinned, which matters on phones once the keyboard takes half the screen.
+  -->
+  <div
+    class="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-5 pt-5 [scroll-padding-block:2rem] sm:px-[var(--pane-gutter)] sm:pt-6"
+  >
     <input
       bind:this={titleEl}
       class="w-full bg-transparent text-xl font-semibold tracking-tight text-text placeholder:text-muted focus:outline-none"
@@ -141,14 +147,14 @@
 
     {#if RichEditor}
       <RichEditor
-        class="mt-4 min-h-0 w-full flex-1 cursor-text overflow-y-auto overscroll-contain pb-8"
+        class="mt-4 w-full flex-1 cursor-text pb-8"
         placeholder={bodyPlaceholder}
         focusAt={bodyFocus}
         bind:value={app.draftContent}
       />
     {:else}
       <!-- Same footprint while the editor chunk loads, so nothing jumps. -->
-      <div class="mt-4 min-h-0 w-full flex-1"></div>
+      <div class="mt-4 w-full flex-1"></div>
     {/if}
   </div>
 

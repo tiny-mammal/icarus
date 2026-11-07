@@ -1,5 +1,5 @@
 import { devices, expect, test, type CDPSession, type Page } from '@playwright/test';
-import { importPlainIcs, openSearch } from './helpers';
+import { importPlainIcs, openSearch, startPlainDiary } from './helpers';
 
 /**
  * Phone layout: the month's entries listed under a compact calendar, swipes
@@ -125,4 +125,19 @@ test('back folds the unfolded search instead of leaving the app', async ({ page 
   await expect(field).toHaveCount(0);
   await expect(icon).toHaveAttribute('aria-expanded', 'false');
   await expect(page).not.toHaveURL('about:blank');
+});
+
+test('title and subtitle scroll away with a long body while writing', async ({ page }) => {
+  await startPlainDiary(page);
+  await page.getByRole('button', { name: /^New entry$/ }).click();
+  const title = page.getByPlaceholder('Title', { exact: true });
+  await title.fill('A long day');
+  const body = page.locator('.ProseMirror');
+  await body.click();
+  for (let i = 0; i < 40; i++) await page.keyboard.press('Enter');
+  await page.keyboard.type('The last line');
+
+  // Following the caret down scrolls the whole page, header fields included.
+  await expect(body.getByText('The last line')).toBeInViewport();
+  await expect(title).not.toBeInViewport();
 });
