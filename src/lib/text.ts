@@ -5,22 +5,61 @@
  * whitespace, then clip with an ellipsis" lives in exactly one place.
  */
 
-// Block syntax at the start of a line: quotes, headings, list and task markers.
-const BLOCK_PREFIX = /^\s*(?:>\s*)*(?:#{1,6}\s+|[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)?/;
+// Block markers at the start of a line. Quotes go first, then one of these.
+const QUOTE = /^\s*(?:>\s*)*/;
+const HEADING = /^#{1,6}\s+/;
+const LIST_ITEM = /^(?:[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)/;
 // Lines that are only syntax: code fences and horizontal rules.
 const SYNTAX_LINE = /^\s*(?:`{3,}.*|~{3,}.*|(?:[-*_]\s*){3,})$/;
+// Text already ending a clause, so no comma is added after it.
+const ENDS_CLAUSE = /[.,;:!?…]$/;
+
+export interface PlainTextOptions {
+  /**
+   * Leave headings out: in a preview they are labels ("Notes"), not what was
+   * written. Kept when the body holds nothing else.
+   */
+  dropHeadings?: boolean;
+}
 
 /**
- * The readable text of a Markdown body, for previews: block markers, emphasis,
- * code ticks and link targets go, their words stay. Line breaks are kept (a
- * flatten afterwards joins them). Not a full parser: previews only need the
- * common syntax gone, and this runs for every visible row.
+ * The readable text of a Markdown body: block markers, emphasis, code ticks
+ * and link targets go, their words stay. Consecutive list items are joined
+ * with commas so they still read as a list once flattened; other lines keep
+ * their breaks. Not a full parser: previews only need the common syntax gone,
+ * and this runs for every visible row.
  */
-export function plainText(markdown: string): string {
-  return (markdown ?? '')
+export function plainText(markdown: string, { dropHeadings = false }: PlainTextOptions = {}): string {
+  const lines = (markdown ?? '')
     .split('\n')
-    .map((line) => (SYNTAX_LINE.test(line) ? '' : line.replace(BLOCK_PREFIX, '')))
-    .join('\n')
+    .filter((line) => !SYNTAX_LINE.test(line))
+    .map((line) => {
+      const text = line.replace(QUOTE, '');
+      if (HEADING.test(text)) return { kind: 'heading', text: text.replace(HEADING, '') };
+      if (LIST_ITEM.test(text)) return { kind: 'item', text: text.replace(LIST_ITEM, '') };
+      return { kind: 'text', text };
+    })
+    .filter((line) => line.text.trim());
+  const kept =
+    dropHeadings && lines.some((line) => line.kind !== 'heading')
+      ? lines.filter((line) => line.kind !== 'heading')
+      : lines;
+
+  let out = '';
+  kept.forEach((line, i) => {
+    const prev = kept[i - 1];
+    if (prev) {
+      const listGoesOn = prev.kind === 'item' && line.kind === 'item';
+      out += listGoesOn && !ENDS_CLAUSE.test(prev.text.trimEnd()) ? ', ' : '\n';
+    }
+    out += line.text.trim();
+  });
+  return inlineText(out);
+}
+
+/** Drop inline Markdown (links, code, emphasis, escapes), keeping the words. */
+function inlineText(text: string): string {
+  return text
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1') // links and images keep their text
     .replace(/<((?:https?|mailto):[^>\s]+)>/g, '$1') // autolinks
     .replace(/`([^`\n]+)`/g, '$1')
@@ -45,5 +84,5 @@ export function truncateText(text: string, max: number): string {
 
 /** A one-line preview of a Markdown body, at most `max` characters. */
 export function previewText(markdown: string, max: number): string {
-  return truncateText(plainText(markdown), max);
+  return truncateText(plainText(markdown, { dropHeadings: true }), max);
 }
