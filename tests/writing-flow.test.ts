@@ -113,6 +113,7 @@ describe('writing in the day pane', () => {
     expect(await app.flushDraftNow()).toBe(true);
 
     app.requestDeleteDraft(app.draftId!);
+    expect(app.discardingOpenDraft).toBe(true);
     await app.confirmDeleteDraft();
     expect(app.editing).toBe(false);
     expect(app.selectedKey).toBeNull();

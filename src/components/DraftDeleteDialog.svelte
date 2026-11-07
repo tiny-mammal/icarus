@@ -9,12 +9,14 @@
       ? (app.drafts.find((d) => d.id === app.confirmDeleteId) ?? null)
       : null,
   );
+  // Same action either way; the editor's "Discard" button gets matching words.
+  const verb = $derived(app.discardingOpenDraft ? 'Discard' : 'Delete');
 </script>
 
 {#if draft}
   <ConfirmDialog
-    title="Delete draft?"
-    confirmLabel="Delete"
+    title="{verb} draft?"
+    confirmLabel={verb}
     onconfirm={() => app.confirmDeleteDraft()}
     oncancel={() => app.cancelDeleteDraft()}
   >

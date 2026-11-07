@@ -1180,12 +1180,19 @@ class AppStore {
   cancelDeleteDraft(): void {
     this.confirmDeleteId = null;
   }
+  /** The pending deletion targets the draft open in the editor ("Discard"). */
+  get discardingOpenDraft(): boolean {
+    return this.editing && this.confirmDeleteId !== null && this.confirmDeleteId === this.draftId;
+  }
   /** Carry out the pending deletion (both "Delete" and "Discard" land here). */
   async confirmDeleteDraft(): Promise<void> {
     const id = this.confirmDeleteId;
+    const discarding = this.discardingOpenDraft;
     this.confirmDeleteId = null;
     if (!id) return;
-    if (await this.deleteDraft(id)) this.toast('info', 'Draft deleted');
+    if (await this.deleteDraft(id)) {
+      this.toast('info', discarding ? 'Draft discarded' : 'Draft deleted');
+    }
   }
 
   /** Delete a draft; if it was open, the editor is cleared and closed. */
