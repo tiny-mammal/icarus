@@ -1,5 +1,5 @@
 import { devices, expect, test, type CDPSession, type Page } from '@playwright/test';
-import { importPlainIcs } from './helpers';
+import { importPlainIcs, openSearch } from './helpers';
 
 /**
  * Phone layout: the month's entries listed under a compact calendar, swipes
@@ -88,4 +88,41 @@ test('lists the month, swipes between months and days, and pulls sheets down', a
   const box = (await sheet.boundingBox())!;
   await drag(cdp, [200, box.y + 16], [200, box.y + 260], 320);
   await expect(sheet).toBeHidden();
+});
+
+test('search unfolds from its icon over the whole top bar', async ({ page }) => {
+  await importPlainIcs(page, DIARY_ICS);
+  const bar = page.getByRole('banner');
+  const icon = bar.getByRole('button', { name: 'Search', exact: true });
+  await expect(page.getByRole('textbox', { name: 'Search entries' })).toHaveCount(0);
+
+  const field = await openSearch(page, (target) => target.tap());
+  await expect(icon).toHaveAttribute('aria-expanded', 'true');
+  // Wider than any slot the actions would have left it.
+  const width = page.viewportSize()!.width;
+  expect((await field.boundingBox())!.width).toBeGreaterThan(width / 2);
+
+  await field.fill('walk');
+  await page.getByText('Morning walk').first().tap();
+  await expect(page.getByRole('article').getByText('Morning walk')).toBeVisible();
+  await expect(field).toHaveCount(0);
+
+  // An empty search folds back from its back arrow.
+  await openSearch(page, (target) => target.tap());
+  await bar.getByRole('button', { name: 'Close search' }).tap();
+  await expect(field).toHaveCount(0);
+  await expect(icon).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('back folds the unfolded search instead of leaving the app', async ({ page }) => {
+  await importPlainIcs(page, DIARY_ICS);
+  const icon = page.getByRole('banner').getByRole('button', { name: 'Search', exact: true });
+  const field = await openSearch(page, (target) => target.tap());
+  await field.fill('walk');
+  await expect(page.getByText('Morning walk').first()).toBeVisible();
+
+  await page.goBack();
+  await expect(field).toHaveCount(0);
+  await expect(icon).toHaveAttribute('aria-expanded', 'false');
+  await expect(page).not.toHaveURL('about:blank');
 });

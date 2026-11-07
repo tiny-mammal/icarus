@@ -6,12 +6,14 @@
   import { keyToDate, longDayLabel } from '../lib/date';
   import { truncateText } from '../lib/text';
 
-  // The list hangs below the trigger, from its right edge (the trigger sits at
-  // the right of the top bar and of the editor header).
+  // On wide screens the list hangs below the trigger, from its right edge. On
+  // phones the trigger shares the bar with other controls, so a trigger-wide
+  // anchor would push the list off-screen: there it spans the bar instead,
+  // which therefore must be positioned (`relative`).
   let {
     compact = false,
   }: {
-    /** Hide the "Drafts" label on narrow screens, leaving the icon. */
+    /** On narrow screens, an icon button with a count badge (no label). */
     compact?: boolean;
   } = $props();
 
@@ -36,9 +38,12 @@
   }
 </script>
 
-<div class="relative" use:clickOutside={() => (open = false)}>
+<div class="sm:relative" use:clickOutside={() => (open = false)}>
   <button
-    class="flex items-center gap-1.5 rounded-lg border border-slate px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text"
+    class="relative flex shrink-0 items-center justify-center gap-1.5 rounded-lg text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text
+      {compact
+      ? 'h-10 w-10 sm:h-auto sm:w-auto sm:border sm:border-slate sm:px-2.5 sm:py-1.5'
+      : 'border border-slate px-2.5 py-1.5'}"
     onclick={() => (open = !open)}
     aria-haspopup="dialog"
     aria-expanded={open}
@@ -47,7 +52,10 @@
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5-.3.3-.5.7-.5 1.1V18c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8c.4 0 .8-.2 1.1-.5.3-.3.5-.7.5-1.1V6.5L15.5 2z"/><path d="M3 7.6v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5H15"/><path d="M15 2v5h5"/></svg>
     <span class={compact ? 'hidden sm:inline' : ''}>Drafts</span>
     {#if app.drafts.length > 0}
-      <span class="grid h-4 min-w-4 place-items-center rounded-full bg-slate px-1 text-[0.65rem] font-semibold tabular-nums text-text">
+      <span
+        class="grid h-4 min-w-4 place-items-center rounded-full bg-slate px-1 text-[0.65rem] font-semibold tabular-nums text-text
+          {compact ? 'absolute right-0.5 top-0.5 sm:static' : ''}"
+      >
         {app.drafts.length}
       </span>
     {/if}
@@ -55,8 +63,8 @@
 
   {#if open}
     <div
-      class="absolute z-popover max-h-80 w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-slate bg-surface p-1.5 shadow-2xl shadow-black/50
-        right-0 top-full mt-2 origin-top-right"
+      class="absolute inset-x-3 top-full z-popover mt-2 max-h-80 origin-top overflow-y-auto rounded-2xl border border-slate bg-surface p-1.5 shadow-2xl shadow-black/50
+        sm:inset-x-auto sm:right-0 sm:w-80 sm:origin-top-right"
       transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
       use:trapFocus={() => (open = false)}
       role="dialog"

@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { Buffer } from 'node:buffer';
 
 /** Shared onboarding steps for the browser-mode E2E suites. */
@@ -30,7 +30,23 @@ export async function pickIcs(page: Page, ics: string, name = 'diary.ics'): Prom
 export async function importPlainIcs(page: Page, ics: string, name?: string): Promise<void> {
   await pickIcs(page, ics, name);
   await chooseNoPassword(page, 'Import without password');
-  await expect(page.getByPlaceholder('Search entries…')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Statistics' })).toBeVisible();
+}
+
+/**
+ * The search field. Phones fold it into an icon in the top bar, so it is
+ * unfolded first there (with `press`, to tap on touch devices).
+ */
+export async function openSearch(
+  page: Page,
+  press: (target: Locator) => Promise<void> = (target) => target.click(),
+): Promise<Locator> {
+  const field = page.getByRole('textbox', { name: 'Search entries' });
+  const icon = page.getByRole('banner').getByRole('button', { name: 'Search', exact: true });
+  if (await icon.isVisible()) await press(icon);
+  else await press(field);
+  await expect(field).toBeFocused();
+  return field;
 }
 
 /**

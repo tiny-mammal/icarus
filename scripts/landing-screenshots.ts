@@ -62,7 +62,7 @@ async function importDiary(page: Page, password?: string): Promise<void> {
     await page.getByText("Don't encrypt", { exact: true }).click();
     await page.getByRole('button', { name: 'Import without password' }).click();
   }
-  await page.getByPlaceholder('Search entries…').waitFor();
+  await page.getByRole('button', { name: 'Statistics' }).waitFor();
   await settle(page);
 }
 
@@ -116,7 +116,7 @@ try {
     await page.keyboard.press('Escape');
     await settle(page);
 
-    await page.getByPlaceholder('Search entries…').fill('Ana');
+    await page.getByRole('textbox', { name: 'Search entries' }).fill('Ana');
     await settle(page, 600);
     await shot(page, 'search');
     await page.keyboard.press('Escape');

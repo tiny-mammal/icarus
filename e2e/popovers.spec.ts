@@ -1,5 +1,5 @@
 import { devices, expect, test, type Locator } from '@playwright/test';
-import { hideToasts, startPlainDiary } from './helpers';
+import { hideToasts, startPlainDiary, openSearch } from './helpers';
 
 for (const touch of [false, true]) {
   test.describe(touch ? 'touch popovers' : 'mouse popovers', () => {
@@ -40,7 +40,7 @@ for (const touch of [false, true]) {
       await expect(trigger).toContainText('January');
 
       await press(trigger);
-      await press(page.getByPlaceholder('Search entries…'));
+      await openSearch(page, press);
       await expectClosed(trigger, picker);
 
       await trigger.focus();
@@ -101,11 +101,16 @@ for (const touch of [false, true]) {
 
       await press(trigger);
       await expect(menu.getByText('Popover regression')).toBeVisible();
+      // The list stays on-screen, even on phones where the trigger sits mid-bar.
+      const box = await menu.boundingBox();
+      const width = page.viewportSize()!.width;
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
       await press(trigger);
       await expectClosed(trigger, menu);
 
       await press(trigger);
-      await press(page.getByPlaceholder('Search entries…'));
+      await openSearch(page, press);
       await expectClosed(trigger, menu);
     });
 
@@ -118,7 +123,7 @@ for (const touch of [false, true]) {
       await page.getByRole('button', { name: 'New entry', exact: true }).click();
       await page.getByPlaceholder('Title', { exact: true }).fill('Read me');
       await page.getByRole('button', { name: 'Save entry' }).click();
-      await page.getByPlaceholder('Search entries…').fill('Read me');
+      await (await openSearch(page)).fill('Read me');
       await page.getByText('Read me').first().click();
       await expect(page.getByRole('complementary').getByRole('article')).toContainText('Read me');
 
@@ -140,7 +145,7 @@ for (const touch of [false, true]) {
       await expectOnTop(page.getByRole('dialog', { name: 'Saved drafts' }));
       await press(drafts);
 
-      await page.getByPlaceholder('Search entries…').fill('zzzz');
+      await (await openSearch(page)).fill('zzzz');
       await expectOnTop(page.getByText('No matching entries'));
     });
   });

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { importPlainIcs } from './helpers';
+import { importPlainIcs, openSearch } from './helpers';
 import wheelFixture from '../tests/fixtures/wheel-windows-chrome.json' with { type: 'json' };
 
 /**
@@ -34,7 +34,7 @@ async function importDiary(page: Page): Promise<void> {
 }
 
 async function openFromSearch(page: Page, title: string): Promise<void> {
-  await page.getByPlaceholder('Search entries…').fill(title);
+  await (await openSearch(page)).fill(title);
   await page.getByText(title).first().click();
   await expect(page.getByRole('article').getByText(title)).toBeVisible();
 }

@@ -96,8 +96,9 @@
   role="form"
   aria-label={app.editingUid ? 'Edit entry' : 'New entry'}
 >
+  <!-- Positioned: on phones the drafts list spans this bar. -->
   <header
-    class="flex items-center justify-between gap-2 border-b border-slate py-3 pr-2 pl-4 sm:gap-3 sm:py-5 sm:pr-[var(--pane-gutter)] sm:pl-[calc(var(--pane-gutter)-0.25rem)]"
+    class="relative flex items-center justify-between gap-2 border-b border-slate py-3 pr-2 pl-4 sm:gap-3 sm:py-5 sm:pr-[var(--pane-gutter)] sm:pl-[calc(var(--pane-gutter)-0.25rem)]"
   >
     <div class="flex min-w-0 items-center gap-2">
       <DatePicker bind:value={app.draftDateKey} align="left" />

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { importPlainIcs, startPlainDiary } from './helpers';
+import { importPlainIcs, startPlainDiary, openSearch } from './helpers';
 
 /**
  * End-to-end coverage for the browser storage backend: the app must detect the
@@ -113,7 +113,7 @@ test('the top bar leaves writing actions to the open editor', async ({ page }) =
   await page.getByRole('button', { name: 'Save as draft' }).click();
 
   const banner = page.getByRole('banner');
-  const search = page.getByPlaceholder('Search entries…');
+  const search = page.getByRole('textbox', { name: 'Search entries' });
   await expect(banner.getByRole('button', { name: 'Drafts', exact: true })).toBeVisible();
   const searchBefore = await search.boundingBox();
 
@@ -128,12 +128,12 @@ test('the top bar leaves writing actions to the open editor', async ({ page }) =
 test('imports an .ics file into browser storage', async ({ page }) => {
   await importPlainIcs(page, IMPORTED_ICS, 'imported.ics');
 
-  await page.getByPlaceholder('Search entries…').fill('Imported entry');
+  await (await openSearch(page)).fill('Imported entry');
   await expect(page.getByText('Imported entry').first()).toBeVisible();
 
   // The import was copied into the browser vault, so it survives a reload.
   await page.reload();
-  await page.getByPlaceholder('Search entries…').fill('Imported entry');
+  await (await openSearch(page)).fill('Imported entry');
   await expect(page.getByText('Imported entry').first()).toBeVisible();
 });
 

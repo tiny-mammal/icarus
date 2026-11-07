@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { pickIcs, startPlainDiary } from './helpers';
+import { pickIcs, startPlainDiary, openSearch } from './helpers';
 
 /**
  * Password protection in browser mode. Web Crypto only exists in secure
@@ -138,7 +138,7 @@ test('imports an .ics straight into an encrypted diary', async ({ page }) => {
   await expect(page.getByText(/The .ics you imported is unchanged/)).toBeVisible();
   await page.getByRole('button', { name: 'Open diary' }).click();
 
-  await page.getByPlaceholder('Search entries…').fill('confession');
+  await (await openSearch(page)).fill('confession');
   await expect(page.getByText('Imported confession').first()).toBeVisible();
   expect(await storedData(page)).not.toContain('confession');
 });
