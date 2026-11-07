@@ -23,6 +23,7 @@
   import { isPlainShortcut } from './lib/keyboard';
   import { dismissBootSplash } from './lib/boot-splash';
   import { gestureLog } from './lib/gesture-log';
+  import { syncBackButton, layerOpen } from './lib/back-button.svelte';
 
   // Development only (`?debug=gestures`): the gesture recorder, loaded on demand.
   const gestureRecorder =
@@ -46,6 +47,9 @@
 
   onMount(() => {
     app.init();
+
+    // Back closes the open dialog, search, editor or day instead of the app.
+    const stopBack = syncBackButton(() => layerOpen() || app.overlayOpen || app.selectedKey !== null);
 
     // Global Escape closes the top-most layer (writing goes back to reading);
     // N starts writing from the calendar (an open day pane handles N itself,
@@ -107,6 +111,7 @@
       window.removeEventListener('pagehide', flush);
       window.removeEventListener('beforeunload', flush);
       unlistenClose?.();
+      stopBack();
     };
   });
 </script>

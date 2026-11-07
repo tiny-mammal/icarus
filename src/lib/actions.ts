@@ -1,4 +1,5 @@
 /** Small reusable Svelte actions for the UI's tactile interactions. */
+import { holdLayer } from './back-button.svelte';
 
 /**
  * Call `onOutside` when a pointer press lands outside `node` — used to dismiss
@@ -88,6 +89,8 @@ export function trapFocus(
   };
 
   node.addEventListener('keydown', onKeydown);
+  // Back closes it too (as Escape), instead of leaving the app.
+  const releaseLayer = holdLayer(node);
   // Move focus in right away: Escape only closes from inside, so deferring it
   // would drop a keypress that follows the opening one. Retry on the next frame
   // for content that only becomes focusable once laid out.
@@ -100,6 +103,7 @@ export function trapFocus(
     },
     destroy() {
       node.removeEventListener('keydown', onKeydown);
+      releaseLayer();
       // Restore focus to whatever opened the popover, if it's still around.
       previouslyFocused?.focus?.();
     },

@@ -7,6 +7,7 @@
   import DraftsMenu from './DraftsMenu.svelte';
   import WriteButton from './WriteButton.svelte';
   import { updates } from '../lib/updates.svelte';
+  import { holdLayer } from '../lib/back-button.svelte';
 
   let query = $state('');
   let focused = $state(false);
@@ -17,6 +18,11 @@
   const hits = $derived<SearchHit[]>(search(query));
   const shownHits = $derived(hits.slice(0, shownCount));
   const open = $derived(focused && query.trim().length > 0);
+
+  // Back closes the results (Escape on the input) instead of the app.
+  $effect(() => {
+    if (open && inputEl) return holdLayer(inputEl);
+  });
 
   // Keep the active row in range as results change.
   $effect(() => {

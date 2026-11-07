@@ -1,8 +1,10 @@
 import { defineConfig } from 'vitest/config';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 
-// A lean, plugin-free config so unit tests for the pure TS modules
-// (ical parsing, date helpers) run fast in a Node environment.
+// Unit tests for the TS modules run in Node. The Svelte plugin compiles runes
+// in `*.svelte.ts` modules (e.g. reactive state shared with actions).
 export default defineConfig({
+  plugins: [svelte()],
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
