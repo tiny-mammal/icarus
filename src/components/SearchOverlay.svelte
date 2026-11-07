@@ -12,6 +12,8 @@
     total,
     activeIndex,
     query,
+    oldestFirst,
+    ontoggleorder,
     onloadmore,
     onselect,
   }: {
@@ -19,6 +21,8 @@
     total: number;
     activeIndex: number;
     query: string;
+    oldestFirst: boolean;
+    ontoggleorder: () => void;
     onloadmore: () => void;
     onselect: (entry: DiaryEntry) => void;
   } = $props();
@@ -36,9 +40,10 @@
     if (remaining < listEl.clientHeight) onloadmore();
   }
 
-  // A new query starts at the top.
+  // A new query or order starts at the top.
   $effect(() => {
     void query;
+    void oldestFirst;
     if (listEl) listEl.scrollTop = 0;
   });
 
@@ -64,15 +69,29 @@
 
 <!-- Phones: spans the screen under the top bar; wider: hangs from the field. -->
 <div
-  class="fixed inset-x-3 top-14 z-popover mt-2 overflow-hidden rounded-xl border border-slate bg-surface shadow-2xl shadow-black/50 sm:absolute sm:inset-x-auto sm:left-1/2 sm:top-full sm:w-full sm:[transform:translateX(-50%)]"
+  class="fixed inset-x-3 top-14 z-popover mt-2 flex max-h-[min(60vh,calc(var(--screen-h)-6rem))] flex-col overflow-hidden rounded-xl border border-slate bg-surface shadow-2xl shadow-black/50 sm:absolute sm:inset-x-auto sm:left-1/2 sm:top-full sm:w-full sm:[transform:translateX(-50%)]"
   transition:fly={{ y: -6, duration: 150 }}
 >
   {#if hits.length === 0}
     <div class="px-4 py-6 text-center text-sm text-muted">No matching entries</div>
   {:else}
+    {#if total > 1}
+      <div class="flex shrink-0 items-center justify-between gap-3 border-b border-slate py-1 pl-4 pr-1.5 text-[0.7rem] text-muted">
+        <span>{total} results</span>
+        <button
+          class="flex h-8 items-center gap-1.5 rounded-md px-2.5 transition-colors hover:bg-slate hover:text-text sm:h-7"
+          aria-label={oldestFirst ? 'Oldest first, show newest first' : 'Newest first, show oldest first'}
+          onmousedown={(e) => e.preventDefault()}
+          onclick={ontoggleorder}
+        >
+          <svg class="transition-transform {oldestFirst ? 'rotate-180' : ''}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+          {oldestFirst ? 'Oldest first' : 'Newest first'}
+        </button>
+      </div>
+    {/if}
     <ul
       bind:this={listEl}
-      class="max-h-[min(60vh,calc(var(--screen-h)-6rem))] overflow-y-auto overscroll-contain py-1"
+      class="min-h-0 overflow-y-auto overscroll-contain py-1"
       onscroll={loadMoreIfNeeded}
     >
       {#each hits as hit, i (hit.entry.uid)}

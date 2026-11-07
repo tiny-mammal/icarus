@@ -44,3 +44,22 @@ test('scrolling through many results loads more without jumping back up', async 
   await expect(list.getByText(/Showing 50 of 300 results/)).toBeVisible();
   await expect.poll(() => list.evaluate((el) => el.scrollTop)).toBeLessThan(10);
 });
+
+test('results can be listed oldest first, and go back to newest once left', async ({ page }) => {
+  await importPlainIcs(page, manyMatchesIcs(3));
+  const field = await openSearch(page);
+  await field.fill('walk');
+
+  const titles = page.getByRole('banner').getByRole('listitem');
+  await expect(titles.first()).toContainText('Evening walk 2');
+  await page.getByRole('button', { name: 'Newest first, show oldest first' }).click();
+  await expect(titles.first()).toContainText('Evening walk 0');
+  await expect(field).toBeFocused();
+
+  // Enter opens the active (now oldest) row.
+  await field.press('Enter');
+  await expect(page.getByRole('complementary').getByRole('article')).toContainText('Evening walk 0');
+
+  await (await openSearch(page)).fill('walk');
+  await expect(titles.first()).toContainText('Evening walk 2');
+});

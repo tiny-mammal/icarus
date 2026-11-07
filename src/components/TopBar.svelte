@@ -36,7 +36,15 @@
     return () => clearTimeout(timer);
   });
 
-  const hits = $derived<SearchHit[]>(search(app.entries, searched));
+  // Newest first suits most searches; oldest first follows a story from its
+  // start. Back to newest whenever the search is left.
+  let oldestFirst = $state(false);
+  $effect(() => {
+    if (!searched.trim()) oldestFirst = false;
+  });
+
+  const newestHits = $derived<SearchHit[]>(search(app.entries, searched));
+  const hits = $derived(oldestFirst ? [...newestHits].reverse() : newestHits);
   const shownHits = $derived(hits.slice(0, shownCount));
   // Follows the searched query, so results never flash "no matches" while the
   // search catches up with the field.
@@ -51,6 +59,7 @@
   // Keep the active row in range as results change.
   $effect(() => {
     void searched;
+    void oldestFirst;
     activeIndex = 0;
     shownCount = 50;
   });
@@ -203,6 +212,8 @@
       total={hits.length}
       {activeIndex}
       query={searched}
+      {oldestFirst}
+      ontoggleorder={() => (oldestFirst = !oldestFirst)}
       onloadmore={showMore}
       onselect={choose}
     />
