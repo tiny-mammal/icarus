@@ -19,8 +19,9 @@ Install the browser once with `pnpm exec playwright install chromium`.
 The suite runs on a non-loopback HTTP address on purpose, because the browser
 app has to keep working on plain-HTTP LAN addresses where secure-context APIs
 are missing. Encryption tests need a secure context, so they only run with
-`ICARUS_E2E_HOST=127.0.0.1` (as CI does). `ICARUS_E2E_PORT` picks another
-port.
+`ICARUS_E2E_HOST=127.0.0.1` (as CI does). Each checkout runs its own dev
+server on a stable port derived from its path (20000–29999), so parallel
+worktrees never test each other's code; `ICARUS_E2E_PORT` overrides it.
 
 To reach a dev server over HTTPS from other devices, use `tailscale serve` and
 `ICARUS_ALLOWED_HOSTS=.ts.net pnpm dev --host`.

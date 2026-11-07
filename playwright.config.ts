@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { createHash } from 'node:crypto';
 import os from 'node:os';
 
 /**
@@ -10,9 +11,15 @@ import os from 'node:os';
  * backend must degrade gracefully. Override the address with `ICARUS_E2E_HOST`
  * when the host to use differs from the one the dev server is bound to.
  */
-// Override with `ICARUS_E2E_PORT` when another checkout's dev server owns 1420
-// (otherwise Playwright would silently reuse it and test the wrong code).
-const PORT = Number(process.env.ICARUS_E2E_PORT) || 1420;
+// Each checkout gets its own stable port, derived from its path, so Playwright
+// never silently reuses another worktree's dev server (and tests the wrong
+// code) on the shared default 1420. `ICARUS_E2E_PORT` overrides it.
+function checkoutPort(): number {
+  const hash = createHash('sha256').update(import.meta.dirname).digest();
+  return 20_000 + (hash.readUInt16BE(0) % 10_000);
+}
+
+const PORT = Number(process.env.ICARUS_E2E_PORT) || checkoutPort();
 
 function nonLoopbackHost(): string {
   const addresses = Object.values(os.networkInterfaces())
