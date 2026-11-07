@@ -4,7 +4,7 @@
   import { app } from '../lib/store.svelte';
   import { clickOutside, trapFocus } from '../lib/actions';
   import { keyToDate, longDayLabel } from '../lib/date';
-  import { truncateText } from '../lib/text';
+  import { previewText } from '../lib/text';
 
   // On wide screens the list hangs below the trigger, from its right edge. On
   // phones the trigger shares the bar with other controls, so a trigger-wide
@@ -24,7 +24,7 @@
     [...app.drafts].sort((a, b) => b.updatedAt - a.updatedAt),
   );
 
-  const preview = (text: string) => truncateText(text, 80);
+  const preview = (text: string) => previewText(text, 80);
 
   async function choose(id: string) {
     await app.openDraft(id);

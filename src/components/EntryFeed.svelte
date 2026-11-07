@@ -11,7 +11,7 @@
     rowAt,
     rowForDay,
   } from '../lib/feed';
-  import { truncateText } from '../lib/text';
+  import { previewText } from '../lib/text';
   import type { DiaryEntry } from '../lib/types';
 
   /**
@@ -104,7 +104,7 @@
               </h2>
             {:else}
               {@const day = row.entry.date}
-              {@const preview = [row.entry.location, truncateText(row.entry.content, 200)]
+              {@const preview = [row.entry.location, previewText(row.entry.content, 200)]
                 .filter(Boolean)
                 .join(' · ')}
               <div

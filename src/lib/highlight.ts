@@ -10,7 +10,7 @@
  * accents are asymmetric — an unaccented query letter matches any accented
  * variant, while an accented one only matches itself. `ñ` is its own letter.
  */
-import { flattenText, truncateText } from './text';
+import { flattenText, plainText, truncateText } from './text';
 
 const HL_CLASS = 'search-hl';
 
@@ -171,7 +171,7 @@ export function countMatches(text: string, terms: string[]): number {
  * lines). Falls back to the start of the text when nothing matches literally.
  */
 export function snippetAround(text: string, terms: string[], radius = 70): string {
-  const clean = flattenText(text);
+  const clean = flattenText(plainText(text));
   if (!clean) return '';
   const match = matchRanges(clean, terms)[0];
   if (!match) return truncateText(clean, radius * 2);

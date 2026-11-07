@@ -135,7 +135,7 @@
       <DayPane />
     </main>
     {#if viewport.compact && app.calendarOpen}
-      <Modal title="Calendar" onclose={() => (app.calendarOpen = false)} bodyClass="">
+      <Modal title="Calendar" titleHidden onclose={() => (app.calendarOpen = false)} bodyClass="">
         <Calendar />
       </Modal>
     {/if}

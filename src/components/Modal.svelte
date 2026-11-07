@@ -20,6 +20,7 @@
    */
   let {
     title,
+    titleHidden = false,
     subtitle,
     onclose,
     locked = false,
@@ -31,6 +32,12 @@
     children,
   }: {
     title: string;
+    /**
+     * Keep the title for screen readers only, for content that heads itself
+     * (e.g. the calendar's month). Drops the header row, Close included: the
+     * backdrop, Escape, back and the pull-down still dismiss it.
+     */
+    titleHidden?: boolean;
     /** Secondary line under the title, e.g. progress through a multi-step flow. */
     subtitle?: string;
     onclose: () => void;
@@ -101,29 +108,33 @@
     tabindex="-1"
   >
     <div
-      class="shrink-0 touch-none px-6 pt-2.5 sm:touch-auto sm:pt-5 {divided ? 'border-b border-slate pb-4' : 'pb-4'}"
+      class="shrink-0 touch-none px-6 pt-2.5 sm:touch-auto sm:pt-5 {titleHidden ? 'pb-3' : divided ? 'border-b border-slate pb-4' : 'pb-4'}"
       use:dragToDismiss={{ sheet: card, ondismiss: close, enabled: viewport.compact && !locked }}
     >
       <!-- Grab handle: phones only, where the card is a pull-down sheet. -->
-      <div class="mx-auto mb-3 h-1 w-9 rounded-full bg-faint sm:hidden" aria-hidden="true"></div>
-      <div class="flex items-center justify-between gap-4">
-        <div class="min-w-0">
-          <h2 id={titleId} class="text-base font-semibold tracking-tight text-text">{title}</h2>
-          {#if subtitle}<p class="mt-0.5 text-xs text-muted">{subtitle}</p>{/if}
+      <div class="mx-auto h-1 w-9 rounded-full bg-faint sm:hidden {titleHidden ? '' : 'mb-3'}" aria-hidden="true"></div>
+      {#if titleHidden}
+        <h2 id={titleId} class="sr-only">{title}</h2>
+      {:else}
+        <div class="flex items-center justify-between gap-4">
+          <div class="min-w-0">
+            <h2 id={titleId} class="text-base font-semibold tracking-tight text-text">{title}</h2>
+            {#if subtitle}<p class="mt-0.5 text-xs text-muted">{subtitle}</p>{/if}
+          </div>
+          <div class="-mr-1.5 flex shrink-0 items-center gap-2">
+            {@render actions?.()}
+            {#if !locked}
+              <button
+                class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
+                aria-label="Close"
+                onclick={close}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            {/if}
+          </div>
         </div>
-        <div class="-mr-1.5 flex shrink-0 items-center gap-2">
-          {@render actions?.()}
-          {#if !locked}
-            <button
-              class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
-              aria-label="Close"
-              onclick={close}
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-          {/if}
-        </div>
-      </div>
+      {/if}
     </div>
     <div
       class="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 {divided ? 'pt-5' : ''} {bodyClass}"
