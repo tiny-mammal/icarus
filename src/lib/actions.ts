@@ -104,8 +104,13 @@ export function trapFocus(
     destroy() {
       node.removeEventListener('keydown', onKeydown);
       releaseLayer();
-      // Restore focus to whatever opened the popover, if it's still around.
-      previouslyFocused?.focus?.();
+      // Restore focus to whatever opened the popover, if it's still around and
+      // focus hasn't gone elsewhere: this runs after the closing transition,
+      // by when the user may have moved on (e.g. tapped the search field).
+      const active = document.activeElement;
+      if (!active || active === document.body || node.contains(active)) {
+        previouslyFocused?.focus?.();
+      }
     },
   };
 }

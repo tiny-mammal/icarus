@@ -36,3 +36,33 @@ describe('back button layers', () => {
     el.remove();
   });
 });
+
+describe('trapFocus', () => {
+  function setup() {
+    const trigger = document.createElement('button');
+    const other = document.createElement('input');
+    const popover = document.createElement('div');
+    popover.innerHTML = '<button>Inside</button>';
+    document.body.append(trigger, other, popover);
+    trigger.focus();
+    const action = trapFocus(popover);
+    popover.querySelector('button')!.focus();
+    const cleanup = () => [trigger, other, popover].forEach((el) => el.remove());
+    return { trigger, other, popover, action, cleanup };
+  }
+
+  it('returns focus to the trigger on close', () => {
+    const { trigger, action, cleanup } = setup();
+    action.destroy();
+    expect(document.activeElement).toBe(trigger);
+    cleanup();
+  });
+
+  it('leaves focus alone if it moved elsewhere while the popover was closing', () => {
+    const { other, action, cleanup } = setup();
+    other.focus();
+    action.destroy();
+    expect(document.activeElement).toBe(other);
+    cleanup();
+  });
+});
