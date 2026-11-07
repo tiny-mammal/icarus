@@ -36,7 +36,9 @@
 
   const first = $derived(Math.max(0, rowAt(offsets, scrollTop) - OVERSCAN));
   const last = $derived(Math.min(rows.length, rowAt(offsets, scrollTop + viewHeight) + OVERSCAN + 1));
-  const visible = $derived(rows.slice(first, last).map((row, i) => ({ row, index: first + i })));
+  // The rows themselves, not wrappers: a row that stays on screen while the
+  // window moves is then left alone instead of rebuilding its preview.
+  const visible = $derived(rows.slice(first, last));
 
   // The pinned header shows the month at the top of the list, and the next
   // month's header pushes it up as it arrives.
@@ -93,7 +95,8 @@
       </div>
     {:else}
       <ol class="relative" style="height: {total}px">
-        {#each visible as { row, index } (row.kind + row.key)}
+        {#each visible as row, i (row.kind + row.key)}
+          {@const index = first + i}
           <li
             class="absolute inset-x-0 top-0"
             style="height: {row.kind === 'month' ? monthPx : entryPx}px; transform: translateY({offsets[index]}px)"
