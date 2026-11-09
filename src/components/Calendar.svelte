@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import { tick } from 'svelte';
   import { scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
@@ -273,7 +274,7 @@
             {#each shown as entry (entry.uid)}
               <li
                 class="h-[1.125rem] shrink-0 truncate rounded-md bg-slate px-1.5 text-[0.7rem] leading-[1.125rem] text-text/80 transition-colors group-hover:text-text"
-                title={entryTitle(entry)}
+                use:tooltip={entryTitle(entry)}
               >
                 {entryTitle(entry)}
               </li>

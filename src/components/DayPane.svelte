@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
@@ -190,7 +191,7 @@
           <button
             class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
             aria-label="New entry on this day"
-            title="New entry on this day (N)"
+            use:tooltip={{ label: 'New entry on this day', keys: ['N'] }}
             onclick={writeHere}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -199,7 +200,7 @@
             <button
               class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
               aria-label="Edit entry"
-              title="Edit entry (E) — or tap the text"
+              use:tooltip={{ label: 'Edit entry — or tap the text', keys: ['E'] }}
               onclick={() => entry && edit(entry, { field: 'body', at: 'end' })}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -207,7 +208,7 @@
             <button
               class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-red-400 sm:h-8 sm:w-8"
               aria-label="Delete entry"
-              title="Delete entry"
+              use:tooltip={'Delete entry'}
               onclick={() => entry && app.requestDeleteEntry(entry.uid)}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>

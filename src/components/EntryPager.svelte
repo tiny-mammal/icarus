@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import type { DiaryEntry } from '../lib/types';
 
   // Compact pager for stepping through the entries of a single day. Kept
@@ -16,7 +17,7 @@
   <button
     class="grid h-6 w-6 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
     aria-label="Previous entry"
-    title="Previous entry (Shift+←)"
+    use:tooltip={{ label: 'Previous entry', keys: ['Shift', '←'] }}
     disabled={page === 0}
     onclick={() => go(-1)}
   >
@@ -39,7 +40,7 @@
   <button
     class="grid h-6 w-6 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
     aria-label="Next entry"
-    title="Next entry (Shift+→)"
+    use:tooltip={{ label: 'Next entry', keys: ['Shift', '→'] }}
     disabled={page === count - 1}
     onclick={() => go(1)}
   >

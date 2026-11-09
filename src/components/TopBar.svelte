@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import { flushSync, onMount } from 'svelte';
   import { fade, fly, type TransitionConfig } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
@@ -282,7 +283,7 @@
       <button
         class="grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text disabled:opacity-50"
         aria-label="Lock diary"
-        title="Lock diary"
+        use:tooltip={'Lock diary'}
         onclick={() => app.lock()}
         disabled={app.busy}
       >

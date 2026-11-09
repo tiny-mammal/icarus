@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import { app } from '../lib/store.svelte';
 
   // Wide screens only: let the day pane fill the window (or slide back to the
@@ -10,7 +11,7 @@
   class="hidden h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:grid"
   aria-label={label}
   aria-pressed={app.paneExpanded}
-  title="{label} (F)"
+  use:tooltip={{ label, keys: ['F'] }}
   onclick={() => (app.paneExpanded = !app.paneExpanded)}
 >
   {#if app.paneExpanded}

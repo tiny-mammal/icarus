@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import { fade } from 'svelte/transition';
   import { app } from '../lib/store.svelte';
 
@@ -20,7 +21,7 @@
   <button
     class="hidden h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-text px-3 text-sm font-medium text-ink transition-opacity hover:opacity-90 sm:flex"
     aria-label="New entry"
-    title="New entry (N)"
+    use:tooltip={{ label: 'New entry', keys: ['N'] }}
     onclick={() => app.startNewEntry()}
   >
     {@render plus(16)}

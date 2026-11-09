@@ -11,6 +11,7 @@
 </script>
 
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import { app } from '../lib/store.svelte';
   import { spellCheck } from '../lib/actions';
   import { dateKey } from '../lib/date';
@@ -127,7 +128,10 @@
       <button
         class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
         aria-label={app.editorHasChanges ? 'Minimize' : 'Close'}
-        title={app.editorHasChanges ? 'Minimize (Esc) — keep writing later from the strip' : 'Close (Esc)'}
+        use:tooltip={{
+          label: app.editorHasChanges ? 'Minimize — keep writing later from the strip' : 'Close',
+          keys: ['Esc'],
+        }}
         onclick={() => app.closeEditor()}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -197,7 +201,7 @@
     <button
       class="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-text px-4 py-2 max-[359px]:px-3 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
       aria-label="Save entry"
-      title="Save entry (⌘/Ctrl+Enter)"
+      use:tooltip={{ label: 'Save entry', keys: ['⌘/Ctrl', '↵'] }}
       onclick={commit}
       disabled={saving}
     >

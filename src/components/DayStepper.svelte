@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip, type TooltipContent } from '../lib/tooltip';
   import { app } from '../lib/store.svelte';
   import { compactDayLabel, keyToDate, longDayLabel, shortDayLabel } from '../lib/date';
 
@@ -6,10 +7,12 @@
   // with entries.
   let { date }: { date: Date } = $props();
 
-  function hint(dir: 'Previous' | 'Next', key: string | null): string {
-    if (!key) return `No ${dir === 'Previous' ? 'earlier' : 'later'} entries`;
-    const arrow = dir === 'Previous' ? '←' : '→';
-    return `${dir} day (${arrow}) · ${shortDayLabel(keyToDate(key), app.dateFormat)}`;
+  function hint(dir: 'Previous' | 'Next', key: string | null): TooltipContent {
+    if (!key) return { label: `No ${dir === 'Previous' ? 'earlier' : 'later'} entries` };
+    return {
+      label: `${dir} day · ${shortDayLabel(keyToDate(key), app.dateFormat)}`,
+      keys: [dir === 'Previous' ? '←' : '→'],
+    };
   }
 </script>
 
@@ -17,7 +20,7 @@
   <button
     class="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
     aria-label="Previous day"
-    title={hint('Previous', app.prevDayKey)}
+    use:tooltip={hint('Previous', app.prevDayKey)}
     disabled={!app.prevDayKey}
     onclick={() => app.stepDay(-1)}
   >
@@ -33,7 +36,7 @@
   <button
     class="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
     aria-label="Next day"
-    title={hint('Next', app.nextDayKey)}
+    use:tooltip={hint('Next', app.nextDayKey)}
     disabled={!app.nextDayKey}
     onclick={() => app.stepDay(1)}
   >

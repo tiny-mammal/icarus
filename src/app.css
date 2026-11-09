@@ -18,6 +18,7 @@
   --z-index-dialog: 60; /* default modal, also opened over a sheet    */
   --z-index-confirm: 70; /* confirmations, over any dialog             */
   --z-index-toast: 80; /* notifications, over everything              */
+  --z-index-hint: 90; /* hover hints on controls (lib/tooltip.ts)     */
   --z-index-debug: 100; /* developer tooling                          */
 }
 
@@ -98,6 +99,64 @@
 /* Markdown reader typography — clean, editorial, monochrome.         */
 /* ------------------------------------------------------------------ */
 @layer components {
+  /* Hover hint bubble shared by every `use:tooltip` (lib/tooltip.ts). */
+  .tooltip {
+    position: fixed;
+    z-index: var(--z-index-hint);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: min(18rem, calc(100vw - 1rem));
+    padding: 0.3125rem 0.5rem;
+    border: 1px solid var(--color-slate);
+    border-radius: 0.5rem;
+    background: color-mix(in oklab, var(--color-surface) 95%, transparent);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--color-text);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-2px);
+    transition:
+      opacity 120ms var(--ease-glide),
+      transform 120ms var(--ease-glide),
+      visibility 0s 120ms;
+  }
+  .tooltip[data-side='top'] {
+    transform: translateY(2px);
+  }
+  .tooltip[data-open] {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition:
+      opacity 120ms var(--ease-glide),
+      transform 120ms var(--ease-glide);
+  }
+  .tooltip-keys {
+    display: flex;
+    flex-shrink: 0;
+    gap: 0.25rem;
+  }
+  .tooltip kbd {
+    padding: 0 0.3125rem;
+    border: 1px solid var(--color-slate);
+    border-radius: 0.25rem;
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    line-height: 1rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tooltip {
+      transition: none;
+    }
+  }
+
   .markdown {
     color: var(--color-text);
     line-height: 1.7;
