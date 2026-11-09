@@ -149,14 +149,16 @@
     style="height: {monthPx}px"
   >
     <div class="h-full" style="transform: translateY({push}px)">
+      <!-- A chip, not a chevron: an arrow by a header reads as folding it away. -->
       <button
-        class="pointer-events-auto ml-2 flex h-full items-end gap-1.5 px-2 pb-2 text-sm font-semibold tracking-tight text-text"
+        class="group pointer-events-auto ml-2 flex h-full items-end px-2 pb-1 text-sm font-semibold tracking-tight text-text"
         aria-haspopup="dialog"
         aria-label="{monthLabel(pinnedMonth)}, open calendar"
         onclick={() => app.openCalendar(pinnedMonth)}
       >
-        {monthLabel(pinnedMonth)}
-        <svg class="mb-0.5 text-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        <span class="rounded-full bg-slate-soft px-3 py-1 transition-colors group-hover:bg-slate group-active:bg-slate">
+          {monthLabel(pinnedMonth)}
+        </span>
       </button>
     </div>
   </div>
