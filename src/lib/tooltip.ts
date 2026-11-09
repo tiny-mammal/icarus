@@ -11,6 +11,8 @@ export interface TooltipContent {
   label: string;
   /** Keyboard shortcut, one chip per key. */
   keys?: string[];
+  /** Only show while the element's own text is cut off (e.g. an ellipsis). */
+  truncatedOnly?: boolean;
 }
 
 export type TooltipOptions = string | TooltipContent | null | undefined;
@@ -120,6 +122,7 @@ export function tooltip(node: HTMLElement, options: TooltipOptions) {
   const schedule = (delay: number) => {
     clearTimeout(showTimer);
     if (!content) return;
+    if (content.truncatedOnly && node.scrollWidth <= node.clientWidth) return;
     const current = content;
     if (delay <= 0) show(node, current);
     else showTimer = setTimeout(() => show(node, current), delay);

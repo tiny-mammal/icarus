@@ -274,7 +274,7 @@
             {#each shown as entry (entry.uid)}
               <li
                 class="h-[1.125rem] shrink-0 truncate rounded-md bg-slate px-1.5 text-[0.7rem] leading-[1.125rem] text-text/80 transition-colors group-hover:text-text"
-                use:tooltip={entryTitle(entry)}
+                use:tooltip={{ label: entryTitle(entry), truncatedOnly: true }}
               >
                 {entryTitle(entry)}
               </li>
@@ -304,6 +304,7 @@
       <button
         class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
         aria-label="Previous month"
+        use:tooltip={'Previous month'}
         onclick={() => page(-1)}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -343,6 +344,7 @@
       <button
         class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
         aria-label="Next month"
+        use:tooltip={'Next month'}
         onclick={() => page(1)}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>

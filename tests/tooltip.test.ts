@@ -86,4 +86,19 @@ describe('tooltip action', () => {
     action.destroy();
     expect(isOpen()).toBe(false);
   });
+
+  it('skips truncation-only hints while the text fits', () => {
+    vi.useFakeTimers();
+    const el = button();
+    tooltip(el, { label: 'A long title', truncatedOnly: true });
+    mouse('pointerenter', el);
+    vi.advanceTimersByTime(500);
+    expect(isOpen()).toBe(false);
+
+    Object.defineProperty(el, 'scrollWidth', { value: 120 });
+    Object.defineProperty(el, 'clientWidth', { value: 80 });
+    mouse('pointerenter', el);
+    vi.advanceTimersByTime(500);
+    expect(isOpen()).toBe(true);
+  });
 });

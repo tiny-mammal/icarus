@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
@@ -88,6 +89,7 @@
       <button
         class="-mr-1 -mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text"
         aria-label={kind === 'update' ? 'Dismiss until next launch' : 'Remind me next month'}
+        use:tooltip={kind === 'update' ? 'Dismiss until next launch' : 'Remind me next month'}
         onclick={() => (kind === 'update' ? updates.snooze() : void updates.snoozeReminder())}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>

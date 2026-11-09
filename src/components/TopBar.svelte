@@ -189,6 +189,7 @@
       <button
         class="-my-2 -mr-2 grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted transition-colors hover:text-text"
         aria-label="Clear search"
+        use:tooltip={'Clear search'}
         onmousedown={(e) => e.preventDefault()}
         onclick={() => {
           query = '';
@@ -255,6 +256,7 @@
         bind:this={searchButtonEl}
         class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
         aria-label="Search"
+        use:tooltip={{ label: 'Search', keys: ['⌘/Ctrl', 'K'] }}
         aria-expanded={searchExpanded}
         onclick={expandSearch}
       >
@@ -273,6 +275,7 @@
     <button
       class="grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text"
       aria-label="Statistics"
+      use:tooltip={'Statistics'}
       onclick={() => (app.statsOpen = true)}
     >
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16v-3"/></svg>
@@ -295,6 +298,7 @@
     <button
       class="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg sm:h-8 sm:w-8 text-muted transition-colors hover:bg-slate hover:text-text"
       aria-label={updates.available ? 'Settings, update available' : 'Settings'}
+      use:tooltip={updates.available ? 'Settings · update available' : 'Settings'}
       onclick={() => (app.settingsOpen = true)}
     >
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -310,6 +314,7 @@
       <button
         class="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
         aria-label="Close search"
+        use:tooltip={{ label: 'Close search', keys: ['Esc'] }}
         onmousedown={(e) => e.preventDefault()}
         onclick={collapseSearch}
         in:fly|global={{ x: 8, duration: 360, delay: 90, easing: quintOut }}

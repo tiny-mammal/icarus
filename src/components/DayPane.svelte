@@ -218,6 +218,7 @@
           <button
             class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
             aria-label="Close"
+            use:tooltip={{ label: 'Close', keys: ['Esc'] }}
             onclick={() => app.closeDay()}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>

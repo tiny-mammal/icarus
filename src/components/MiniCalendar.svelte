@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import { tick } from 'svelte';
   import { fade } from 'svelte/transition';
   import { app } from '../lib/store.svelte';
@@ -129,6 +130,7 @@
       type="button"
       class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:invisible"
       aria-label="Previous month"
+      use:tooltip={'Previous month'}
       disabled={choosingMonth}
       onclick={() => (month = addMonths(month, -1))}
     >
@@ -149,6 +151,7 @@
       type="button"
       class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:invisible"
       aria-label="Next month"
+      use:tooltip={'Next month'}
       disabled={choosingMonth}
       onclick={() => (month = addMonths(month, 1))}
     >

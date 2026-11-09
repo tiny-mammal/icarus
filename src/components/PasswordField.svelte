@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import type { HTMLInputAttributes } from 'svelte/elements';
 
   /** A labelled password input with a show/hide toggle. */
@@ -49,6 +50,7 @@
       type="button"
       class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text"
       aria-label={visible ? 'Hide password' : 'Show password'}
+      use:tooltip={visible ? 'Hide password' : 'Show password'}
       aria-pressed={visible}
       onclick={() => (visible = !visible)}
     >

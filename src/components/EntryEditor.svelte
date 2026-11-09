@@ -201,7 +201,6 @@
     <button
       class="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-text px-4 py-2 max-[359px]:px-3 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
       aria-label="Save entry"
-      use:tooltip={{ label: 'Save entry', keys: ['⌘/Ctrl', '↵'] }}
       onclick={commit}
       disabled={saving}
     >

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tooltip } from '../lib/tooltip';
   import { monthShortLabels } from '../lib/date';
 
   /**
@@ -27,6 +28,7 @@
     type="button"
     class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
     aria-label="Previous year"
+    use:tooltip={'Previous year'}
     onclick={() => (year -= 1)}
   >
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -36,6 +38,7 @@
     type="button"
     class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
     aria-label="Next year"
+    use:tooltip={'Next year'}
     onclick={() => (year += 1)}
   >
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>

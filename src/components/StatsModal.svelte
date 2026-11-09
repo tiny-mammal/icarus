@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { tooltip } from '../lib/tooltip';
   import { app } from '../lib/store.svelte';
   import Modal from './Modal.svelte';
   import StatsPeriodSelect from './StatsPeriodSelect.svelte';
@@ -351,7 +350,6 @@
               <button
                 type="button"
                 class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-slate-soft"
-                use:tooltip={'Open this day'}
                 onclick={() => openDay(day)}
               >
                 <span class="w-5 shrink-0 font-mono text-xs tabular-nums text-muted">

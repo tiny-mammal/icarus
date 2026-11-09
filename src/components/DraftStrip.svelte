@@ -25,7 +25,6 @@
     class="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-float flex items-center gap-3 rounded-2xl border border-slate bg-surface py-2.5 pr-3 pl-2.5 text-left shadow-xl shadow-black/50 transition-colors hover:bg-slate-soft
       sm:right-5 sm:bottom-5 sm:left-auto sm:w-80"
     aria-label="Continue writing: {heading}"
-    title="Continue writing"
     onclick={() => app.resumeParked()}
     transition:fly={{ y: 24, duration: 200, easing: cubicOut }}
   >
