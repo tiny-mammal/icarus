@@ -64,6 +64,21 @@
   const plural = (n: number, one: string, many: string) =>
     `${n.toLocaleString()} ${n === 1 ? one : many}`;
 
+  // The count steps aside while the body changes, so it never ticks along
+  // with every letter, and returns after a pause (or on hover). Keyed on the
+  // content rather than input events: ProseMirror handles Enter, Backspace
+  // and undo itself, without a native input event.
+  const TYPING_PAUSE_MS = 1500;
+  let typing = $state(false);
+  let lastContent = app.draftContent;
+  $effect(() => {
+    if (app.draftContent === lastContent) return;
+    lastContent = app.draftContent;
+    typing = true;
+    const timer = setTimeout(() => (typing = false), TYPING_PAUSE_MS);
+    return () => clearTimeout(timer);
+  });
+
   // Autosave: whenever a field changes, schedule a debounced write to the
   // persisted draft store, so an unsaved entry survives a crash, a power cut,
   // or quitting the app mid-sentence.
@@ -161,13 +176,19 @@
     <!--
       Autosave made visible, so closing feels as safe as it is ("draft", so it
       isn't mistaken for the entry being saved); then the body's length,
-      counted like the statistics.
+      counted like the statistics, hidden while typing. It fades out quickly
+      and back in slowly, so its return goes unnoticed.
     -->
-    <p class="min-w-0 truncate text-xs text-muted tabular-nums" data-testid="entry-status">
+    <p class="group min-w-0 truncate text-xs text-muted tabular-nums" data-testid="entry-status">
       {#if app.draftSaved}
-        <span class="text-text/70">✓ <span class="max-[359px]:hidden">Draft saved</span><span class="min-[360px]:hidden">Saved</span></span><span aria-hidden="true">{' · '}</span>
-      {/if}
-      {plural(words, 'word', 'words')}{' · '}{plural(chars, 'char', 'chars')}
+        <span class="text-text/70">✓ <span class="max-[359px]:hidden">Draft saved</span><span class="min-[360px]:hidden">Saved</span></span>
+      {/if}<span
+        class="transition-opacity group-hover:opacity-100 group-hover:duration-150 {typing
+          ? 'opacity-0 duration-150'
+          : 'duration-700'}"
+        data-testid="entry-count"
+        >{#if app.draftSaved}<span aria-hidden="true">{' · '}</span>{/if}{plural(words, 'word', 'words')}{' · '}{plural(chars, 'char', 'chars')}</span
+      >
     </p>
 
     <button
