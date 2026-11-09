@@ -1,7 +1,7 @@
 // The tooltip action drives DOM events and a shared bubble, so this suite runs in jsdom.
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { tooltip } from '../src/lib/tooltip';
+import { LONG_PRESS, tooltip } from '../src/lib/tooltip';
 
 const bubble = () => document.querySelector<HTMLElement>('[role="tooltip"]');
 const isOpen = () => bubble()?.hasAttribute('data-open') ?? false;
@@ -10,6 +10,13 @@ function mouse(type: 'pointerenter' | 'pointerleave', el: HTMLElement, pointerTy
   const e = new Event(type);
   Object.assign(e, { pointerType });
   el.dispatchEvent(e);
+}
+
+function press(type: string, el: HTMLElement, x = 0, y = 0) {
+  const e = new Event(type, { bubbles: true, cancelable: true });
+  Object.assign(e, { pointerType: 'touch', pointerId: 1, isPrimary: true, clientX: x, clientY: y });
+  el.dispatchEvent(e);
+  return e;
 }
 
 function button(label?: string): HTMLButtonElement {
@@ -100,5 +107,47 @@ describe('tooltip action', () => {
     mouse('pointerenter', el);
     vi.advanceTimersByTime(500);
     expect(isOpen()).toBe(true);
+  });
+
+  it('shows on a touch long press and swallows the click that follows', () => {
+    vi.useFakeTimers();
+    const el = button();
+    let clicks = 0;
+    el.addEventListener('click', () => clicks++);
+    tooltip(el, 'Statistics');
+
+    press('pointerdown', el);
+    vi.advanceTimersByTime(LONG_PRESS);
+    expect(isOpen()).toBe(true);
+    expect(press('contextmenu', el).defaultPrevented).toBe(true);
+    press('pointerup', el);
+    press('pointerleave', el);
+    el.click();
+    expect(clicks).toBe(0);
+    expect(isOpen()).toBe(true);
+
+    vi.advanceTimersByTime(2000);
+    expect(isOpen()).toBe(false);
+    el.click();
+    expect(clicks).toBe(1);
+  });
+
+  it('leaves quick taps and drags alone', () => {
+    vi.useFakeTimers();
+    const el = button();
+    let clicks = 0;
+    el.addEventListener('click', () => clicks++);
+    tooltip(el, 'Statistics');
+
+    press('pointerdown', el);
+    vi.advanceTimersByTime(100);
+    press('pointerup', el);
+    el.click();
+    expect(clicks).toBe(1);
+
+    press('pointerdown', el);
+    press('pointermove', el, 0, 30);
+    vi.advanceTimersByTime(LONG_PRESS);
+    expect(isOpen()).toBe(false);
   });
 });
