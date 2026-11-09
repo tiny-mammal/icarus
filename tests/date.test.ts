@@ -11,6 +11,7 @@ import {
   monthLabel,
   monthShortLabels,
   parseDateFormat,
+  rangeLabel,
   startOfMonth,
   weekdayLabels,
   timeAgo,
@@ -211,6 +212,14 @@ describe('date formats', () => {
   it('omits the weekday from the compact label', () => {
     expect(compactDayLabel(day, 'iso')).toBe('2026-06-08');
     expect(compactDayLabel(day, 'dmy')).toMatch(/^8 \S+ 2026$/);
+  });
+
+  it('labels a range, dropping the start year when both ends share it', () => {
+    const start = new Date(2025, 2, 3);
+    expect(rangeLabel(start, new Date(2025, 3, 14), 'dmy')).toMatch(/^3 \S+ – 14 \S+ 2025$/);
+    expect(rangeLabel(new Date(2024, 11, 30), start, 'dmy')).toMatch(/^30 \S+ 2024 – 3 \S+ 2025$/);
+    expect(rangeLabel(start, new Date(2025, 3, 14), 'iso')).toBe('2025-03-03 – 2025-04-14');
+    expect(rangeLabel(start, new Date(2025, 2, 3), 'iso')).toBe('2025-03-03');
   });
 
   it('falls back to auto for unknown stored values', () => {

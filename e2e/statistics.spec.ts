@@ -85,6 +85,47 @@ test('shows totals, chart and top days for the selected period', async ({ page }
   await expect(card(page, 'Characters')).toContainText('14');
 });
 
+/** Local `YYYY-MM-DD` for `offsetDays` from today. */
+function dayKey(offsetDays: number): string {
+  const d = icsDate(offsetDays);
+  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
+}
+
+test('a custom range narrows the statistics to the days picked', async ({ page }) => {
+  await importDiary(page);
+  await page.getByRole('button', { name: 'Statistics' }).click();
+  await dialog(page).locator('button[aria-haspopup="listbox"]').click();
+  await page.getByRole('option', { name: 'Custom range…' }).click();
+
+  // The picker opens on the period on show (all time), which ends today.
+  // Moving just the start keeps that end. Its field shows the current start,
+  // 400 days ago, so page forward to 40 days ago and pick it.
+  const picker = page.getByRole('dialog', { name: 'Custom range' });
+  await picker.getByRole('button', { name: /^From / }).click();
+  const start = picker.locator(`[data-key="${dayKey(-40)}"]`);
+  for (let i = 0; i < 15 && !(await start.isVisible()); i++) {
+    await picker.getByRole('button', { name: 'Next month' }).click();
+  }
+  await start.click();
+  await expect(picker).toContainText('41 days');
+  await expect(picker).toContainText('2 with entries');
+  await picker.getByRole('button', { name: 'Apply' }).click();
+
+  await expect(picker).toBeHidden();
+  await expect(card(page, 'Entries')).toContainText('3');
+  await expect(card(page, 'Characters')).toContainText('14');
+
+  // The custom range is now the chosen option, and Escape only closes the menu.
+  await dialog(page).locator('button[aria-haspopup="listbox"]').click();
+  await expect(page.getByRole('option', { name: /Custom range/ })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('listbox')).toBeHidden();
+  await expect(dialog(page)).toBeVisible();
+});
+
 test('a ranking row opens that day and Escape closes the modal', async ({ page }) => {
   await importDiary(page);
   await page.getByRole('button', { name: 'Statistics' }).click();

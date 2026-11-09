@@ -7,6 +7,8 @@ import type { DiaryEntry } from './types';
 import {
   addMonths,
   dateKey,
+  keyToDate,
+  rangeLabel,
   startOfDay,
   startOfMonth,
   type DateFormat,
@@ -15,16 +17,25 @@ import { isInvalidDate } from './ical';
 import { countChars } from './text-count';
 import { EMPTY_TIMELINE, buildTimeline, type DayTotal, type Timeline } from './timeline';
 
-/** The time windows the statistics modal can show. */
-export type StatsPeriod = '30d' | '12m' | 'year' | 'all';
+/** The fixed time windows the statistics modal offers. */
+export type StatsPreset = '30d' | '12m' | 'year' | 'all';
 
-export interface StatsPeriodOption {
-  value: StatsPeriod;
+/** A window the user picked by hand: local `YYYY-MM-DD` keys, both inclusive. */
+export interface CustomRange {
+  start: string;
+  end: string;
+}
+
+/** The time window the statistics cover. */
+export type StatsPeriod = StatsPreset | CustomRange;
+
+export interface StatsPresetOption {
+  value: StatsPreset;
   label: string;
 }
 
-/** Period choices, in the order they appear in the selector. */
-export const STATS_PERIODS: readonly StatsPeriodOption[] = [
+/** Preset choices, in the order they appear in the selector. */
+export const STATS_PRESETS: readonly StatsPresetOption[] = [
   { value: '30d', label: 'Last 30 days' },
   { value: '12m', label: 'Last year' },
   { value: 'year', label: 'This year' },
@@ -81,17 +92,38 @@ export function entryChars(entry: DiaryEntry): number {
 // so an edit made in place still recounts.
 const charCache = new WeakMap<DiaryEntry, { content: string; chars: number }>();
 
+export function isCustomRange(period: StatsPeriod): period is CustomRange {
+  return typeof period === 'object';
+}
+
+/** Readable name of a period, e.g. "Last 30 days" or "3 Mar – 14 Apr 2025". */
+export function periodLabel(period: StatsPeriod, format: DateFormat = 'auto'): string {
+  if (isCustomRange(period)) {
+    return rangeLabel(keyToDate(period.start), keyToDate(period.end), format);
+  }
+  return STATS_PRESETS.find((p) => p.value === period)?.label ?? '';
+}
+
 /** Inclusive day range a period covers. */
-interface StatsRange {
+export interface StatsRange {
   start: Date;
   end: Date;
 }
 
-function periodRange(
+/**
+ * The days `period` covers, or null when there is nothing to cover (all time
+ * over a diary without real dates). Custom ranges are taken as given, either
+ * way round.
+ */
+export function periodRange(
   period: StatsPeriod,
   entries: readonly DiaryEntry[],
-  now: Date,
+  now: Date = new Date(),
 ): StatsRange | null {
+  if (isCustomRange(period)) {
+    const [start, end] = [period.start, period.end].sort().map(keyToDate);
+    return { start, end };
+  }
   const today = startOfDay(now);
   if (period === '30d') {
     return {

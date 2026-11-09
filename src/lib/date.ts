@@ -144,6 +144,17 @@ export function compactDayLabel(d: Date, format: DateFormat = 'auto'): string {
   return formatDay(d, 'compact', format);
 }
 
+/**
+ * Compact label for an inclusive day range, e.g. "3 Mar – 14 Apr 2025": the
+ * start drops its year when both ends share it. A single day is just that day.
+ */
+export function rangeLabel(start: Date, end: Date, format: DateFormat = 'auto'): string {
+  if (isSameDay(start, end)) return compactDayLabel(start, format);
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const from = formatDay(start, 'compact', format, !sameYear);
+  return `${from} – ${compactDayLabel(end, format)}`;
+}
+
 /** Localised short weekday name for a specific day, e.g. "Mon". */
 export function weekdayShortLabel(d: Date): string {
   return fmtWeekdayShort.format(d);

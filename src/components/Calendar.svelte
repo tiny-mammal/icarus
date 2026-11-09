@@ -12,17 +12,16 @@
     isSameDay,
     monthGrid,
     monthLabel,
-    monthShortLabels,
     weekdayLabels,
     longDayLabel,
   } from '../lib/date';
   import { dragPager, turnPage } from '../lib/gestures';
+  import MonthYearGrid from './MonthYearGrid.svelte';
   import { viewport } from '../lib/viewport.svelte';
   import type { DiaryEntry } from '../lib/types';
 
   const today = new Date();
   const weekdays = $derived(weekdayLabels(app.weekStart));
-  const monthsShort = monthShortLabels();
 
   // --- keyboard navigation (roving tabindex) ------------------------------
   // The grid is one tab stop: a single cell is tabbable at a time and the arrow
@@ -97,15 +96,6 @@
   function pickMonth(month: number) {
     app.goToMonth(pickerYear, month);
     pickerOpen = false;
-  }
-  function isCurrentMonthCell(month: number): boolean {
-    return (
-      pickerYear === app.currentMonth.getFullYear() &&
-      month === app.currentMonth.getMonth()
-    );
-  }
-  function isThisMonthCell(month: number): boolean {
-    return pickerYear === today.getFullYear() && month === today.getMonth();
   }
 
   // --- month paging -------------------------------------------------------
@@ -340,41 +330,11 @@
           role="dialog"
           aria-label="Select month and year"
         >
-          <!-- Year stepper -->
-          <div class="mb-3 flex items-center justify-between">
-            <button
-              class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
-              aria-label="Previous year"
-              onclick={() => (pickerYear -= 1)}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            </button>
-            <span class="text-sm font-semibold tabular-nums tracking-tight text-text">{pickerYear}</span>
-            <button
-              class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
-              aria-label="Next year"
-              onclick={() => (pickerYear += 1)}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-            </button>
-          </div>
-
-          <!-- Month grid -->
-          <div class="grid grid-cols-3 gap-1.5">
-            {#each monthsShort as label, month (month)}
-              <button
-                class="rounded-lg py-2 text-sm font-medium tabular-nums transition-colors
-                  {isCurrentMonthCell(month)
-                    ? 'bg-text text-ink'
-                    : isThisMonthCell(month)
-                      ? 'text-text ring-1 ring-inset ring-faint hover:bg-slate'
-                      : 'text-muted hover:bg-slate hover:text-text'}"
-                onclick={() => pickMonth(month)}
-              >
-                {label}
-              </button>
-            {/each}
-          </div>
+          <MonthYearGrid
+            bind:year={pickerYear}
+            selected={{ year: app.currentMonth.getFullYear(), month: app.currentMonth.getMonth() }}
+            onpick={pickMonth}
+          />
         </div>
       {/if}
       </div>

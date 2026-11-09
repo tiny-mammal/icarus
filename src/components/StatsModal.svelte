@@ -1,14 +1,11 @@
 <script lang="ts">
-  import { tick } from 'svelte';
-  import { cubicOut } from 'svelte/easing';
-  import { scale } from 'svelte/transition';
   import { app } from '../lib/store.svelte';
-  import { clickOutside } from '../lib/actions';
   import Modal from './Modal.svelte';
+  import StatsPeriodSelect from './StatsPeriodSelect.svelte';
   import { shortDayLabel } from '../lib/date';
   import {
-    STATS_PERIODS,
     computeStats,
+    periodLabel,
     type DayStat,
     type StatsPeriod,
   } from '../lib/stats';
@@ -24,63 +21,10 @@
 
   const numberFmt = new Intl.NumberFormat();
 
-  // --- period selector ----------------------------------------------------
+  // --- period -------------------------------------------------------------
   let period = $state<StatsPeriod>('all');
   const stats = $derived(computeStats(app.entries, period, new Date(), app.dateFormat));
-  const periodLabel = $derived(
-    STATS_PERIODS.find((p) => p.value === period)?.label ?? '',
-  );
-
-  let selectOpen = $state(false);
-  let selectIdx = $state(0);
-  let triggerEl = $state<HTMLButtonElement | null>(null);
-  let listEl = $state<HTMLDivElement | null>(null);
-
-  function openPeriodSelect() {
-    selectIdx = Math.max(
-      0,
-      STATS_PERIODS.findIndex((p) => p.value === period),
-    );
-    selectOpen = true;
-    focusOption();
-  }
-
-  function focusOption() {
-    void tick().then(() => {
-      listEl?.querySelectorAll<HTMLElement>('[role="option"]')[selectIdx]?.focus();
-    });
-  }
-
-  function choosePeriod(value: StatsPeriod) {
-    period = value;
-    selectOpen = false;
-    triggerEl?.focus();
-  }
-
-  function onSelectKey(e: KeyboardEvent) {
-    if (!selectOpen) {
-      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        openPeriodSelect();
-      }
-      return;
-    }
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const delta = e.key === 'ArrowDown' ? 1 : -1;
-      selectIdx = (selectIdx + delta + STATS_PERIODS.length) % STATS_PERIODS.length;
-      focusOption();
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      choosePeriod(STATS_PERIODS[selectIdx].value);
-    } else if (e.key === 'Escape') {
-      // Close only the list — the modal's own Escape handler must not fire.
-      e.preventDefault();
-      e.stopPropagation();
-      selectOpen = false;
-      triggerEl?.focus();
-    }
-  }
+  const periodText = $derived(periodLabel(period, app.dateFormat));
 
   // --- chart geometry -----------------------------------------------------
   const CHART_HEIGHT = 190;
@@ -198,82 +142,7 @@
     divided
   >
     {#snippet actions()}
-      <div
-        class="relative"
-        use:clickOutside={() => (selectOpen = false)}
-        onfocusout={(e) => {
-          // Tabbing out of the picker should dismiss it, but moving focus
-          // between its own trigger and options must not.
-          if (!e.currentTarget.contains(e.relatedTarget as Node)) selectOpen = false;
-        }}
-      >
-        <button
-          bind:this={triggerEl}
-          type="button"
-          class="flex items-center gap-1.5 rounded-lg border border-slate px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text
-            {selectOpen ? 'border-faint text-text' : ''}"
-          onclick={() => (selectOpen ? (selectOpen = false) : openPeriodSelect())}
-          onkeydown={onSelectKey}
-          aria-haspopup="listbox"
-          aria-expanded={selectOpen}
-        >
-          <span>{periodLabel}</span>
-          <svg
-            class="transition-transform {selectOpen ? '[transform:rotate(180deg)]' : ''}"
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="m6 9 6 6 6-6" />
-          </svg>
-        </button>
-
-        {#if selectOpen}
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div
-            bind:this={listEl}
-            class="absolute top-full right-0 z-popover mt-2 w-44 origin-top-right rounded-xl border border-slate bg-surface p-1 shadow-2xl shadow-black/50"
-            transition:scale={{ duration: 140, start: 0.96, easing: cubicOut }}
-            role="listbox"
-            aria-label="Statistics period"
-            tabindex="-1"
-            onkeydown={onSelectKey}
-          >
-            {#each STATS_PERIODS as option, i (option.value)}
-              <button
-                type="button"
-                class="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2.5 text-left text-sm transition-colors sm:py-1.5 sm:text-xs
-                  {i === selectIdx ? 'bg-slate text-text' : 'text-muted hover:bg-slate-soft hover:text-text'}"
-                role="option"
-                aria-selected={option.value === period}
-                tabindex="-1"
-                onclick={() => choosePeriod(option.value)}
-              >
-                <span>{option.label}</span>
-                {#if option.value === period}
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
-                {/if}
-              </button>
-            {/each}
-          </div>
-        {/if}
-      </div>
+      <StatsPeriodSelect bind:period />
     {/snippet}
 
     <!-- Headline totals -->
@@ -285,7 +154,7 @@
         <p class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-text">
           {numberFmt.format(stats.totalEntries)}
         </p>
-        <p class="mt-0.5 truncate text-[0.7rem] text-muted">{periodLabel}</p>
+        <p class="mt-0.5 truncate text-[0.7rem] text-muted">{periodText}</p>
       </div>
       <div class="rounded-xl border border-slate bg-slate-soft px-3.5 py-3">
         <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">
@@ -294,7 +163,7 @@
         <p class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-text">
           {numberFmt.format(stats.totalChars)}
         </p>
-        <p class="mt-0.5 truncate text-[0.7rem] text-muted">{periodLabel}</p>
+        <p class="mt-0.5 truncate text-[0.7rem] text-muted">{periodText}</p>
       </div>
       <div class="rounded-xl border border-slate bg-slate-soft px-3.5 py-3">
         <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">
@@ -315,7 +184,7 @@
         <p class="mt-0.5 truncate text-[0.7rem] text-muted">
           {stats.bestDay
             ? `${numberFmt.format(stats.bestDay.chars)} characters`
-            : periodLabel}
+            : periodText}
         </p>
       </div>
     </div>
@@ -324,7 +193,7 @@
     <div class="mt-6">
       <div class="mb-3 flex items-end justify-between gap-4">
         <h3 class="text-sm font-medium text-text">Characters per day</h3>
-        <p class="text-[0.7rem] text-muted">{periodLabel}</p>
+        <p class="text-[0.7rem] text-muted">{periodText}</p>
       </div>
 
       {#if bins.length > 0 && stats.totalChars > 0}

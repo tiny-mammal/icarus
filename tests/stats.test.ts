@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   computeStats,
   entryChars,
+  periodLabel,
+  periodRange,
   type StatsPeriod,
 } from '../src/lib/stats';
 import { keyToDate } from '../src/lib/date';
@@ -232,6 +234,37 @@ describe('computeStats — day ranking', () => {
     ];
     const stats = computeStats(entries, '30d', NOW);
     expect(stats.ranking.map((d) => d.key)).toEqual(['2026-09-25']);
+  });
+});
+
+describe('computeStats — custom range', () => {
+  const entries = [
+    entry('2025-03-02', 'x'.repeat(7)), // the day before → outside
+    entry('2025-03-03', 'x'.repeat(3)), // first day
+    entry('2025-03-14', 'x'.repeat(4)), // last day
+    entry('2025-03-15', 'x'.repeat(9)), // the day after → outside
+  ];
+
+  it('covers both ends inclusively', () => {
+    const stats = computeStats(entries, { start: '2025-03-03', end: '2025-03-14' }, NOW);
+    expect(stats.totalEntries).toBe(2);
+    expect(stats.totalChars).toBe(7);
+    expect(stats.timeline.bins).toHaveLength(12);
+    expect(stats.timeline.bins[0].key).toBe('2025-03-03');
+    expect(stats.timeline.bins.at(-1)?.key).toBe('2025-03-14');
+  });
+
+  it('accepts the ends either way round', () => {
+    const range = periodRange({ start: '2025-03-14', end: '2025-03-03' }, [], NOW);
+    expect(range?.start).toEqual(keyToDate('2025-03-03'));
+    expect(range?.end).toEqual(keyToDate('2025-03-14'));
+  });
+
+  it('labels presets by name and custom ranges by their days', () => {
+    expect(periodLabel('30d')).toBe('Last 30 days');
+    expect(periodLabel({ start: '2025-03-03', end: '2025-03-14' }, 'iso')).toBe(
+      '2025-03-03 – 2025-03-14',
+    );
   });
 });
 
