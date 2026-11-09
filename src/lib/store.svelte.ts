@@ -90,6 +90,18 @@ export interface PendingDiary {
   replaces?: boolean;
 }
 
+/** Work in progress waiting outside the editor (see `parkedDraft`). */
+export interface ParkedDraft {
+  /** Its persisted draft, if it has been saved yet. */
+  id: string | null;
+  /** Revising a committed entry rather than writing a new one. */
+  revision: boolean;
+  title: string;
+  location: string;
+  content: string;
+  dateKey: string;
+}
+
 /** The reading state behind the editor, restored when it closes. */
 interface ReadingView {
   selectedKey: string | null;
@@ -906,25 +918,73 @@ class AppStore {
       if (id && this.drafts.some((d) => d.id === id)) void this.removeDraft(id);
       return;
     }
-    // Say where the work went: with no "save as draft" button, this is what
-    // tells the user that closing kept it.
-    if (!this.hasEditorContent()) return;
-    void this.flushDraftNow().then((saved) => {
-      if (saved) this.toast('success', 'Saved to drafts');
-    });
+    // The draft strip (`parkedDraft`) shows where the work went.
+    if (this.hasEditorContent()) void this.flushDraftNow();
   }
 
   /**
-   * Close the editor (X, Escape, back) and return to what was on screen when
-   * it opened: the calendar, or the day being read. Work in progress is kept
-   * as in `stopEditing`.
+   * The work waiting while the user reads, shown as a strip that reopens it
+   * with one tap: what was left in the editor or, when that is empty (after a
+   * restart, or once it is saved), the most recently edited draft.
+   */
+  get parkedDraft(): ParkedDraft | null {
+    if (this.editing) return null;
+    if (this.hasEditorContent()) {
+      return {
+        id: this.draftId,
+        revision: !!this.editingUid,
+        title: this.draftTitle,
+        location: this.draftLocation,
+        content: this.draftContent,
+        dateKey: this.draftDateKey,
+      };
+    }
+    const latest = this.drafts.reduce<StoredDraft | null>(
+      (newest, d) => (!newest || d.updatedAt > newest.updatedAt ? d : newest),
+      null,
+    );
+    return latest && { ...latest, revision: !!latest.editingUid };
+  }
+
+  /**
+   * Whether `uid` has changes waiting outside the editor (left in it, or in a
+   * saved draft), so its reader can say the text shown is not the latest.
+   */
+  hasPendingEdit(uid: string): boolean {
+    if (this.editingUid === uid && !this.editing && this.editorHasChanges) return true;
+    return !!findEntryDraft(this.drafts, uid);
+  }
+
+  /** Reopen the parked draft (see `parkedDraft`). */
+  resumeParked(): void {
+    const parked = this.parkedDraft;
+    if (!parked) return;
+    if (this.hasEditorContent() || !parked.id) this.resumeWriting();
+    else void this.openDraft(parked.id);
+  }
+
+  /** Start a fresh entry dated today; work in progress is kept in drafts. */
+  startNewEntry(): Promise<void> {
+    return this.newEntryOn(dateKey(new Date()));
+  }
+
+  /**
+   * Minimize the editor (its button, Escape, back) and return to what was on
+   * screen when it opened: the calendar, or the day being read. Work in
+   * progress is kept as in `stopEditing`. A changed revision never returns to
+   * its own day, where the old text would read as if the edit had been lost:
+   * it goes to the calendar, with the draft strip in sight.
    */
   closeEditor(): void {
     const origin = this.editorOrigin;
+    const revised =
+      this.editingUid && this.editorHasChanges
+        ? this.entries.find((e) => e.uid === this.editingUid)
+        : undefined;
     this.stopEditing();
     if (!origin) return;
     this.editorOrigin = null;
-    if (origin.selectedKey) {
+    if (origin.selectedKey && !(revised && dateKey(revised.date) === origin.selectedKey)) {
       this.selectedKey = origin.selectedKey;
       this.focusEntryUid = origin.focusEntryUid;
       this.searchHighlight = origin.searchHighlight;
@@ -1054,6 +1114,14 @@ class AppStore {
       devError('addSpellWord: could not persist the personal dictionary', err);
       this.toast('error', 'Could not save settings.');
     });
+  }
+
+  /**
+   * Whether leaving the editor keeps something waiting: there is content, and
+   * a revision differs from its entry.
+   */
+  get editorHasChanges(): boolean {
+    return this.hasEditorContent() && !(this.editingUid && this.revisionUnchanged());
   }
 
   /** Whether the editor holds anything worth saving. */

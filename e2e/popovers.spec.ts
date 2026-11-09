@@ -108,7 +108,7 @@ for (const touch of [false, true]) {
       await startPlainDiary(page);
       await page.getByRole('button', { name: 'New entry', exact: true }).click();
       await page.getByPlaceholder('Title', { exact: true }).fill('Popover regression');
-      await page.getByRole('button', { name: 'Stop editing' }).click();
+      await page.getByRole('button', { name: 'Minimize' }).click();
       await expect(page.getByRole('complementary')).toBeHidden();
       const trigger = page.getByRole('banner').getByRole('button', { name: 'Drafts', exact: true });
       const menu = page.getByRole('dialog', { name: 'Saved drafts' });
@@ -135,7 +135,7 @@ for (const touch of [false, true]) {
       await page.getByRole('button', { name: 'Save entry' }).click();
       await page.getByRole('button', { name: 'New entry', exact: true }).click();
       await page.getByPlaceholder('Title', { exact: true }).fill('Layering regression');
-      await page.getByRole('button', { name: 'Stop editing' }).click();
+      await page.getByRole('button', { name: 'Minimize' }).click();
       // Read a saved entry: the pane stays open and the top bar keeps Drafts.
       await (await openSearch(page)).fill('Read me');
       await searchResult(page, 'Read me').click();

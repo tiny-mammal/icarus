@@ -62,6 +62,7 @@ describe('writing in the day pane', () => {
     expect(app.editing).toBe(false);
     expect(app.editingUid).toBeNull();
     expect(app.selectedKey).toBe('2026-10-01');
+    expect(app.hasPendingEdit(entry.uid)).toBe(false);
   });
 
   it('keeps a changed revision as a draft when leaving without saving', async () => {
@@ -70,10 +71,17 @@ describe('writing in the day pane', () => {
     app.draftContent = 'Changed text';
 
     app.stopEditing();
+    // The reader is told at once, before the draft is even written.
+    expect(app.hasPendingEdit('e1')).toBe(true);
     await vi.waitFor(() => expect(app.drafts).toHaveLength(1));
     expect(app.drafts[0].editingUid).toBe('e1');
     expect(app.editingUid).toBe('e1'); // still loaded, ready to resume
     expect(app.entries[0].content).toBe('Original text');
+
+    // Saving the revision settles it.
+    app.resumeParked();
+    await app.commit();
+    expect(app.hasPendingEdit('e1')).toBe(false);
   });
 
   it('saves a new entry and returns to the calendar on its month', async () => {
@@ -93,7 +101,7 @@ describe('writing in the day pane', () => {
     expect(app.drafts).toEqual([]);
   });
 
-  it('shows when the work is saved, and says where it went on closing', async () => {
+  it('shows when the work is saved, and keeps it minimized on closing', async () => {
     const app = await openApp();
     await app.newEntryOn('2026-12-05');
     app.draftTitle = 'Half-written';
@@ -104,10 +112,33 @@ describe('writing in the day pane', () => {
 
     app.closeEditor();
     expect(app.editing).toBe(false);
-    await vi.waitFor(() =>
-      expect(app.toasts.map((t) => t.message)).toContain('Saved to drafts'),
-    );
+    expect(app.parkedDraft?.title).toBe('Half-written');
     expect(app.drafts.map((d) => d.title)).toEqual(['Half-written']);
+
+    app.resumeParked();
+    expect(app.parkedDraft).toBeNull();
+    expect(app.draftTitle).toBe('Half-written');
+  });
+
+  it('parks the latest saved draft once the editor is empty', async () => {
+    const app = await openApp();
+    await app.newEntryOn('2026-12-05');
+    app.draftTitle = 'Older';
+    // A new entry stashes the work in progress, which stays parked.
+    await app.startNewEntry();
+    app.draftTitle = 'Newer';
+    expect(await app.flushDraftNow()).toBe(true);
+    app.closeEditor();
+    expect(app.parkedDraft?.title).toBe('Newer');
+
+    // Saving it leaves the other draft waiting, which reopens from storage.
+    app.resumeParked();
+    await app.commit();
+    expect(app.hasEditorContent()).toBe(false);
+    expect(app.parkedDraft?.title).toBe('Older');
+    app.resumeParked();
+    await vi.waitFor(() => expect(app.editing).toBe(true));
+    expect(app.draftTitle).toBe('Older');
   });
 
   it('closes an empty editor quietly', async () => {
@@ -115,6 +146,7 @@ describe('writing in the day pane', () => {
     await app.newEntryOn('2026-12-05');
     app.closeEditor();
     await Promise.resolve();
+    expect(app.parkedDraft).toBeNull();
     expect(app.toasts).toEqual([]);
     expect(app.drafts).toEqual([]);
   });
@@ -196,5 +228,22 @@ describe('writing in the day pane', () => {
     expect(app.focusEntryUid).toBe('e1');
     expect(app.searchHighlight).toBe('Original');
     expect(app.currentMonth.getMonth()).toBe(9);
+  });
+
+  it('minimizing an edit leaves its day, unless nothing changed', async () => {
+    const app = await openApp();
+    app.jumpToEntry(app.entries[0]);
+
+    await app.editEntry(app.entries[0]);
+    expect(app.editorHasChanges).toBe(false); // a plain close
+    app.closeEditor();
+    expect(app.selectedKey).toBe('2026-10-01');
+
+    await app.editEntry(app.entries[0]);
+    app.draftContent = 'Changed text';
+    expect(app.editorHasChanges).toBe(true); // a minimize
+    app.closeEditor();
+    expect(app.selectedKey).toBeNull();
+    expect(app.parkedDraft?.revision).toBe(true);
   });
 });

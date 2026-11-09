@@ -9,6 +9,7 @@
   import { viewport } from './lib/viewport.svelte';
   import DayPane from './components/DayPane.svelte';
   import WriteButton from './components/WriteButton.svelte';
+  import DraftStrip from './components/DraftStrip.svelte';
   import SettingsMenu from './components/SettingsMenu.svelte';
   import StatsModal from './components/StatsModal.svelte';
   import DraftDeleteDialog from './components/DraftDeleteDialog.svelte';
@@ -54,15 +55,15 @@
     // Back closes the open dialog, search, editor or day instead of the app.
     const stopBack = syncBackButton(() => layerOpen() || app.overlayOpen || app.selectedKey !== null);
 
-    // Global Escape closes the top-most layer (writing goes back to reading);
-    // N starts writing from the calendar (an open day pane handles N itself,
+    // Global Escape closes the top-most layer (writing minimizes to reading);
+    // N starts a new entry from the calendar (an open day pane handles N itself,
     // dating the entry that day).
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === 'n' || e.key === 'N') && !e.shiftKey) {
         if (app.view !== 'main' || app.selectedKey || app.overlayOpen) return;
         if (!isPlainShortcut(e)) return;
         e.preventDefault();
-        app.resumeWriting();
+        void app.startNewEntry();
         return;
       }
       if (e.key !== 'Escape') return;
@@ -140,6 +141,7 @@
       </Modal>
     {/if}
     <WriteButton variant="floating" />
+    <DraftStrip />
     <SettingsMenu />
     <StatsModal />
     {#if app.privacyDialog}<PrivacyDialog />{/if}

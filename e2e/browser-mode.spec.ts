@@ -95,10 +95,12 @@ test('restores an autosaved draft after a reload', async ({ page }) => {
   await startWriting(page);
   await page.getByPlaceholder('Title', { exact: true }).fill('Half-written');
   await page.locator('.ProseMirror').fill('Draft body');
-  await page.getByRole('button', { name: 'Stop editing' }).click();
-  await expect(page.getByText('Saved to drafts')).toBeVisible();
+  await expect(page.getByTestId('entry-status')).toContainText('Draft saved');
+  await page.getByRole('button', { name: 'Minimize' }).click();
 
   await page.reload();
+  // It waits in the strip, and in the drafts list.
+  await expect(page.getByRole('button', { name: /^Continue writing/ })).toContainText('Half-written');
   await page.getByRole('button', { name: /Drafts/ }).click();
   const drafts = page.getByRole('dialog', { name: 'Saved drafts' });
   await expect(drafts.getByText('Half-written')).toBeVisible();
@@ -106,11 +108,60 @@ test('restores an autosaved draft after a reload', async ({ page }) => {
   await expect(page.getByPlaceholder('Title', { exact: true })).toHaveValue('Half-written');
 });
 
+test('a minimized draft waits in a strip while reading', async ({ page }) => {
+  await startPlainDiary(page);
+  await writeEntry(page, 'Read me', 'Already saved.');
+  await page.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page.getByRole('complementary')).toBeHidden();
+
+  await startWriting(page);
+  await page.getByPlaceholder('Title', { exact: true }).fill('Half-written');
+  await page.getByRole('button', { name: 'Minimize' }).click();
+  const strip = page.getByRole('button', { name: /^Continue writing/ });
+  await expect(strip).toContainText('Half-written');
+
+  // It stays while reading another entry, and reopens the work where it was.
+  await openToday(page);
+  await expect(page.getByRole('article').getByText('Read me')).toBeVisible();
+  await expect(strip).toBeVisible();
+  await strip.click();
+  await expect(page.getByPlaceholder('Title', { exact: true })).toHaveValue('Half-written');
+  await expect(strip).toBeHidden();
+
+  // Saving finishes the work, so nothing is left waiting.
+  await page.getByRole('button', { name: 'Save entry' }).click();
+  await expect(page.getByRole('complementary')).toBeHidden();
+  await expect(strip).toBeHidden();
+});
+
+test('a minimized edit is flagged on the entry it changes', async ({ page }) => {
+  await startPlainDiary(page);
+  await writeEntry(page, 'Read me', 'Already saved.');
+  await page.getByRole('button', { name: 'Edit entry' }).click();
+  await page.locator('.ProseMirror').fill('Rewritten.');
+  await page.getByRole('button', { name: 'Minimize' }).click();
+
+  // It leaves the old text behind, then flags it when the entry is read.
+  await expect(page.getByRole('complementary')).toBeHidden();
+  await expect(page.getByRole('button', { name: /^Continue writing/ })).toContainText('Editing entry');
+  await openToday(page);
+  const notice = page.getByRole('status').filter({ hasText: 'Unsaved changes to this entry' });
+  await expect(notice).toBeVisible();
+  await expect(page.getByRole('article')).toContainText('Already saved.');
+  await notice.getByRole('button', { name: 'Continue editing' }).click();
+  await expect(page.locator('.ProseMirror')).toHaveText('Rewritten.');
+
+  await page.getByRole('button', { name: 'Save entry' }).click();
+  await openToday(page);
+  await expect(page.getByRole('article')).toContainText('Rewritten.');
+  await expect(notice).toBeHidden();
+});
+
 test('the top bar leaves writing actions to the open editor', async ({ page }) => {
   await startPlainDiary(page);
   await startWriting(page);
   await page.getByPlaceholder('Title', { exact: true }).fill('Parked');
-  await page.getByRole('button', { name: 'Stop editing' }).click();
+  await page.getByRole('button', { name: 'Minimize' }).click();
 
   const banner = page.getByRole('banner');
   const search = page.getByRole('textbox', { name: 'Search entries' });

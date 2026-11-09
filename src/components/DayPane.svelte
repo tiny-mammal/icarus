@@ -231,7 +231,7 @@
       {/if}
 
       <div
-        class="min-h-0 flex-1 [touch-action:pan-y] overflow-y-auto overscroll-contain px-5 pt-5 pb-[calc(4rem+env(safe-area-inset-bottom))] [scroll-padding-block:2rem] sm:px-[var(--pane-gutter)] sm:pt-6"
+        class="min-h-0 flex-1 [touch-action:pan-y] overflow-y-auto overscroll-contain px-5 pt-5 {app.parkedDraft ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} [scroll-padding-block:2rem] sm:px-[var(--pane-gutter)] sm:pt-6"
         use:swipe={daySwipe}
       >
         {#if !entry}
@@ -246,6 +246,21 @@
             </button>
           </div>
         {:else}
+          {#if app.hasPendingEdit(entry.uid)}
+            <!-- The edit is kept apart until saved: say so, or it looks lost. -->
+            <div
+              class="mb-5 flex items-center justify-between gap-3 rounded-xl border border-slate bg-slate-soft py-2 pr-2 pl-3.5 text-sm text-muted"
+              role="status"
+            >
+              <span class="min-w-0">Unsaved changes to this entry</span>
+              <button
+                class="shrink-0 rounded-lg px-2.5 py-1.5 font-medium text-text transition-colors hover:bg-slate"
+                onclick={() => entry && edit(entry, { field: 'body', at: 'end' })}
+              >
+                Continue editing
+              </button>
+            </div>
+          {/if}
           {#key entry.uid}
             <!-- Tapping the text starts editing it; the edit button and E do the same. -->
             <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
