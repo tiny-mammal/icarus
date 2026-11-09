@@ -10,8 +10,7 @@ import type { Plugin } from 'vite';
 const OLDEST_CHROMIUM = 'chrome99';
 
 /**
- * CSS that breaks layout below that version and that Lightning CSS can't
- * lower. Rotate and scale utilities only lose a cosmetic effect, so they stay.
+ * CSS that breaks below that version and that Lightning CSS can't lower.
  */
 const UNSUPPORTED: { pattern: RegExp; fix: string }[] = [
   {
@@ -20,8 +19,10 @@ const UNSUPPORTED: { pattern: RegExp; fix: string }[] = [
     fix: 'use var(--screen-h) instead of dvh (Chromium 108+)',
   },
   {
-    pattern: /[{;]translate:/,
-    fix: 'use [transform:translate…] instead of translate-* utilities (Chromium 104+)',
+    // Tailwind 4 emits the individual transform properties, which older
+    // WebViews drop: a flipped arrow would point the wrong way.
+    pattern: /[{;](translate|rotate|scale):/,
+    fix: 'use [transform:translate…|rotate…|scale…] instead of translate-*, rotate-* and scale-* utilities (Chromium 104+)',
   },
   {
     // Tailwind composes touch-pan-* from custom properties, which older

@@ -84,7 +84,7 @@
           onmousedown={(e) => e.preventDefault()}
           onclick={ontoggleorder}
         >
-          <svg class="transition-transform {oldestFirst ? 'rotate-180' : ''}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+          <svg class="transition-transform {oldestFirst ? '[transform:rotate(180deg)]' : ''}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
           {oldestFirst ? 'Oldest first' : 'Newest first'}
         </button>
       </div>

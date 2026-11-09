@@ -85,7 +85,7 @@
     <button
       class="group mt-5 flex w-full flex-col items-center gap-4 rounded-2xl border border-dashed px-8 py-10 transition-all duration-300
         {dragHover
-          ? 'scale-[1.01] border-muted bg-slate-soft'
+          ? '[transform:scale(1.01)] border-muted bg-slate-soft'
           : 'border-faint hover:border-muted hover:bg-slate-soft/60'}"
       onclick={() => app.importVault()}
       ondragover={isDesktop ? undefined : onDragOver}
@@ -94,7 +94,7 @@
       in:fly={{ y: 18, duration: 700, delay: 240, easing: cubicOut }}
     >
       <span
-        class="grid h-12 w-12 place-items-center rounded-full border border-faint text-muted transition-all duration-300 group-hover:scale-105 group-hover:text-text"
+        class="grid h-12 w-12 place-items-center rounded-full border border-faint text-muted transition-all duration-300 group-hover:[transform:scale(1.05)] group-hover:text-text"
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
       </span>

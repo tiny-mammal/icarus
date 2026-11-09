@@ -328,7 +328,7 @@
       >
         {monthLabel(app.currentMonth)}
         <svg
-          class="text-muted transition-transform duration-200 group-hover:text-text {pickerOpen ? 'rotate-180' : ''}"
+          class="text-muted transition-transform duration-200 group-hover:text-text {pickerOpen ? '[transform:rotate(180deg)]' : ''}"
           width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
       </button>
 

@@ -328,7 +328,7 @@
               <span class="block text-xs text-muted">Released {timeAgo(new Date(updates.latest.published))}</span>
             </span>
             <button
-              class="shrink-0 rounded-lg bg-text px-3 py-1.5 text-xs font-semibold text-ink transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              class="shrink-0 rounded-lg bg-text px-3 py-1.5 text-xs font-semibold text-ink transition-transform hover:[transform:scale(1.02)] active:[transform:scale(0.98)]"
               onclick={getUpdate}
             >
               Get the update

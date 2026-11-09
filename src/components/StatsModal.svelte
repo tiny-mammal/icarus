@@ -219,7 +219,7 @@
         >
           <span>{periodLabel}</span>
           <svg
-            class="transition-transform {selectOpen ? 'rotate-180' : ''}"
+            class="transition-transform {selectOpen ? '[transform:rotate(180deg)]' : ''}"
             width="12"
             height="12"
             viewBox="0 0 24 24"
