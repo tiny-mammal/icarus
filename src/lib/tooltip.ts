@@ -22,13 +22,15 @@ const SHOW_DELAY = 450;
 /** Moving onto another control within this window shows its hint at once. */
 const WARM_WINDOW = 400;
 const GAP = 6;
+/** Below a touched control, clear the fingertip (Android's touch offset). */
+const TOUCH_GAP = 16;
 const MARGIN = 8;
 /** Holding a touch this long shows the hint instead of tapping. */
 export const LONG_PRESS = 500;
 /** A finger drifting further than this is scrolling or swiping, not holding. */
 const PRESS_SLOP = 10;
-/** How long a long-press hint stays up after the finger lifts. */
-const TOUCH_LINGER = 1500;
+/** How long a long-press hint stays up after the finger lifts (as on Android). */
+const TOUCH_LINGER = 2500;
 /** Upper bound for the click that follows lifting a long press. */
 const CLICK_WINDOW = 400;
 
@@ -82,7 +84,7 @@ function position(el: HTMLDivElement, target: HTMLElement) {
   const { offsetWidth: width, offsetHeight: height } = el;
   const maxLeft = window.innerWidth - width - MARGIN;
   const left = Math.min(Math.max(anchor.left + anchor.width / 2 - width / 2, MARGIN), maxLeft);
-  const below = anchor.bottom + GAP;
+  const below = anchor.bottom + (preferAbove ? TOUCH_GAP : GAP);
   const aboveTop = anchor.top - GAP - height;
   const fitsBelow = below + height <= window.innerHeight - MARGIN;
   const fitsAbove = aboveTop >= MARGIN;

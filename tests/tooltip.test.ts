@@ -126,7 +126,7 @@ describe('tooltip action', () => {
     expect(clicks).toBe(0);
     expect(isOpen()).toBe(true);
 
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(3000);
     expect(isOpen()).toBe(false);
     el.click();
     expect(clicks).toBe(1);
