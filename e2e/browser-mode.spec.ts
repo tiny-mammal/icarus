@@ -176,6 +176,24 @@ test('the top bar leaves writing actions to the open editor', async ({ page }) =
   expect((await search.boundingBox())?.x).toBe(searchBefore?.x);
 });
 
+test('the top bar actions never overlap the search on mid-size screens', async ({ page }) => {
+  await startPlainDiary(page);
+  await startWriting(page);
+  await page.getByPlaceholder('Title', { exact: true }).fill('Parked');
+  await page.getByRole('button', { name: 'Minimize' }).click();
+
+  const banner = page.getByRole('banner');
+  // The search field's box, not the bare input inside it.
+  const field = banner.locator('div:has(> input[aria-label="Search entries"])');
+  const drafts = banner.getByRole('button', { name: 'Drafts', exact: true });
+  for (const width of [640, 768, 820, 900, 1024]) {
+    await page.setViewportSize({ width, height: 800 });
+    const fieldBox = (await field.boundingBox())!;
+    const draftsBox = (await drafts.boundingBox())!;
+    expect(fieldBox.x + fieldBox.width, `at ${width}px`).toBeLessThanOrEqual(draftsBox.x);
+  }
+});
+
 test('imports an .ics file into browser storage', async ({ page }) => {
   await importPlainIcs(page, IMPORTED_ICS, 'imported.ics');
 

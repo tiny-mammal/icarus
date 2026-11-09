@@ -18,7 +18,7 @@
 
 {#if variant === 'header'}
   <button
-    class="hidden h-8 shrink-0 items-center gap-1.5 rounded-lg bg-text px-3 text-sm font-medium text-ink transition-opacity hover:opacity-90 sm:flex"
+    class="hidden h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-text px-3 text-sm font-medium text-ink transition-opacity hover:opacity-90 sm:flex"
     aria-label="New entry"
     title="New entry (N)"
     onclick={() => app.startNewEntry()}

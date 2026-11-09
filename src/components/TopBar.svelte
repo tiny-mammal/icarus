@@ -181,7 +181,7 @@
       enterkeyhint="search"
       aria-label="Search entries"
       placeholder="Search entries…"
-      class="w-full bg-transparent text-sm text-text placeholder:text-muted focus:outline-none"
+      class="w-full min-w-0 bg-transparent text-sm text-text placeholder:text-muted focus:outline-none"
       spellcheck="false"
     />
     {#if viewport.compact && query}
