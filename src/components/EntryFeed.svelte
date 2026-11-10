@@ -1,5 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { cubicOut } from 'svelte/easing';
+  import type { TransitionConfig } from 'svelte/transition';
   import { app } from '../lib/store.svelte';
   import { dateKey, longDayLabel, monthLabel, weekdayShortLabel } from '../lib/date';
   import {
@@ -13,6 +15,7 @@
   } from '../lib/feed';
   import { previewText } from '../lib/text';
   import type { DiaryEntry } from '../lib/types';
+  import { viewport } from '../lib/viewport.svelte';
   import ScrollTopButton from './ScrollTopButton.svelte';
 
   /**
@@ -28,6 +31,9 @@
   let scrollTop = $state(0);
   let viewHeight = $state(0);
   let remPx = $state(16);
+  let labelWidth = $state(0);
+  /** Which way the feed last moved: 1 towards older entries, -1 back up. */
+  let scrollDir = 1;
 
   const monthPx = $derived(FEED_MONTH_REM * remPx);
   const entryPx = $derived(FEED_ENTRY_REM * remPx);
@@ -41,15 +47,34 @@
   // window moves is then left alone instead of rebuilding its preview.
   const visible = $derived(rows.slice(first, last));
 
-  // The pinned header shows the month at the top of the list, and the next
-  // month's header pushes it up as it arrives.
-  const pinnedRow = $derived(rows[monthRowFor(rows, rowAt(offsets, scrollTop))]);
+  // The pinned header names the month of the first row below it. It stays
+  // put: a month header arriving from below fades out before it would be
+  // clipped, and the pinned label rolls over to it halfway through that fade.
+  const pinnedRow = $derived(rows[monthRowFor(rows, rowAt(offsets, scrollTop + monthPx))]);
   const pinnedMonth = $derived(pinnedRow?.kind === 'month' ? pinnedRow.month : new Date());
-  const push = $derived.by(() => {
-    const below = rowAt(offsets, scrollTop + monthPx - 0.5);
-    if (rows[below]?.kind !== 'month' || rows[below] === pinnedRow) return 0;
-    return Math.min(0, offsets[below] - scrollTop - monthPx);
-  });
+  const pinnedLabel = $derived(monthLabel(pinnedMonth));
+
+  /** Opacity of the month header at `top`: gone once it reaches the pinned one. */
+  function headerOpacity(top: number): number {
+    return Math.min(1, Math.max(0, ((top - scrollTop) / monthPx - 0.7) / 0.6));
+  }
+
+  /** Roll the pinned label the way the feed is moving, like an odometer. */
+  function roll(_node: Element, { leaving = false } = {}): TransitionConfig {
+    if (viewport.reducedMotion) return { duration: 120, css: (t) => `opacity: ${t}` };
+    const from = (leaving ? -1 : 1) * scrollDir;
+    return {
+      duration: 240,
+      easing: cubicOut,
+      css: (t, u) => `opacity: ${t}; transform: translateY(${from * u * 1.2}em)`,
+    };
+  }
+
+  function onScroll(): void {
+    const next = scroller?.scrollTop ?? 0;
+    if (next !== scrollTop) scrollDir = next > scrollTop ? 1 : -1;
+    scrollTop = next;
+  }
 
   $effect(() => {
     if (!scroller) return;
@@ -87,7 +112,7 @@
   <div
     bind:this={scroller}
     class="h-full overflow-y-auto overscroll-contain"
-    onscroll={() => (scrollTop = scroller?.scrollTop ?? 0)}
+    onscroll={onScroll}
   >
     {#if rows.length === 0}
       <div class="flex h-full flex-col items-center justify-center gap-1 px-8 text-center">
@@ -103,7 +128,10 @@
             style="height: {row.kind === 'month' ? monthPx : entryPx}px; transform: translateY({offsets[index]}px)"
           >
             {#if row.kind === 'month'}
-              <h2 class="flex h-full items-end px-4 pb-2 text-sm font-semibold tracking-tight text-text">
+              <h2
+                class="flex h-full items-end px-4 pb-2 text-sm font-semibold tracking-tight text-text"
+                style="opacity: {headerOpacity(offsets[index])}"
+              >
                 {monthLabel(row.month)}
               </h2>
             {:else}
@@ -149,19 +177,25 @@
     class="pointer-events-none absolute inset-x-0 top-0 overflow-hidden bg-ink {scrollTop > 0 ? 'border-b border-slate' : ''}"
     style="height: {monthPx}px"
   >
-    <div class="h-full" style="transform: translateY({push}px)">
-      <!-- A chip, not a chevron: an arrow by a header reads as folding it away. -->
-      <button
-        class="group pointer-events-auto ml-2 flex h-full items-end px-2 pb-1 text-sm font-semibold tracking-tight text-text"
-        aria-haspopup="dialog"
-        aria-label="{monthLabel(pinnedMonth)}, open calendar"
-        onclick={() => app.openCalendar(pinnedMonth)}
+    <!-- A chip, not a chevron: an arrow by a header reads as folding it away. -->
+    <button
+      class="group pointer-events-auto ml-2 flex h-full items-end px-2 pb-1 text-sm font-semibold tracking-tight text-text"
+      aria-haspopup="dialog"
+      aria-label="{pinnedLabel}, open calendar"
+      onclick={() => app.openCalendar(pinnedMonth)}
+    >
+      <!-- The chip resizes to the new label while the old one rolls out. -->
+      <span
+        class="relative grid justify-items-start overflow-hidden whitespace-nowrap rounded-full bg-slate-soft px-3 py-1 transition-[width,background-color] duration-[240ms] ease-out group-hover:bg-slate group-active:bg-slate motion-reduce:transition-colors"
+        style={labelWidth ? `width: calc(${labelWidth + 1}px + 1.5rem)` : ''}
+        aria-hidden="true"
       >
-        <span class="rounded-full bg-slate-soft px-3 py-1 transition-colors group-hover:bg-slate group-active:bg-slate">
-          {monthLabel(pinnedMonth)}
-        </span>
-      </button>
-    </div>
+        <span class="invisible absolute" bind:clientWidth={labelWidth}>{pinnedLabel}</span>
+        {#key pinnedLabel}
+          <span class="col-start-1 row-start-1" in:roll out:roll={{ leaving: true }}>{pinnedLabel}</span>
+        {/key}
+      </span>
+    </button>
   </div>
 
   <ScrollTopButton target={scroller} />
