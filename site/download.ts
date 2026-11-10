@@ -14,6 +14,9 @@ import {
 } from './releases';
 import { detectPlatform } from '../src/lib/user-agent';
 import { isVersion } from '../src/lib/semver';
+import { startPromoTracking } from './promo';
+
+startPromoTracking();
 
 const platform = detectPlatform();
 if (platform) {

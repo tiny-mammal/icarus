@@ -166,6 +166,9 @@ importers:
 
   .:
     dependencies:
+      '@martinezharo/promo-funnel':
+        specifier: https://github.com/martinezharo/promo-funnel/archive/refs/tags/v1.0.1.tar.gz
+        version: https://github.com/martinezharo/promo-funnel/archive/refs/tags/v1.0.1.tar.gz
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
@@ -878,6 +881,10 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@martinezharo/promo-funnel@https://github.com/martinezharo/promo-funnel/archive/refs/tags/v1.0.1.tar.gz':
+    resolution: {integrity: sha512-AUaTX0ARaw3V4d3zL7Kfno8Ma+UxySBOGZk2c7ulV0wNxZY8E6CDjIS13Ie9RSUUXoHbvYkaCslMAMwKhK7rKw==, tarball: https://github.com/martinezharo/promo-funnel/archive/refs/tags/v1.0.1.tar.gz}
+    version: 1.0.1
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     resolution: {integrity: sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==}
@@ -2508,6 +2515,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  '@martinezharo/promo-funnel@https://github.com/martinezharo/promo-funnel/archive/refs/tags/v1.0.1.tar.gz': {}
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
