@@ -57,8 +57,8 @@
   const lengthCountOptions = LENGTH_COUNTS.map((value) => ({ value, label: LENGTH_COUNT_NAMES[value] }));
   const countPreview = $derived(
     app.lengthCount === 'off'
-      ? 'Nothing is counted while you write'
-      : `Under the entry, like “${lengthLabel({ words: 248, chars: 1312 }, app.lengthCount)}”`,
+      ? 'No count while reading or writing'
+      : `Shown with each entry, like “${lengthLabel({ words: 248, chars: 1312 }, app.lengthCount)}”`,
   );
 
   const autoLockOptions: SelectOption<AutoLockMinutes>[] = AUTO_LOCK_CHOICES.map((minutes) => ({

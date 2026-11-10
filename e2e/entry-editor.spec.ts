@@ -29,7 +29,19 @@ test('the reader shows the same length as the editor under the date', async ({ p
 
   await page.getByRole('button', { name: 'Save entry' }).click();
   await page.getByRole('button', { name: /1 entry/ }).first().click();
-  await expect(page.getByTestId('entry-length')).toHaveText('2 words · 10 chars');
+  const length = page.getByTestId('entry-length');
+  await expect(length).toHaveText('2 words · 10 chars');
+
+  // The reader follows the length-count preference too.
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  const counts = settings.getByRole('button', { name: /^Length count/ });
+  await counts.click();
+  await settings.getByRole('option', { name: 'Characters' }).click();
+  await expect(length).toHaveText('10 chars');
+  await counts.click();
+  await settings.getByRole('option', { name: 'Off' }).click();
+  await expect(length).toBeHidden();
 });
 
 test('undo and redo buttons appear once writing starts and step through the body history', async ({ page }) => {
@@ -65,7 +77,7 @@ test('the length count follows the chosen counts and can stay visible while typi
   const hides = settings.getByRole('switch', { name: 'Hide the count while typing' });
   await counts.click();
   await settings.getByRole('option', { name: 'Words' }).click();
-  await expect(settings.getByText('Under the entry, like “248 words”')).toBeVisible();
+  await expect(settings.getByText('Shown with each entry, like “248 words”')).toBeVisible();
   await hides.click();
   await settings.getByRole('button', { name: 'Close' }).click();
 
