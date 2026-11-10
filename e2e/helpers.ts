@@ -62,8 +62,8 @@ export const SAMPLE_ENTRY: TestEntry = {
 
 /**
  * Open the day pane on `date` (`YYYY-MM-DD`), which must hold an entry: from
- * the feed on phones, from the calendar on wider screens, stepping it to the
- * day's month first.
+ * the feed on phones, from the calendar on wider screens, jumping to the day's
+ * month through the month/year picker (a few clicks, however far back).
  */
 export async function openDay(page: Page, date: string): Promise<void> {
   const [y, m, d] = date.split('-').map(Number);
@@ -84,18 +84,17 @@ export async function openDay(page: Page, date: string): Promise<void> {
     .filter({ visible: true })
     .first();
 
-  const now = new Date();
-  const months = (y - now.getFullYear()) * 12 + (m - 1 - now.getMonth());
-  const step = page.getByRole('button', { name: months < 0 ? 'Previous month' : 'Next month' });
-  if (!(await day.isVisible()) && (await step.isVisible())) {
-    // Each step waits for the month label to change: clicks during the
-    // paging transition would otherwise be dropped.
-    const month = page.locator('button[aria-haspopup="dialog"]').filter({ hasText: /\d{4}/ }).first();
-    for (let i = 0; i < Math.abs(months); i++) {
-      const shown = await month.textContent();
-      await step.click();
-      await expect(month).not.toHaveText(shown ?? '');
-    }
+  const monthLabel = page.locator('button[aria-haspopup="dialog"]').filter({ hasText: /\d{4}/ });
+  if (!(await day.isVisible()) && (await monthLabel.isVisible())) {
+    await monthLabel.click();
+    const picker = page.getByRole('dialog', { name: 'Select month and year' });
+    const year = picker.getByText(/^\d{4}$/);
+    const shown = Number(await year.textContent());
+    const step = picker.getByRole('button', { name: y < shown ? 'Previous year' : 'Next year' });
+    for (let i = 0; i < Math.abs(y - shown); i++) await step.click();
+    await expect(year).toHaveText(String(y));
+    // The twelve month buttons are the only toggles, January first.
+    await picker.locator('button[aria-pressed]').nth(m - 1).click();
   }
   await day.click();
   await expect(page.getByRole('complementary')).toBeVisible();
