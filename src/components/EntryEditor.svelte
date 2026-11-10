@@ -36,6 +36,10 @@
     .then((module) => (RichEditor = module.default))
     .catch((err) => devError('EntryEditor: could not load the editor', err));
 
+  let body = $state<{ undo(): void; redo(): void }>();
+  let canUndo = $state(false);
+  let canRedo = $state(false);
+
   let saving = $state(false);
   let titleEl = $state<HTMLInputElement | null>(null);
   let locationEl = $state<HTMLInputElement | null>(null);
@@ -106,6 +110,23 @@
   }
 </script>
 
+<!--
+  Undo / redo for the body (title and location keep their native undo).
+  Pressing doesn't take focus, so the caret and the phone keyboard stay put.
+-->
+{#snippet historyButton(label: string, keys: string[], enabled: boolean, run: () => void, path: string)}
+  <button
+    class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted sm:h-8 sm:w-8"
+    aria-label={label}
+    use:tooltip={{ label, keys }}
+    disabled={!enabled}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={run}
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={path}/></svg>
+  </button>
+{/snippet}
+
 <!-- Keydown is delegated from the fields within (Cmd/Ctrl+Enter). -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
@@ -122,6 +143,11 @@
     <div class="flex shrink-0 items-center gap-1">
       {#if !app.editingUid && app.drafts.length > 0}
         <DraftsMenu compact />
+      {/if}
+      <!-- Only once there is history, so a fresh entry keeps a quiet header. -->
+      {#if canUndo || canRedo}
+        {@render historyButton('Undo', ['⌘/Ctrl', 'Z'], canUndo, () => body?.undo(), 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11')}
+        {@render historyButton('Redo', ['⌘/Ctrl', '⇧', 'Z'], canRedo, () => body?.redo(), 'm15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13')}
       {/if}
       <PaneSizeToggle />
       <!-- Minimize when leaving keeps work waiting in the strip; else just close. -->
@@ -169,6 +195,9 @@
         class="mt-4 w-full flex-1 cursor-text pb-8"
         placeholder={bodyPlaceholder}
         focusAt={bodyFocus}
+        bind:this={body}
+        bind:canUndo
+        bind:canRedo
         bind:value={app.draftContent}
       />
     {:else}

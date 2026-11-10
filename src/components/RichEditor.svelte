@@ -11,6 +11,7 @@
    * underlines instead.
    */
   import { Editor } from '@tiptap/core';
+  import { EditorState } from '@tiptap/pm/state';
   import StarterKit from '@tiptap/starter-kit';
   import Placeholder from '@tiptap/extension-placeholder';
   import ListKeymap from '@tiptap/extension-list-keymap';
@@ -30,6 +31,8 @@
     placeholder = '',
     class: className = '',
     focusAt = null,
+    canUndo = $bindable(false),
+    canRedo = $bindable(false),
   }: {
     value?: string;
     placeholder?: string;
@@ -40,7 +43,24 @@
      * end of the text, or nowhere.
      */
     focusAt?: number | 'end' | null;
+    /** Whether the body's history has a step to undo / redo (read-only). */
+    canUndo?: boolean;
+    canRedo?: boolean;
   } = $props();
+
+  // For the editor's own undo / redo buttons. They leave focus where it was,
+  // so tapping them doesn't pop the on-screen keyboard open or closed.
+  export function undo() {
+    editor?.commands.undo();
+  }
+  export function redo() {
+    editor?.commands.redo();
+  }
+
+  function syncHistory(current: Editor) {
+    canUndo = current.can().undo();
+    canRedo = current.can().redo();
+  }
 
   let editor = $state<Editor>();
   let menu = $state<{ hit: SpellHit; suggestions: string[] } | null>(null);
@@ -107,6 +127,7 @@
         lastValue = editor.storage.markdown.getMarkdown();
         value = lastValue;
       },
+      onTransaction: ({ editor }) => syncHistory(editor),
     });
 
     const initialFocus = focusAt;
@@ -133,6 +154,12 @@
     if (!editor || incoming === lastValue) return;
     lastValue = incoming;
     editor.commands.setContent(incoming, false);
+    // A different text (another draft, a fresh entry) starts its own history:
+    // undoing must never bring back the previous one's words.
+    const { doc, plugins } = editor.state;
+    editor.view.updateState(EditorState.create({ doc, plugins }));
+    syncHistory(editor);
+    if (app.spellcheck) refreshSpellcheck(editor);
   });
 
   // Load the dictionary on demand and (re)paint the underlines when it arrives
