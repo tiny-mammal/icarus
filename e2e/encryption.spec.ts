@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { pickIcs, startPlainDiary, openSearch } from './helpers';
+import { diaryIcs, pickIcs, startPlainDiary, openSearch } from './helpers';
 
 /**
  * Password protection in browser mode. Web Crypto only exists in secure
@@ -9,19 +9,9 @@ import { pickIcs, startPlainDiary, openSearch } from './helpers';
 
 const PASSWORD = 'correct horse battery staple';
 
-const IMPORTED_ICS = [
-  'BEGIN:VCALENDAR',
-  'VERSION:2.0',
-  'PRODID:-//icarus//EN',
-  'BEGIN:VEVENT',
-  'UID:secret-import@icarus.diary',
-  'DTSTART;VALUE=DATE:20260608',
-  'SUMMARY:Imported confession',
-  'DESCRIPTION:Only for me',
-  'END:VEVENT',
-  'END:VCALENDAR',
-  '',
-].join('\r\n');
+const IMPORTED_ICS = diaryIcs([
+  { uid: 'secret-import@icarus.diary', date: '2026-06-08', title: 'Imported confession', body: 'Only for me' },
+]);
 
 async function isSecure(page: Page): Promise<boolean> {
   return page.evaluate(() => isSecureContext);

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { importPlainIcs, openSearch } from './helpers';
+import { diaryIcs, importPlainIcs, openSearch } from './helpers';
 import wheelFixture from '../tests/fixtures/wheel-windows-chrome.json' with { type: 'json' };
 
 /**
@@ -7,27 +7,12 @@ import wheelFixture from '../tests/fixtures/wheel-windows-chrome.json' with { ty
  * empty ones and crossing months), while the entry pager stays within a day.
  */
 
-function vevent(uid: string, date: string, title: string): string[] {
-  return [
-    'BEGIN:VEVENT',
-    `UID:${uid}@icarus.diary`,
-    `DTSTART;VALUE=DATE:${date}`,
-    `SUMMARY:${title}`,
-    'END:VEVENT',
-  ];
-}
-
-const DIARY_ICS = [
-  'BEGIN:VCALENDAR',
-  'VERSION:2.0',
-  'PRODID:-//icarus//EN',
-  ...vevent('a', '20251231', 'New year eve'),
-  ...vevent('b', '20260608', 'Morning walk'),
-  ...vevent('c', '20260608', 'Evening swim'),
-  ...vevent('d', '20260620', 'Midsummer'),
-  'END:VCALENDAR',
-  '',
-].join('\r\n');
+const DIARY_ICS = diaryIcs([
+  { date: '2025-12-31', title: 'New year eve' },
+  { date: '2026-06-08', title: 'Morning walk' },
+  { date: '2026-06-08', title: 'Evening swim' },
+  { date: '2026-06-20', title: 'Midsummer' },
+]);
 
 async function importDiary(page: Page): Promise<void> {
   await importPlainIcs(page, DIARY_ICS);

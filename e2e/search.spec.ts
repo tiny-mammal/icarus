@@ -1,20 +1,15 @@
 import { expect, test } from '@playwright/test';
-import { importPlainIcs, openSearch } from './helpers';
+import { dateKey } from '../src/lib/date';
+import { diaryIcs, importPlainIcs, openSearch } from './helpers';
 
 /** A diary where every entry matches, so the results come in batches. */
 function manyMatchesIcs(count: number): string {
-  const events = Array.from({ length: count }, (_, i) => {
-    const day = new Date(Date.UTC(2020, 0, 1 + i)).toISOString().slice(0, 10).replace(/-/g, '');
-    return [
-      'BEGIN:VEVENT',
-      `UID:walk-${i}@icarus.diary`,
-      `DTSTART;VALUE=DATE:${day}`,
-      `SUMMARY:Evening walk ${i}`,
-      'END:VEVENT',
-    ];
-  });
-  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//icarus//EN', ...events.flat(), 'END:VCALENDAR', '']
-    .join('\r\n');
+  return diaryIcs(
+    Array.from({ length: count }, (_, i) => ({
+      date: dateKey(new Date(2020, 0, 1 + i)),
+      title: `Evening walk ${i}`,
+    })),
+  );
 }
 
 test('scrolling through many results loads more without jumping back up', async ({ page }) => {

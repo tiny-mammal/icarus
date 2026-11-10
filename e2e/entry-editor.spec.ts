@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
-import { startPlainDiary } from './helpers';
+import { dateKey } from '../src/lib/date';
+import { openDay, startPlainDiary } from './helpers';
 
 test('the length count steps aside while typing and returns after a pause', async ({ page }) => {
   await startPlainDiary(page);
@@ -28,7 +29,7 @@ test('the reader shows the same length as the editor under the date', async ({ p
   await expect(page.getByTestId('entry-count')).toContainText('2 words · 10 chars');
 
   await page.getByRole('button', { name: 'Save entry' }).click();
-  await page.getByRole('button', { name: /1 entry/ }).first().click();
+  await openDay(page, dateKey(new Date()));
   const length = page.getByTestId('entry-length');
   await expect(length).toHaveText('2 words · 10 chars');
 

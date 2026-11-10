@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { importPlainIcs, startPlainDiary, openSearch } from './helpers';
+import { diaryIcs, importPlainIcs, startPlainDiary, openSearch } from './helpers';
 
 /**
  * End-to-end coverage for the browser storage backend: the app must detect the
@@ -10,19 +10,9 @@ import { importPlainIcs, startPlainDiary, openSearch } from './helpers';
 
 const LOOPBACK = new Set(['127.0.0.1', 'localhost', '::1']);
 
-const IMPORTED_ICS = [
-  'BEGIN:VCALENDAR',
-  'VERSION:2.0',
-  'PRODID:-//icarus//EN',
-  'BEGIN:VEVENT',
-  'UID:imported@icarus.diary',
-  'DTSTART;VALUE=DATE:20260608',
-  'SUMMARY:Imported entry',
-  'DESCRIPTION:From an imported file',
-  'END:VEVENT',
-  'END:VCALENDAR',
-  '',
-].join('\r\n');
+const IMPORTED_ICS = diaryIcs([
+  { uid: 'imported@icarus.diary', date: '2026-06-08', title: 'Imported entry', body: 'From an imported file' },
+]);
 
 
 async function startWriting(page: Page): Promise<void> {

@@ -7,6 +7,7 @@ pnpm tauri:dev       # desktop app
 pnpm test            # unit tests (Vitest)
 pnpm test:e2e        # end-to-end tests (Playwright)
 pnpm check           # svelte-check and TypeScript
+pnpm screenshots     # phone and desktop screenshots into screenshots/
 ```
 
 `dev:seed` generates about three years of entries and discards every change on
@@ -22,6 +23,16 @@ are missing. Encryption tests need a secure context, so they only run with
 `ICARUS_E2E_HOST=127.0.0.1` (as CI does). Each checkout runs its own dev
 server on a stable port derived from its path (20000–29999), so parallel
 worktrees never test each other's code; `ICARUS_E2E_PORT` overrides it.
+
+Build test diaries with `diaryIcs()` and open a day with `openDay()` from
+`e2e/helpers.ts`, rather than writing `.ics` text by hand.
+
+## Screenshots
+
+`pnpm screenshots` captures the home screen, the reader and the editor on a
+phone and a desktop, with `SAMPLE_ENTRY` from `e2e/helpers.ts`. Pass
+`-g reader` to capture only matching scenes. For a new screen, add a scene to
+`e2e/screenshots.spec.ts` instead of writing a throwaway spec.
 
 To reach a dev server over HTTPS from other devices, use `tailscale serve` and
 `ICARUS_ALLOWED_HOSTS=.ts.net pnpm dev --host`.

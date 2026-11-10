@@ -1,23 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { importPlainIcs, searchResult } from './helpers';
+import { diaryIcs, importPlainIcs, searchResult } from './helpers';
 
 /**
  * Back (browser, PWA or Android) closes the top-most open layer instead of
  * leaving the app, and only leaves once nothing is open.
  */
 
-const DIARY_ICS = [
-  'BEGIN:VCALENDAR',
-  'VERSION:2.0',
-  'PRODID:-//icarus//EN',
-  'BEGIN:VEVENT',
-  'UID:a@icarus.diary',
-  'DTSTART;VALUE=DATE:20260620',
-  'SUMMARY:Midsummer',
-  'END:VEVENT',
-  'END:VCALENDAR',
-  '',
-].join('\r\n');
+const DIARY_ICS = diaryIcs([{ date: '2026-06-20', title: 'Midsummer' }]);
 
 const dayPane = (page: Page) => page.getByRole('complementary');
 const settings = (page: Page) => page.getByRole('dialog', { name: 'Settings' });

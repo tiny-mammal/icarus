@@ -1,5 +1,6 @@
 import { devices, expect, test, type CDPSession, type Page } from '@playwright/test';
-import { importPlainIcs, openSearch, startPlainDiary, searchResult } from './helpers';
+import { dateKey } from '../src/lib/date';
+import { diaryIcs, importPlainIcs, openSearch, startPlainDiary, searchResult } from './helpers';
 
 /**
  * Phone layout: every entry in one feed with a calendar sheet to jump around,
@@ -10,24 +11,10 @@ import { importPlainIcs, openSearch, startPlainDiary, searchResult } from './hel
 const { defaultBrowserType: _, ...pixel } = devices['Pixel 7'];
 test.use(pixel);
 
-const DIARY_ICS = [
-  'BEGIN:VCALENDAR',
-  'VERSION:2.0',
-  'PRODID:-//icarus//EN',
-  'BEGIN:VEVENT',
-  'UID:a@icarus.diary',
-  'DTSTART;VALUE=DATE:20260608',
-  'SUMMARY:Morning walk',
-  'LOCATION:Lisbon',
-  'END:VEVENT',
-  'BEGIN:VEVENT',
-  'UID:b@icarus.diary',
-  'DTSTART;VALUE=DATE:20260620',
-  'SUMMARY:Midsummer',
-  'END:VEVENT',
-  'END:VCALENDAR',
-  '',
-].join('\r\n');
+const DIARY_ICS = diaryIcs([
+  { date: '2026-06-08', title: 'Morning walk', location: 'Lisbon' },
+  { date: '2026-06-20', title: 'Midsummer' },
+]);
 
 async function drag(cdp: CDPSession, from: [number, number], to: [number, number], ms = 160) {
   const steps = 8;
@@ -144,12 +131,13 @@ test('title and subtitle scroll away with a long body while writing', async ({ p
 });
 
 test('a back-to-top button returns a long feed and a long entry to the top', async ({ page }) => {
-  const days = Array.from({ length: 60 }, (_, i) => {
-    const date = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10).replaceAll('-', '');
-    const body = i === 59 ? Array(40).fill('A long paragraph about the day.').join('\\n\\n') : 'A short note.';
-    return ['BEGIN:VEVENT', `UID:d${i}@icarus.diary`, `DTSTART;VALUE=DATE:${date}`, `SUMMARY:Day ${i}`, `DESCRIPTION:${body}`, 'END:VEVENT'];
-  });
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//icarus//EN', ...days.flat(), 'END:VCALENDAR', ''].join('\r\n');
+  const ics = diaryIcs(
+    Array.from({ length: 60 }, (_, i) => ({
+      date: dateKey(new Date(2026, 0, 1 + i)),
+      title: `Day ${i}`,
+      body: i === 59 ? Array(40).fill('A long paragraph about the day.').join('\n\n') : 'A short note.',
+    })),
+  );
   await importPlainIcs(page, ics);
   const toTop = page.getByRole('button', { name: 'Back to top' });
 

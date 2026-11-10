@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "screenshots": "SCREENSHOTS_DIR=screenshots playwright test e2e/screenshots.spec.ts",
     "icon": "node scripts/gen-icon.mjs && tauri icon ./app-icon.png && node scripts/gen-icon.mjs --android && node scripts/gen-icon.mjs --ios",
     "tauri": "tauri",
     "tauri:dev": "WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 tauri dev",

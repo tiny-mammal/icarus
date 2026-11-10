@@ -43,3 +43,6 @@ blob-report/
 # Public site build (landing + web app) and local Wrangler state
 dist-web/
 .wrangler/
+
+# `pnpm screenshots` output
+/screenshots/
