@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { fly } from 'svelte/transition';
+  import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
   import { keyToDate, nearDayLabel } from '../lib/date';
@@ -24,8 +24,16 @@
 </script>
 
 {#if parked}
+  <!-- On phones, fade the feed out beneath the strip so it reads as docked
+       chrome rather than one more row of the list scrolling under it. -->
+  <div
+    class="pointer-events-none fixed inset-x-0 bottom-0 z-float h-[calc(5.5rem+env(safe-area-inset-bottom))] bg-gradient-to-t from-ink from-40% to-transparent sm:hidden"
+    aria-hidden="true"
+    in:fade={{ duration: 200, delay: STRIP_DELAY_MS }}
+    out:fade={{ duration: 150 }}
+  ></div>
   <button
-    class="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-float flex items-center gap-3 rounded-2xl border border-slate bg-surface py-2.5 pr-3 pl-2.5 text-left shadow-xl shadow-black/50 transition-colors hover:bg-slate-soft
+    class="draft-strip fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-float flex items-center gap-3 rounded-2xl border border-faint bg-slate py-2.5 pr-3 pl-2.5 text-left transition-colors hover:bg-faint
       sm:right-5 sm:bottom-5 sm:left-auto sm:w-80"
     aria-label="Continue writing: {heading}"
     onclick={() => app.resumeParked()}
@@ -44,3 +52,36 @@
     <svg class="shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>
   </button>
 {/if}
+
+<style>
+  /*
+   * A black shadow vanishes on the near-black app, so the strip lifts itself
+   * with a lit top edge instead, and glows briefly on arrival so the eye
+   * catches where the editor went.
+   */
+  .draft-strip {
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.06),
+      0 12px 32px -8px rgb(0 0 0 / 0.8);
+    animation: arrive 1.6s var(--ease-glide) 0.38s both;
+  }
+  @keyframes arrive {
+    0% {
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.06),
+        0 0 0 0 rgb(250 250 250 / 0.28),
+        0 12px 32px -8px rgb(0 0 0 / 0.8);
+    }
+    100% {
+      box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / 0.06),
+        0 0 0 10px rgb(250 250 250 / 0),
+        0 12px 32px -8px rgb(0 0 0 / 0.8);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .draft-strip {
+      animation: none;
+    }
+  }
+</style>
