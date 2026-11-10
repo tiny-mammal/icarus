@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { countChars, countWords, formatLength, plainText } from '../src/lib/text-count';
+import {
+  countChars,
+  countWords,
+  formatLength,
+  lengthLabel,
+  parseLengthCount,
+  plainText,
+} from '../src/lib/text-count';
 
 describe('plainText', () => {
   it('drops inline and block Markdown syntax', () => {
@@ -53,5 +60,28 @@ describe('formatLength', () => {
   it('shows words and characters, singular when there is one', () => {
     expect(formatLength('**Hi**')).toBe('1 word · 2 chars');
     expect(formatLength('a')).toBe('1 word · 1 char');
+  });
+
+  it('counts only what the preference shows', () => {
+    expect(formatLength('**Hi** there', 'words')).toBe('2 words');
+    expect(formatLength('**Hi** there', 'chars')).toBe('8 chars');
+    expect(formatLength('**Hi** there', 'off')).toBe('');
+  });
+});
+
+describe('lengthLabel', () => {
+  const count = { words: 1, chars: 1200 };
+
+  it('writes only what the preference shows', () => {
+    expect(lengthLabel(count, 'words')).toBe('1 word');
+    expect(lengthLabel(count, 'chars')).toBe(`${(1200).toLocaleString()} chars`);
+    expect(lengthLabel(count, 'both')).toBe(`1 word · ${(1200).toLocaleString()} chars`);
+    expect(lengthLabel(count, 'off')).toBe('');
+  });
+
+  it('falls back to both counts for unknown saved values', () => {
+    expect(parseLengthCount('chars')).toBe('chars');
+    expect(parseLengthCount(undefined)).toBe('both');
+    expect(parseLengthCount('pages')).toBe('both');
   });
 });

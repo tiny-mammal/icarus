@@ -51,7 +51,12 @@ import {
   setSavedAutoLock,
   getSavedLockWhenHidden,
   setSavedLockWhenHidden,
+  getSavedLengthCount,
+  setSavedLengthCount,
+  getSavedCountHidesWhileTyping,
+  setSavedCountHidesWhileTyping,
   type AutoLockMinutes,
+  type LengthCount,
   type WeekStart,
   type DateFormat,
 } from './config';
@@ -195,6 +200,12 @@ class AppStore {
   /** Underline misspellings in the writing fields. User preference. */
   spellcheck = $state(true);
 
+  /** What the editor's length count shows. User preference. */
+  lengthCount = $state<LengthCount>('both');
+
+  /** The length count fades out while typing and returns on a pause. User preference. */
+  countHidesWhileTyping = $state(true);
+
   /**
    * Wide screens: the day pane fills the window, text centred. Lasts while
    * the pane stays open (across days, reading and writing) and resets when
@@ -266,6 +277,7 @@ class AppStore {
     void this.loadWeekStart();
     void this.loadDateFormat();
     void this.loadSpellcheck();
+    void this.loadCountPreferences();
     void this.loadSpellWords();
     void this.loadLockPreferences();
     try {
@@ -493,6 +505,8 @@ class AppStore {
     this.weekStart = 1;
     this.dateFormat = 'auto';
     this.spellcheck = true;
+    this.lengthCount = 'both';
+    this.countHidesWhileTyping = true;
     this.spellWords = [];
     setUserWords([]);
     await Promise.all([
@@ -500,6 +514,7 @@ class AppStore {
       this.loadWeekStart(),
       this.loadDateFormat(),
       this.loadSpellcheck(),
+      this.loadCountPreferences(),
       this.loadSpellWords(),
       this.loadLockPreferences(),
       updates.load(),
@@ -1102,6 +1117,40 @@ class AppStore {
       await setSavedSpellcheck(enabled);
     } catch (err) {
       devError('setSpellcheck: could not persist the spell-check preference', err);
+      this.toast('error', 'Could not save settings.');
+    }
+  }
+
+  /** Restore the length-count preferences on boot (both counts, hidden while typing). */
+  async loadCountPreferences(): Promise<void> {
+    try {
+      [this.lengthCount, this.countHidesWhileTyping] = await Promise.all([
+        getSavedLengthCount(),
+        getSavedCountHidesWhileTyping(),
+      ]);
+    } catch (err) {
+      devError('loadCountPreferences: could not read the length-count preferences', err);
+    }
+  }
+
+  /** Choose what the editor's length count shows and persist it. */
+  async setLengthCount(shown: LengthCount): Promise<void> {
+    this.lengthCount = shown;
+    try {
+      await setSavedLengthCount(shown);
+    } catch (err) {
+      devError('setLengthCount: could not persist the length-count preference', err);
+      this.toast('error', 'Could not save settings.');
+    }
+  }
+
+  /** Choose whether the length count steps aside while typing and persist it. */
+  async setCountHidesWhileTyping(enabled: boolean): Promise<void> {
+    this.countHidesWhileTyping = enabled;
+    try {
+      await setSavedCountHidesWhileTyping(enabled);
+    } catch (err) {
+      devError('setCountHidesWhileTyping: could not persist the preference', err);
       this.toast('error', 'Could not save settings.');
     }
   }

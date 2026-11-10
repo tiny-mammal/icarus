@@ -199,9 +199,9 @@
                 No matches for “{app.searchHighlight}” here
               {/if}
             </p>
-          {:else if entry?.content}
+          {:else if entry?.content && app.lengthCount !== 'off'}
             <p class="mt-1 pl-8 text-[0.7rem] font-medium text-muted tabular-nums" data-testid="entry-length">
-              {formatLength(entry.content)}
+              {formatLength(entry.content, app.lengthCount)}
             </p>
           {/if}
         </div>

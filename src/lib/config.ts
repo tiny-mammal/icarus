@@ -6,8 +6,9 @@
 import { storage } from './storage';
 import { parseDateFormat, type DateFormat, type WeekStart } from './date';
 import { SPELL_WORDS_ITEM } from './storage/types';
+import { parseLengthCount, type LengthCount } from './text-count';
 
-export type { DateFormat, WeekStart };
+export type { DateFormat, WeekStart, LengthCount };
 
 const STORE = 'settings' as const;
 
@@ -76,6 +77,24 @@ export async function getSavedDateFormat(): Promise<DateFormat> {
 
 export async function setSavedDateFormat(format: DateFormat): Promise<void> {
   await storage.setItem(STORE, 'dateFormat', format);
+}
+
+/** What the editor's length count shows: words, characters, both or nothing. */
+export async function getSavedLengthCount(): Promise<LengthCount> {
+  return parseLengthCount(await storage.getItem<LengthCount>(STORE, 'lengthCount'));
+}
+
+export async function setSavedLengthCount(shown: LengthCount): Promise<void> {
+  await storage.setItem(STORE, 'lengthCount', shown);
+}
+
+/** Whether the length count steps aside while typing. On by default. */
+export async function getSavedCountHidesWhileTyping(): Promise<boolean> {
+  return (await storage.getItem<boolean>(STORE, 'countHidesWhileTyping')) !== false;
+}
+
+export async function setSavedCountHidesWhileTyping(enabled: boolean): Promise<void> {
+  await storage.setItem(STORE, 'countHidesWhileTyping', enabled);
 }
 
 /** Whether the desktop app checks icarus.4oli.com for new versions. Opt-in, off by default. */

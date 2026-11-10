@@ -3,6 +3,7 @@
   import { DATE_FORMATS, longDayLabel, type DateFormat } from '../lib/date';
   import { SOURCE_REPO, openExternal } from '../lib/external';
   import { AUTO_LOCK_CHOICES } from '../lib/config';
+  import { LENGTH_COUNTS, lengthLabel, type LengthCount } from '../lib/text-count';
   import { install } from '../lib/install.svelte';
   import { PLATFORM_NAMES } from '../lib/user-agent';
   import { updates } from '../lib/updates.svelte';
@@ -35,6 +36,23 @@
     name: FORMAT_NAMES[value],
     sample: longDayLabel(sampleDay, value),
   }));
+
+  // The editor's length count, previewed with a sample entry as it would appear.
+  const LENGTH_COUNT_NAMES: Record<LengthCount, string> = {
+    words: 'Words',
+    chars: 'Characters',
+    both: 'Both',
+    off: 'Off',
+  };
+  const countPreview = $derived(
+    app.lengthCount === 'off'
+      ? 'No count while writing'
+      : lengthLabel({ words: 248, chars: 1312 }, app.lengthCount),
+  );
+  const countTimingOptions = [
+    { hides: true, name: 'When I pause', hint: 'Hides while typing' },
+    { hides: false, name: 'Always', hint: 'Updates as you type' },
+  ];
 
   async function forget() {
     await app.forgetVault();
@@ -304,6 +322,53 @@
             </button>
           {/each}
         </div>
+      </div>
+
+      <div>
+        <div class="mb-2 flex items-baseline justify-between gap-3">
+          <p class="text-[0.7rem] font-medium uppercase tracking-wider text-muted">Length count</p>
+          <!-- What the editor's footer will say, so each choice explains itself. -->
+          <p class="truncate text-xs tabular-nums {app.lengthCount === 'off' ? 'text-muted/70 italic' : 'text-muted'}" aria-live="polite" data-testid="count-preview">
+            {countPreview}
+          </p>
+        </div>
+        <div class="grid grid-cols-4 gap-1.5" role="group" aria-label="Length count">
+          {#each LENGTH_COUNTS as value (value)}
+            <button
+              class="rounded-lg border px-1 py-1.5 text-xs font-medium transition-colors
+                {app.lengthCount === value
+                  ? 'border-faint bg-slate text-text'
+                  : 'border-slate text-muted hover:bg-slate hover:text-text'}"
+              aria-pressed={app.lengthCount === value}
+              onclick={() => app.setLengthCount(value)}
+            >
+              {LENGTH_COUNT_NAMES[value]}
+            </button>
+          {/each}
+        </div>
+
+        <!-- Timing only matters while there is a count to show. -->
+        <fieldset
+          class="mt-3 transition-opacity {app.lengthCount === 'off' ? 'pointer-events-none opacity-40' : ''}"
+          disabled={app.lengthCount === 'off'}
+        >
+          <legend class="mb-2 text-xs text-muted">Show the count</legend>
+          <div class="grid grid-cols-2 gap-2">
+            {#each countTimingOptions as opt (opt.name)}
+              <button
+                class="flex flex-col justify-start rounded-lg border px-3 py-2 text-left transition-colors
+                  {app.countHidesWhileTyping === opt.hides
+                    ? 'border-faint bg-slate text-text'
+                    : 'border-slate text-muted hover:bg-slate hover:text-text'}"
+                aria-pressed={app.countHidesWhileTyping === opt.hides}
+                onclick={() => app.setCountHidesWhileTyping(opt.hides)}
+              >
+                <span class="block text-sm font-medium">{opt.name}</span>
+                <span class="block text-xs text-muted">{opt.hint}</span>
+              </button>
+            {/each}
+          </div>
+        </fieldset>
       </div>
 
       <div class="flex items-center justify-between gap-4">

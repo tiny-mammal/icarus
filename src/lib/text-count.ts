@@ -67,10 +67,39 @@ export function countWords(markdown: string): number {
   return plainText(markdown).match(WORD)?.length ?? 0;
 }
 
+/** What the length count shows, in the editor and the reader (user preference). */
+export const LENGTH_COUNTS = ['words', 'chars', 'both', 'off'] as const;
+export type LengthCount = (typeof LENGTH_COUNTS)[number];
+
+export function parseLengthCount(value: unknown): LengthCount {
+  return LENGTH_COUNTS.includes(value as LengthCount) ? (value as LengthCount) : 'both';
+}
+
 const plural = (n: number, one: string, many: string) =>
   `${n.toLocaleString()} ${n === 1 ? one : many}`;
 
-/** "120 words · 640 chars": the length line shown by the editor and the reader. */
-export function formatLength(markdown: string): string {
-  return `${plural(countWords(markdown), 'word', 'words')} · ${plural(countChars(markdown), 'char', 'chars')}`;
+/** Counts written out as the preference shows them, e.g. "12 words · 64 chars" ('' when off). */
+export function lengthLabel(count: { words: number; chars: number }, shown: LengthCount): string {
+  const words = plural(count.words, 'word', 'words');
+  const chars = plural(count.chars, 'char', 'chars');
+  if (shown === 'words') return words;
+  if (shown === 'chars') return chars;
+  if (shown === 'both') return `${words} · ${chars}`;
+  return '';
+}
+
+/**
+ * "120 words · 640 chars": the length line shown by the editor and the
+ * reader, limited to what the preference shows ('' when off). Only what is
+ * shown gets counted.
+ */
+export function formatLength(markdown: string, shown: LengthCount = 'both'): string {
+  if (shown === 'off') return '';
+  return lengthLabel(
+    {
+      words: shown === 'chars' ? 0 : countWords(markdown),
+      chars: shown === 'words' ? 0 : countChars(markdown),
+    },
+    shown,
+  );
 }

@@ -64,21 +64,26 @@
       : 'Write this day’s chapter… Markdown is welcome.',
   );
 
-  const length = $derived(formatLength(app.draftContent));
+  const countLabel = $derived(formatLength(app.draftContent, app.lengthCount));
 
-  // The count steps aside while the body changes, so it never ticks along
-  // with every letter, and returns after a pause (or on hover). Keyed on the
-  // content rather than input events: ProseMirror handles Enter, Backspace
-  // and undo itself, without a native input event.
+  // Unless the user prefers it always visible, the count steps aside while
+  // the body changes, so it never ticks along with every letter, and returns
+  // after a pause (or on hover). Keyed on the content rather than input
+  // events: ProseMirror handles Enter, Backspace and undo itself, without a
+  // native input event.
   const TYPING_PAUSE_MS = 1500;
   let typing = $state(false);
   let lastContent = app.draftContent;
   $effect(() => {
     if (app.draftContent === lastContent) return;
     lastContent = app.draftContent;
+    if (!app.countHidesWhileTyping) return;
     typing = true;
     const timer = setTimeout(() => (typing = false), TYPING_PAUSE_MS);
     return () => clearTimeout(timer);
+  });
+  $effect(() => {
+    if (!app.countHidesWhileTyping) typing = false;
   });
 
   // Autosave: whenever a field changes, schedule a debounced write to the
@@ -209,19 +214,20 @@
     <!--
       Autosave made visible, so closing feels as safe as it is ("draft", so it
       isn't mistaken for the entry being saved); then the body's length,
-      counted like the statistics, hidden while typing. It fades out quickly
+      counted like the statistics, showing what the user chose, hidden while
+      typing unless they prefer it always visible. It fades out quickly
       and back in slowly, so its return goes unnoticed.
     -->
     <p class="group min-w-0 truncate text-xs text-muted tabular-nums" data-testid="entry-status">
       {#if app.draftSaved}
         <span class="text-text/70">✓ <span class="max-[359px]:hidden">Draft saved</span><span class="min-[360px]:hidden">Saved</span></span>
-      {/if}<span
-        class="transition-opacity group-hover:opacity-100 group-hover:duration-150 {typing
-          ? 'opacity-0 duration-150'
-          : 'duration-700'}"
-        data-testid="entry-count"
-        >{#if app.draftSaved}<span aria-hidden="true">{' · '}</span>{/if}{length}</span
-      >
+      {/if}{#if countLabel}<span
+          class="transition-opacity group-hover:opacity-100 group-hover:duration-150 {typing
+            ? 'opacity-0 duration-150'
+            : 'duration-700'}"
+          data-testid="entry-count"
+          >{#if app.draftSaved}<span aria-hidden="true">{' · '}</span>{/if}{countLabel}</span
+        >{/if}
     </p>
 
     <button

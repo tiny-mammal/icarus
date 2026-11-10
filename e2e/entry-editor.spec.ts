@@ -56,3 +56,26 @@ test('undo and redo buttons appear once writing starts and step through the body
   await expect(body).toContainText('Dear diary');
   await expect(redo).toBeDisabled();
 });
+
+test('the length count follows the chosen counts and can stay visible while typing', async ({ page }) => {
+  await startPlainDiary(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  const counts = settings.getByRole('group', { name: 'Length count' });
+  await counts.getByRole('button', { name: 'Words', exact: true }).click();
+  await expect(settings.getByTestId('count-preview')).toHaveText('248 words');
+  await settings.getByRole('button', { name: /Always/ }).click();
+  await settings.getByRole('button', { name: 'Close' }).click();
+
+  await page.getByRole('button', { name: 'New entry', exact: true }).click();
+  const count = page.getByTestId('entry-count');
+  await page.locator('.ProseMirror').click();
+  await page.keyboard.type('Dear diary');
+  await expect(count).toHaveText('2 words');
+  await expect(count).toHaveCSS('opacity', '1');
+
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await counts.getByRole('button', { name: 'Off', exact: true }).click();
+  await expect(settings.getByRole('button', { name: /Always/ })).toBeDisabled();
+});
