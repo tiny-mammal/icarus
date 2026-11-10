@@ -8,6 +8,7 @@
   import { swipe } from '../lib/gestures';
   import { queryTerms, countMatches } from '../lib/highlight';
   import { loadRichEditor } from '../lib/editor-loader';
+  import { viewport } from '../lib/viewport.svelte';
   import { devError } from '../lib/log';
   import { visibleOffsetAt } from '../lib/caret';
   import type { DiaryEntry } from '../lib/types';
@@ -111,6 +112,25 @@
     edit(entry, { field, at: at ?? 'end' });
   }
 
+  // --- pane motion -----------------------------------------------------------
+  // Reading slides in from the side, like a page over the calendar. Writing
+  // rises from the bottom edge, where the write button and the draft strip
+  // live, and minimizing sinks it back down into the strip. The pane closes
+  // after `app.editing` is already off, so remember what it was showing.
+  let showedEditor = false;
+  $effect.pre(() => {
+    if (app.selectedKey) showedEditor = app.editing;
+  });
+
+  function paneMotion(node: HTMLElement, writing: boolean, duration: number) {
+    if (viewport.reducedMotion) return fade(node, { duration: 150 });
+    return writing
+      ? fly(node, { y: '100%', opacity: 1, duration, easing: cubicOut })
+      : fly(node, { x: 480, duration, easing: cubicOut });
+  }
+  const paneIn = (node: HTMLElement) => paneMotion(node, app.editing, 320);
+  const paneOut = (node: HTMLElement) => paneMotion(node, showedEditor, showedEditor ? 260 : 320);
+
   // Touch: swipe sideways to step to the previous/next day with entries, the
   // same move as ←/→ on a keyboard. Off while writing.
   const daySwipe = $derived({
@@ -152,25 +172,27 @@
 {#if app.selectedKey && dayDate}
   <!-- Backdrop -->
   <div
-    class="absolute inset-0 z-pane bg-ink/50 backdrop-blur-[1px]"
+    class="absolute inset-0 z-pane bg-ink/50 backdrop-blur-[1px] {app.editing ? 'max-sm:fixed' : ''}"
     transition:fade={{ duration: 180 }}
     onclick={() => app.closeDay()}
     role="presentation"
   ></div>
 
   <!--
-    Sliding pane; it widens while writing to give the text room. Expanded, it
+    Sliding pane; it widens while writing to give the text room (on phones it
+    covers the top bar too, see TopBar). Expanded, it
     fills the window and --pane-gutter centres the text in a readable column.
     Width and gutter animate together (the raw gutter is registered in app.css
     so it can), so the pane grows from its edge as the text glides to centre.
   -->
   <aside
-    class="absolute right-0 top-0 z-pane flex h-full w-full flex-col border-l border-slate bg-surface shadow-2xl shadow-black/40 transition-[max-width,--pane-gutter-raw] duration-300 ease-glide motion-reduce:transition-none
+    class="absolute right-0 top-0 z-pane flex h-full w-full {app.editing ? 'max-sm:fixed' : ''} flex-col border-l border-slate bg-surface shadow-2xl shadow-black/40 transition-[max-width,--pane-gutter-raw] duration-300 ease-glide motion-reduce:transition-none
       [--pane-gutter:max(1.75rem,var(--pane-gutter-raw))]
       {app.paneExpanded
         ? 'max-w-full border-l-0 [--pane-gutter-raw:calc((100%-46rem)/2)]'
         : `[--pane-gutter-raw:1.75rem] ${app.editing ? 'max-w-3xl' : 'max-w-xl'}`}"
-    transition:fly={{ x: 480, duration: 320, easing: cubicOut }}
+    in:paneIn
+    out:paneOut
   >
     {#if app.editing}
       <EntryEditor focus={editorFocus} />

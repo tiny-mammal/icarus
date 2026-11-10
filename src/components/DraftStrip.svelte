@@ -12,6 +12,9 @@
    * write button), and in the bottom-right corner on wide screens.
    */
 
+  // Minimizing sinks the editor into this strip, which rises once it's gone.
+  const STRIP_DELAY_MS = 180;
+
   const parked = $derived(app.parkedDraft);
   const heading = $derived(
     parked
@@ -26,7 +29,8 @@
       sm:right-5 sm:bottom-5 sm:left-auto sm:w-80"
     aria-label="Continue writing: {heading}"
     onclick={() => app.resumeParked()}
-    transition:fly={{ y: 24, duration: 200, easing: cubicOut }}
+    in:fly={{ y: 24, duration: 200, delay: STRIP_DELAY_MS, easing: cubicOut }}
+    out:fly={{ y: 24, duration: 150, easing: cubicOut }}
   >
     <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-text text-ink">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5-.3.3-.5.7-.5 1.1V18c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8c.4 0 .8-.2 1.1-.5.3-.3.5-.7.5-1.1V6.5L15.5 2z"/><path d="M3 7.6v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5H15"/><path d="M15 2v5h5"/></svg>

@@ -224,10 +224,12 @@
 
 <!-- Three columns: the equal-width sides keep the search centred and still
      while the actions on the right come and go. Positioned: on phones the
-     drafts list spans this bar. Phones hide it while writing, leaving the
-     screen to the entry; closing the editor brings it back. -->
+     drafts list spans this bar. Phones give the screen to the entry while
+     writing: the editor covers the bar (dropped below the main stage), which
+     keeps its place, so nothing behind the editor shifts as it comes and goes. -->
 <header
-  class="relative z-bar grid h-14 shrink-0 {app.editing ? 'max-sm:hidden' : ''} grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate px-3 sm:grid-cols-[1fr_minmax(0,28rem)_1fr] sm:gap-4 sm:px-6"
+  class="relative z-bar grid h-14 shrink-0 {app.editing ? 'max-sm:z-auto' : ''} grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b border-slate px-3 sm:grid-cols-[1fr_minmax(0,28rem)_1fr] sm:gap-4 sm:px-6"
+  inert={viewport.compact && app.editing}
 >
   <!-- Brand -->
   <div class="flex shrink-0 items-center gap-2 text-sm font-semibold tracking-tight text-text">
