@@ -166,6 +166,9 @@ importers:
 
   .:
     dependencies:
+      '@martinezharo/promo-funnel':
+        specifier: github:martinezharo/promo-funnel#v1.0.1
+        version: https://codeload.github.com/martinezharo/promo-funnel/tar.gz/9c2ea1e440de4a09f8fc349efd1a6670f0bb334d
       '@tauri-apps/api':
         specifier: ^2.12.4
         version: 2.12.4
@@ -878,6 +881,10 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@martinezharo/promo-funnel@https://codeload.github.com/martinezharo/promo-funnel/tar.gz/9c2ea1e440de4a09f8fc349efd1a6670f0bb334d':
+    resolution: {gitHosted: true, integrity: sha512-yqMtYRQ9K4cR50xG5O573FH0eSLcqO4qzNI6dttF9v1mMre8+9pVtWkSOyUIlDm/IURjWdiYoflGIbu1uz1oJg==, tarball: https://codeload.github.com/martinezharo/promo-funnel/tar.gz/9c2ea1e440de4a09f8fc349efd1a6670f0bb334d}
+    version: 1.0.1
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     resolution: {integrity: sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==}
@@ -2508,6 +2515,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  '@martinezharo/promo-funnel@https://codeload.github.com/martinezharo/promo-funnel/tar.gz/9c2ea1e440de4a09f8fc349efd1a6670f0bb334d': {}
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true

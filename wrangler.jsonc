@@ -12,18 +12,26 @@
     "binding": "ASSETS",
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
-    // The home page (Markdown negotiation for agents) and the desktop builds
-    // stored in R2 need the Worker; everything else is a plain asset.
-    "run_worker_first": ["/", "/download/*"]
+    // The home page (Markdown negotiation for agents), the desktop builds
+    // stored in R2 and the promo funnel's API need the Worker; everything
+    // else is a plain asset.
+    "run_worker_first": ["/", "/download/*", "/api/*"]
   },
   // Desktop builds, uploaded by .github/workflows/release.yml.
   "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "icarus-releases" }],
   // Branch previews (Workers Builds runs `wrangler preview` off main) get an
   // empty bucket of their own, so they never read the published builds.
+  // ...and count their promo events apart, so testing a branch never shows up
+  // on the promo-stats dashboard.
   "previews": {
-    "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "icarus-releases-preview" }]
+    "r2_buckets": [{ "binding": "RELEASES", "bucket_name": "icarus-releases-preview" }],
+    "analytics_engine_datasets": [{ "binding": "PROMO_ANALYTICS", "dataset": "promo_events_preview" }]
   },
-  // No logs or analytics: the site has nothing to learn about its visitors.
+  // The promo funnel (site/promo-event.ts): what visitors who came from a
+  // promo on the author's other sites did next, in the `promo_events` dataset
+  // those sites write too. Anonymous, and never from the diary app.
+  "analytics_engine_datasets": [{ "binding": "PROMO_ANALYTICS", "dataset": "promo_events" }],
+  // No logs: the site has nothing else to learn about its visitors.
   "observability": { "enabled": false },
   "workers_dev": false,
   "preview_urls": false

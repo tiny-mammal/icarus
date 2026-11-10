@@ -5,6 +5,9 @@
  * becomes the main action instead.
  */
 import { PLATFORM_NAMES, detectPlatform, isAppleMobile } from '../src/lib/user-agent';
+import { startPromoTracking } from './promo';
+
+startPromoTracking();
 
 const platform = detectPlatform();
 

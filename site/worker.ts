@@ -1,12 +1,16 @@
 /**
  * Edge entry for icarus.4oli.com. Every page is a static asset; this Worker
- * only runs for `/` and `/download/*` (see `run_worker_first` in
+ * only runs for `/`, `/download/*` and `/api/*` (see `run_worker_first` in
  * `wrangler.jsonc`):
  *  - `/` serves `index.md` to agents that ask for Markdown.
  *  - `/download/<asset>` streams the latest build of that asset from R2
  *    (`?version=` pins an earlier release), and `/download/latest.json`
  *    describes the current release.
+ *  - `POST /api/promo-event` counts a step of the promo funnel
+ *    (`site/promo-event.ts`).
  */
+import { handlePromoEvent, type PromoDataset } from '@martinezharo/promo-funnel/worker';
+import { promoFunnel } from './promo-event';
 import { MANIFEST_KEY, isReleaseManifest, releasedAsset, type ReleaseManifest } from './releases';
 
 /** The slice of the R2 binding this Worker uses. */
@@ -29,6 +33,8 @@ interface R2Bucket {
 interface Env {
   ASSETS: { fetch(input: Request | URL | string, init?: RequestInit): Promise<Response> };
   RELEASES: R2Bucket;
+  /** The `promo_events` dataset, shared with the author's other sites. */
+  PROMO_ANALYTICS: PromoDataset;
 }
 
 const DOWNLOAD_PREFIX = '/download/';
@@ -158,6 +164,7 @@ export default {
     if (url.pathname === '/' && prefersMarkdown(request.headers.get('Accept') ?? '')) {
       return markdownHome(request, env);
     }
+    if (url.pathname === '/api/promo-event') return handlePromoEvent(request, env.PROMO_ANALYTICS, promoFunnel);
     if (url.pathname.startsWith(DOWNLOAD_PREFIX)) {
       const id = url.pathname.slice(DOWNLOAD_PREFIX.length);
       if (id && !id.includes('/')) {
