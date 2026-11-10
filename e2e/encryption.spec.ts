@@ -161,4 +161,15 @@ test('a plain diary can be protected later from Settings', async ({ page }) => {
   await choosePassword(page, 'Encrypt diary');
   await page.getByRole('button', { name: 'Done' }).click();
   expect(await storedData(page)).not.toContain('Protected later');
+
+  // Settings now offers the lock controls, and they work from there.
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  const autoLock = settings.getByRole('button', { name: /^Lock after inactivity/ });
+  await expect(autoLock).toHaveText('15 min');
+  await autoLock.click();
+  await settings.getByRole('option', { name: 'Never' }).click();
+  await expect(autoLock).toHaveText('Never');
+  await settings.getByRole('button', { name: /Lock now/ }).click();
+  await expect(page.getByRole('heading', { name: 'Diary locked' })).toBeVisible();
 });

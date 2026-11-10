@@ -740,6 +740,16 @@ class AppStore {
     }
   }
 
+  /** Preferences apply at once; a failed write is logged and reported, not rolled back. */
+  private async savePreference(caller: string, save: Promise<void>): Promise<void> {
+    try {
+      await save;
+    } catch (err) {
+      devError(`${caller}: could not persist the preference`, err);
+      this.toast('error', 'Could not save settings.');
+    }
+  }
+
   async loadLockPreferences(): Promise<void> {
     try {
       [this.autoLockMinutes, this.lockWhenHidden] = await Promise.all([
@@ -753,22 +763,12 @@ class AppStore {
 
   async setAutoLock(minutes: AutoLockMinutes): Promise<void> {
     this.autoLockMinutes = minutes;
-    try {
-      await setSavedAutoLock(minutes);
-    } catch (err) {
-      devError('setAutoLock: could not persist the auto-lock preference', err);
-      this.toast('error', 'Could not save settings.');
-    }
+    await this.savePreference('setAutoLock', setSavedAutoLock(minutes));
   }
 
   async setLockWhenHidden(enabled: boolean): Promise<void> {
     this.lockWhenHidden = enabled;
-    try {
-      await setSavedLockWhenHidden(enabled);
-    } catch (err) {
-      devError('setLockWhenHidden: could not persist the preference', err);
-      this.toast('error', 'Could not save settings.');
-    }
+    await this.savePreference('setLockWhenHidden', setSavedLockWhenHidden(enabled));
   }
 
   /**
@@ -1073,12 +1073,7 @@ class AppStore {
   /** Change the first day of the week and persist it. */
   async setWeekStart(weekStart: WeekStart): Promise<void> {
     this.weekStart = weekStart;
-    try {
-      await setSavedWeekStart(weekStart);
-    } catch (err) {
-      devError('setWeekStart: could not persist the week-start preference', err);
-      this.toast('error', 'Could not save settings.');
-    }
+    await this.savePreference('setWeekStart', setSavedWeekStart(weekStart));
   }
 
   /** Restore the saved date-format preference on boot (defaults to the system locale). */
@@ -1093,12 +1088,7 @@ class AppStore {
   /** Change how day labels are written and persist it. */
   async setDateFormat(format: DateFormat): Promise<void> {
     this.dateFormat = format;
-    try {
-      await setSavedDateFormat(format);
-    } catch (err) {
-      devError('setDateFormat: could not persist the date-format preference', err);
-      this.toast('error', 'Could not save settings.');
-    }
+    await this.savePreference('setDateFormat', setSavedDateFormat(format));
   }
 
   /** Restore the saved spell-check preference on boot (defaults to on). */
@@ -1113,12 +1103,7 @@ class AppStore {
   /** Turn native spell-check highlighting on/off and persist it. */
   async setSpellcheck(enabled: boolean): Promise<void> {
     this.spellcheck = enabled;
-    try {
-      await setSavedSpellcheck(enabled);
-    } catch (err) {
-      devError('setSpellcheck: could not persist the spell-check preference', err);
-      this.toast('error', 'Could not save settings.');
-    }
+    await this.savePreference('setSpellcheck', setSavedSpellcheck(enabled));
   }
 
   /** Restore the length-count preferences on boot (both counts, hidden while typing). */
@@ -1136,23 +1121,13 @@ class AppStore {
   /** Choose what the editor's length count shows and persist it. */
   async setLengthCount(shown: LengthCount): Promise<void> {
     this.lengthCount = shown;
-    try {
-      await setSavedLengthCount(shown);
-    } catch (err) {
-      devError('setLengthCount: could not persist the length-count preference', err);
-      this.toast('error', 'Could not save settings.');
-    }
+    await this.savePreference('setLengthCount', setSavedLengthCount(shown));
   }
 
   /** Choose whether the length count steps aside while typing and persist it. */
   async setCountHidesWhileTyping(enabled: boolean): Promise<void> {
     this.countHidesWhileTyping = enabled;
-    try {
-      await setSavedCountHidesWhileTyping(enabled);
-    } catch (err) {
-      devError('setCountHidesWhileTyping: could not persist the preference', err);
-      this.toast('error', 'Could not save settings.');
-    }
+    await this.savePreference('setCountHidesWhileTyping', setSavedCountHidesWhileTyping(enabled));
   }
 
   /** Restore the personal spell-check dictionary on boot. */

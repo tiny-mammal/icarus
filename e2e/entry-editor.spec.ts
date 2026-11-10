@@ -61,10 +61,12 @@ test('the length count follows the chosen counts and can stay visible while typi
   await startPlainDiary(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const settings = page.getByRole('dialog', { name: 'Settings' });
-  const counts = settings.getByRole('group', { name: 'Length count' });
-  await counts.getByRole('button', { name: 'Words', exact: true }).click();
-  await expect(settings.getByTestId('count-preview')).toHaveText('248 words');
-  await settings.getByRole('button', { name: /Always/ }).click();
+  const counts = settings.getByRole('button', { name: /^Length count/ });
+  const hides = settings.getByRole('switch', { name: 'Hide the count while typing' });
+  await counts.click();
+  await settings.getByRole('option', { name: 'Words' }).click();
+  await expect(settings.getByText('Under the entry, like “248 words”')).toBeVisible();
+  await hides.click();
   await settings.getByRole('button', { name: 'Close' }).click();
 
   await page.getByRole('button', { name: 'New entry', exact: true }).click();
@@ -74,8 +76,28 @@ test('the length count follows the chosen counts and can stay visible while typi
   await expect(count).toHaveText('2 words');
   await expect(count).toHaveCSS('opacity', '1');
 
+  // Without a count there is nothing to hide, nor anything in the footer.
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Settings' }).click();
-  await counts.getByRole('button', { name: 'Off', exact: true }).click();
-  await expect(settings.getByRole('button', { name: /Always/ })).toBeDisabled();
+  await counts.click();
+  await settings.getByRole('option', { name: 'Off' }).click();
+  await expect(hides).toBeDisabled();
+});
+
+test('a select at the bottom of Settings opens upwards and Escape closes only its list', async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 520 });
+  await startPlainDiary(page);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  const format = settings.getByRole('button', { name: /^Date format/ });
+  await format.scrollIntoViewIfNeeded();
+  await format.focus();
+  await page.keyboard.press('ArrowDown');
+  const list = settings.getByRole('listbox', { name: 'Date format' });
+  await expect(list).toBeInViewport({ ratio: 1 });
+
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
+  await expect(settings).toBeVisible();
+  await expect(format).toBeFocused();
 });

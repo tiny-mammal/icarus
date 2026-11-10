@@ -149,12 +149,11 @@ test('date format preference rewrites day labels and survives a reload', async (
   await openFromSearch(page, 'Midsummer');
 
   await page.getByRole('button', { name: 'Settings' }).click();
-  const settings = page.getByRole('dialog');
-  await settings.getByRole('button', { name: /Year first/ }).click();
-  await expect(settings.getByRole('button', { name: /Year first/ })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  const settings = page.getByRole('dialog', { name: 'Settings' });
+  const format = settings.getByRole('button', { name: /^Date format/ });
+  await format.click();
+  await settings.getByRole('option', { name: /Year first/ }).click();
+  await expect(format).toHaveText('Year first');
   await page.waitForTimeout(250); // let the dialog transition settle for the screenshot
   await page.screenshot({ path: 'test-results/date-format-settings.png' });
 
@@ -167,9 +166,9 @@ test('date format preference rewrites day labels and survives a reload', async (
   // The choice is persisted with the other preferences.
   await page.reload();
   await page.getByRole('button', { name: 'Settings' }).click();
-  await expect(
-    page.getByRole('dialog').getByRole('button', { name: /Year first/ }),
-  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('dialog').getByRole('button', { name: /^Date format/ })).toHaveText(
+    'Year first',
+  );
 });
 
 type WheelEvents = number[][]; // [t (ms), deltaX, deltaY]
