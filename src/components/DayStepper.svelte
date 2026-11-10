@@ -11,7 +11,7 @@
     if (!key) return { label: `No ${dir === 'Previous' ? 'earlier' : 'later'} entries` };
     return {
       label: `${dir} day · ${shortDayLabel(keyToDate(key), app.dateFormat)}`,
-      keys: [dir === 'Previous' ? '←' : '→'],
+      keys: ['Shift', dir === 'Previous' ? '←' : '→'],
     };
   }
 </script>

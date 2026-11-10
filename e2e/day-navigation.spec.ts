@@ -62,7 +62,15 @@ test('steps between days with entries and between entries of a day', async ({ pa
   // The entry pager stays on the same day.
   await page.getByRole('button', { name: 'Next entry' }).click();
   await expect(article(page)).toContainText('Evening swim');
-  await page.keyboard.press('Shift+ArrowLeft');
+
+  // ←/→ turn the page: through the day's entries first, then on to the next
+  // day, entering it from its last entry when going back.
+  await page.keyboard.press('ArrowRight');
+  await expect(article(page)).toContainText('Midsummer');
+  await page.keyboard.press('ArrowLeft');
+  await expect(article(page)).toContainText('Evening swim');
+  await expect(page.getByText('2 / 2')).toBeVisible();
+  await page.keyboard.press('ArrowLeft');
   await expect(article(page)).toContainText('Morning walk');
 
   // ← crosses into the previous year and moves the calendar along with it.
@@ -97,7 +105,8 @@ test('steps between days with entries and between entries of a day', async ({ pa
   await page.screenshot({ path: 'test-results/day-navigation-expanded.png' });
   await page.keyboard.press('f');
   await expect(page.getByRole('button', { name: 'Full screen' })).toBeVisible();
-  await page.keyboard.press('ArrowRight');
+  // Shift skips the rest of the day's entries.
+  await page.keyboard.press('Shift+ArrowRight');
   await expect(article(page)).toContainText('Midsummer');
 });
 
@@ -247,12 +256,17 @@ test('two-finger touchpad swipes page through months and days', async ({ page })
   await page.waitForTimeout(250);
   await expect(page.getByText('December 2025')).toBeVisible();
 
-  // In the day pane the same swipe steps between days with entries.
+  // In the day pane the same swipe turns the page: back onto the previous
+  // day's last entry, then through that day's entries.
   await openFromSearch(page, 'Midsummer');
   await page.waitForTimeout(350); // let the pane slide in
   const body = (await article(page).boundingBox())!;
   await playWheel(page, body.x + body.width / 2, body.y + 20, touchpadSwipe(-200));
+  await expect(article(page)).toContainText('Evening swim');
+  await playWheel(page, body.x + body.width / 2, body.y + 20, touchpadSwipe(-200));
   await expect(article(page)).toContainText('Morning walk');
+  await playWheel(page, body.x + body.width / 2, body.y + 20, touchpadSwipe(200));
+  await expect(article(page)).toContainText('Evening swim');
   await playWheel(page, body.x + body.width / 2, body.y + 20, touchpadSwipe(200));
   await expect(article(page)).toContainText('Midsummer');
 });

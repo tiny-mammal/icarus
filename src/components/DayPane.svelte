@@ -36,12 +36,9 @@
     }
   });
 
-  // One entry per page when a day holds several. `page` is kept in range as the
-  // selection changes; it resets to the first entry whenever the day changes.
-  let page = $state(0);
+  // One entry per page when a day holds several; the store tracks which.
   const count = $derived(app.selectedEntries.length);
-  const safePage = $derived(Math.min(page, Math.max(0, count - 1)));
-  const entry = $derived(app.selectedEntries[safePage] ?? null);
+  const entry = $derived(app.readingEntry);
 
   // Terms to highlight when this day was opened from a search hit.
   const terms = $derived(queryTerms(app.searchHighlight));
@@ -58,14 +55,6 @@
           (entry.location ? countMatches(entry.location, terms) : 0)
       : 0,
   );
-
-  // On day change, jump to the searched entry (if any) rather than the first.
-  $effect(() => {
-    app.selectedKey; // re-run on day change
-    const uid = app.focusEntryUid;
-    const idx = uid ? app.selectedEntries.findIndex((e) => e.uid === uid) : -1;
-    page = idx >= 0 ? idx : 0;
-  });
 
   // Scroll the first highlighted hit in the body into view once it's rendered.
   function onBodyHighlight(c: number, first: HTMLElement | null) {
@@ -132,15 +121,15 @@
   const paneIn = (node: HTMLElement) => paneMotion(node, app.editing, 320);
   const paneOut = (node: HTMLElement) => paneMotion(node, showedEditor, showedEditor ? 260 : 320);
 
-  // Touch: swipe sideways to step to the previous/next day with entries, the
-  // same move as ←/→ on a keyboard. Off while writing.
-  const daySwipe = $derived({
-    onswipe: (dir: -1 | 1) => app.stepDay(dir),
+  // Touch: swipe sideways to turn the page, through the day's entries and then
+  // on to the next day with entries, the same move as ←/→ on a keyboard.
+  const pageSwipe = $derived({
+    onswipe: (dir: -1 | 1) => app.turnPage(dir),
     enabled: !app.overlayOpen,
   });
 
-  // Reader shortcuts: ←/→ step between days with entries, Shift+←/→ between
-  // the entries of the open day, N writes a new entry on the open day, E edits
+  // Reader shortcuts: ←/→ turn the page (entry by entry, then day by day),
+  // Shift+←/→ skip straight to the previous/next day with entries, N writes a new entry on the open day, E edits
   // the one being read, F toggles full screen. Inert while writing or another
   // overlay is up.
   function onKeydown(e: KeyboardEvent) {
@@ -162,8 +151,8 @@
     }
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     const dir = e.key === 'ArrowLeft' ? -1 : 1;
-    if (e.shiftKey) page = Math.min(Math.max(safePage + dir, 0), Math.max(0, count - 1));
-    else app.stepDay(dir);
+    if (e.shiftKey) app.stepDay(dir);
+    else app.turnPage(dir);
     e.preventDefault();
   }
 </script>
@@ -257,14 +246,14 @@
 
       {#if count > 1}
         <div class="px-5 py-2.5 sm:px-[var(--pane-gutter)]">
-          <EntryPager entries={app.selectedEntries} bind:page={() => safePage, (v) => (page = v)} />
+          <EntryPager entries={app.selectedEntries} bind:page={() => app.readingIndex, (v) => app.readEntry(v)} />
         </div>
       {/if}
 
       <div
         bind:this={reader}
         class="min-h-0 flex-1 [touch-action:pan-y] overflow-y-auto overscroll-contain px-5 pt-5 {app.parkedDraft ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} [scroll-padding-block:2rem] sm:px-[var(--pane-gutter)] sm:pt-6"
-        use:swipe={daySwipe}
+        use:swipe={pageSwipe}
       >
         {#if !entry}
           <div class="flex h-full flex-col items-center justify-center text-center text-muted">

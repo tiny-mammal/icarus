@@ -225,7 +225,7 @@ describe('writing in the day pane', () => {
     app.closeEditor();
 
     expect(app.selectedKey).toBe('2026-10-01');
-    expect(app.focusEntryUid).toBe('e1');
+    expect(app.readingUid).toBe('e1');
     expect(app.searchHighlight).toBe('Original');
     expect(app.currentMonth.getMonth()).toBe(9);
   });

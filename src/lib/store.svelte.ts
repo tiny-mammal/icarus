@@ -106,7 +106,7 @@ export interface ParkedDraft {
 interface ReadingView {
   selectedKey: string | null;
   currentMonth: Date;
-  focusEntryUid: string | null;
+  readingUid: string | null;
   searchHighlight: string;
 }
 
@@ -168,8 +168,11 @@ class AppStore {
 
   /** When a day pane is opened from a search hit, the term(s) to highlight. */
   searchHighlight = $state('');
-  /** UID of the entry to focus inside the opened day (from a search hit). */
-  focusEntryUid = $state<string | null>(null);
+  /**
+   * UID of the entry being read on the open day; null (or a UID no longer on
+   * that day) reads its first entry.
+   */
+  readingUid = $state<string | null>(null);
 
   /**
    * Whether the day pane shows the editor (writing a new entry or revising
@@ -238,6 +241,12 @@ class AppStore {
   selectedEntries = $derived.by<DiaryEntry[]>(() =>
     this.selectedKey ? (this.entriesByDay.get(this.selectedKey) ?? []) : [],
   );
+
+  /** Position of the entry being read among `selectedEntries`. */
+  readingIndex = $derived(
+    Math.max(0, this.selectedEntries.findIndex((e) => e.uid === this.readingUid)),
+  );
+  readingEntry = $derived<DiaryEntry | null>(this.selectedEntries[this.readingIndex] ?? null);
 
   /** Every day that holds an entry, ascending (`YYYY-MM-DD` sorts naturally). */
   dayKeys = $derived.by<string[]>(() => [...this.entriesByDay.keys()].sort());
@@ -510,7 +519,7 @@ class AppStore {
     this.selectedKey = null;
     this.paneExpanded = false;
     this.searchHighlight = '';
-    this.focusEntryUid = null;
+    this.readingUid = null;
     this.editing = false;
     this.settingsOpen = false;
     this.statsOpen = false;
@@ -986,7 +995,7 @@ class AppStore {
     this.editorOrigin = null;
     if (origin.selectedKey && !(revised && dateKey(revised.date) === origin.selectedKey)) {
       this.selectedKey = origin.selectedKey;
-      this.focusEntryUid = origin.focusEntryUid;
+      this.readingUid = origin.readingUid;
       this.searchHighlight = origin.searchHighlight;
     } else {
       this.hidePane();
@@ -1001,7 +1010,7 @@ class AppStore {
       this.editorOrigin = {
         selectedKey: this.selectedKey,
         currentMonth: this.currentMonth,
-        focusEntryUid: this.focusEntryUid,
+        readingUid: this.readingUid,
         searchHighlight: this.searchHighlight,
       };
     }
@@ -1323,7 +1332,7 @@ class AppStore {
     }
     // If the open day no longer has anything or the focused entry is gone,
     // close the pane — nothing to show.
-    if (this.focusEntryUid === uid) this.focusEntryUid = null;
+    if (this.readingUid === uid) this.readingUid = null;
     if (this.selectedKey && this.entriesByDay.get(this.selectedKey)?.length === 0) {
       this.closeDay();
     }
@@ -1441,7 +1450,7 @@ class AppStore {
   /** Drop any active search highlight / focus (manual navigation). */
   private clearSearchFocus(): void {
     this.searchHighlight = '';
-    this.focusEntryUid = null;
+    this.readingUid = null;
   }
 
   // --- navigation ---------------------------------------------------------
@@ -1475,15 +1484,31 @@ class AppStore {
   }
   /**
    * Open the previous/next day that has entries, skipping empty days, and keep
-   * the calendar on that day's month.
+   * the calendar on that day's month. It opens on the day's first entry, or
+   * its last with `at: 'last'`.
    */
-  stepDay(dir: -1 | 1): void {
+  stepDay(dir: -1 | 1, at: 'first' | 'last' = 'first'): void {
     const key = dir === 1 ? this.nextDayKey : this.prevDayKey;
     if (!key) return;
     this.stopEditing();
     this.clearSearchFocus();
     this.selectedKey = key;
     this.currentMonth = startOfMonth(keyToDate(key));
+    if (at === 'last') this.readingUid = this.entriesByDay.get(key)?.at(-1)?.uid ?? null;
+  }
+  /** Read the entry at `index` of the open day (clamped to its entries). */
+  readEntry(index: number): void {
+    const entries = this.selectedEntries;
+    this.readingUid = entries[Math.min(Math.max(index, 0), entries.length - 1)]?.uid ?? null;
+  }
+  /**
+   * Turn the page like a book: through the open day's entries first, then on
+   * to the next day with entries (backwards, onto that day's last entry).
+   */
+  turnPage(dir: -1 | 1): void {
+    const next = this.readingIndex + dir;
+    if (next >= 0 && next < this.selectedEntries.length) this.readEntry(next);
+    else this.stepDay(dir, dir === 1 ? 'first' : 'last');
   }
   navigateMonth(delta: number): void {
     this.currentMonth = addMonths(this.currentMonth, delta);
@@ -1508,7 +1533,7 @@ class AppStore {
     this.stopEditing();
     this.currentMonth = startOfMonth(entry.date);
     this.selectedKey = dateKey(entry.date);
-    this.focusEntryUid = entry.uid;
+    this.readingUid = entry.uid;
     this.searchHighlight = query;
   }
 

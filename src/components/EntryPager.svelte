@@ -17,7 +17,7 @@
   <button
     class="grid h-6 w-6 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
     aria-label="Previous entry"
-    use:tooltip={{ label: 'Previous entry', keys: ['Shift', '←'] }}
+    use:tooltip={{ label: 'Previous entry', keys: ['←'] }}
     disabled={page === 0}
     onclick={() => go(-1)}
   >
@@ -40,7 +40,7 @@
   <button
     class="grid h-6 w-6 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
     aria-label="Next entry"
-    use:tooltip={{ label: 'Next entry', keys: ['Shift', '→'] }}
+    use:tooltip={{ label: 'Next entry', keys: ['→'] }}
     disabled={page === count - 1}
     onclick={() => go(1)}
   >
