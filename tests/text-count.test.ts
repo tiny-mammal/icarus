@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countChars, countWords, plainText } from '../src/lib/text-count';
+import { countChars, countWords, formatLength, plainText } from '../src/lib/text-count';
 
 describe('plainText', () => {
   it('drops inline and block Markdown syntax', () => {
@@ -46,5 +46,12 @@ describe('countWords', () => {
 
   it('ignores syntax and punctuation on their own', () => {
     expect(countWords('- [ ] \n---\n* * *')).toBe(0);
+  });
+});
+
+describe('formatLength', () => {
+  it('shows words and characters, singular when there is one', () => {
+    expect(formatLength('**Hi**')).toBe('1 word · 2 chars');
+    expect(formatLength('a')).toBe('1 word · 1 char');
   });
 });

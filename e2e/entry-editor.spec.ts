@@ -20,6 +20,18 @@ test('the length count steps aside while typing and returns after a pause', asyn
   await expect(count).toContainText('2 words · 9 chars');
 });
 
+test('the reader shows the same length as the editor under the date', async ({ page }) => {
+  await startPlainDiary(page);
+  await page.getByRole('button', { name: 'New entry', exact: true }).click();
+  await page.locator('.ProseMirror').click();
+  await page.keyboard.type('Dear **diary**');
+  await expect(page.getByTestId('entry-count')).toContainText('2 words · 10 chars');
+
+  await page.getByRole('button', { name: 'Save entry' }).click();
+  await page.getByRole('button', { name: /1 entry/ }).first().click();
+  await expect(page.getByTestId('entry-length')).toHaveText('2 words · 10 chars');
+});
+
 test('undo and redo buttons appear once writing starts and step through the body history', async ({ page }) => {
   await startPlainDiary(page);
   await page.getByRole('button', { name: 'New entry', exact: true }).click();

@@ -19,6 +19,7 @@
   import PaneSizeToggle from './PaneSizeToggle.svelte';
   import ScrollTopButton from './ScrollTopButton.svelte';
   import EntryEditor, { type EditorFocus } from './EntryEditor.svelte';
+  import { formatLength } from '../lib/text-count';
 
   /**
    * The one place where a day is read and written. It slides over the
@@ -208,6 +209,10 @@
               {:else}
                 No matches for “{app.searchHighlight}” here
               {/if}
+            </p>
+          {:else if entry?.content}
+            <p class="mt-1 pl-8 text-[0.7rem] font-medium text-muted tabular-nums" data-testid="entry-length">
+              {formatLength(entry.content)}
             </p>
           {/if}
         </div>

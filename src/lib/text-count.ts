@@ -66,3 +66,11 @@ export function countChars(markdown: string): number {
 export function countWords(markdown: string): number {
   return plainText(markdown).match(WORD)?.length ?? 0;
 }
+
+const plural = (n: number, one: string, many: string) =>
+  `${n.toLocaleString()} ${n === 1 ? one : many}`;
+
+/** "120 words · 640 chars": the length line shown by the editor and the reader. */
+export function formatLength(markdown: string): string {
+  return `${plural(countWords(markdown), 'word', 'words')} · ${plural(countChars(markdown), 'char', 'chars')}`;
+}

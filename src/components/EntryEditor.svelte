@@ -18,7 +18,7 @@
   import { devError } from '../lib/log';
   import { loadRichEditor } from '../lib/editor-loader';
   import { indexAfterVisible } from '../lib/caret';
-  import { countChars, countWords } from '../lib/text-count';
+  import { formatLength } from '../lib/text-count';
   import DraftsMenu from './DraftsMenu.svelte';
   import DatePicker from './DatePicker.svelte';
   import PaneSizeToggle from './PaneSizeToggle.svelte';
@@ -64,10 +64,7 @@
       : 'Write this day’s chapter… Markdown is welcome.',
   );
 
-  const chars = $derived(countChars(app.draftContent));
-  const words = $derived(countWords(app.draftContent));
-  const plural = (n: number, one: string, many: string) =>
-    `${n.toLocaleString()} ${n === 1 ? one : many}`;
+  const length = $derived(formatLength(app.draftContent));
 
   // The count steps aside while the body changes, so it never ticks along
   // with every letter, and returns after a pause (or on hover). Keyed on the
@@ -223,7 +220,7 @@
           ? 'opacity-0 duration-150'
           : 'duration-700'}"
         data-testid="entry-count"
-        >{#if app.draftSaved}<span aria-hidden="true">{' · '}</span>{/if}{plural(words, 'word', 'words')}{' · '}{plural(chars, 'char', 'chars')}</span
+        >{#if app.draftSaved}<span aria-hidden="true">{' · '}</span>{/if}{length}</span
       >
     </p>
 
