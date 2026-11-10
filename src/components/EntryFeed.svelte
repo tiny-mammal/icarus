@@ -13,6 +13,7 @@
   } from '../lib/feed';
   import { previewText } from '../lib/text';
   import type { DiaryEntry } from '../lib/types';
+  import ScrollTopButton from './ScrollTopButton.svelte';
 
   /**
    * Phones: the home screen. Every entry, newest first, in one virtualised
@@ -162,4 +163,6 @@
       </button>
     </div>
   </div>
+
+  <ScrollTopButton target={scroller} />
 </section>

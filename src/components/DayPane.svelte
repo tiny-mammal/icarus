@@ -16,6 +16,7 @@
   import DayStepper from './DayStepper.svelte';
   import EntryPager from './EntryPager.svelte';
   import PaneSizeToggle from './PaneSizeToggle.svelte';
+  import ScrollTopButton from './ScrollTopButton.svelte';
   import EntryEditor, { type EditorFocus } from './EntryEditor.svelte';
 
   /**
@@ -79,6 +80,7 @@
   // --- reading → writing ----------------------------------------------------
   // Where the editor should put the caret when it opens.
   let editorFocus = $state<EditorFocus>(null);
+  let reader = $state<HTMLElement | null>(null);
   // A focus request belongs to one editing session only.
   $effect(() => {
     if (!app.editing) editorFocus = null;
@@ -233,6 +235,7 @@
       {/if}
 
       <div
+        bind:this={reader}
         class="min-h-0 flex-1 [touch-action:pan-y] overflow-y-auto overscroll-contain px-5 pt-5 {app.parkedDraft ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} [scroll-padding-block:2rem] sm:px-[var(--pane-gutter)] sm:pt-6"
         use:swipe={daySwipe}
       >
@@ -284,6 +287,7 @@
           {/key}
         {/if}
       </div>
+      <ScrollTopButton target={reader} />
     {/if}
   </aside>
 {/if}

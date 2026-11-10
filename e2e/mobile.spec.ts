@@ -142,3 +142,29 @@ test('title and subtitle scroll away with a long body while writing', async ({ p
   await expect(body.getByText('The last line')).toBeInViewport();
   await expect(title).not.toBeInViewport();
 });
+
+test('a back-to-top button returns a long feed and a long entry to the top', async ({ page }) => {
+  const days = Array.from({ length: 60 }, (_, i) => {
+    const date = new Date(Date.UTC(2026, 0, 1 + i)).toISOString().slice(0, 10).replaceAll('-', '');
+    const body = i === 59 ? Array(40).fill('A long paragraph about the day.').join('\\n\\n') : 'A short note.';
+    return ['BEGIN:VEVENT', `UID:d${i}@icarus.diary`, `DTSTART;VALUE=DATE:${date}`, `SUMMARY:Day ${i}`, `DESCRIPTION:${body}`, 'END:VEVENT'];
+  });
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//icarus//EN', ...days.flat(), 'END:VCALENDAR', ''].join('\r\n');
+  await importPlainIcs(page, ics);
+  const toTop = page.getByRole('button', { name: 'Back to top' });
+
+  // The feed: hidden at the top, offered once a screen down.
+  const feed = page.getByRole('region', { name: 'Entries' }).locator('> div').first();
+  await expect(toTop).toHaveCount(0);
+  await feed.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await toTop.tap();
+  await expect.poll(() => feed.evaluate((el) => el.scrollTop)).toBe(0);
+  await expect(toTop).toHaveCount(0);
+
+  // A long entry read in the day pane.
+  await page.getByRole('button', { name: /Day 59$/ }).tap();
+  const reader = page.locator('aside .overflow-y-auto');
+  await reader.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await page.locator('aside').getByRole('button', { name: 'Back to top' }).tap();
+  await expect.poll(() => reader.evaluate((el) => el.scrollTop)).toBe(0);
+});
