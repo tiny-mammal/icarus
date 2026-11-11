@@ -122,3 +122,18 @@ test('shows how many days in a row passed, until turned off', async ({ page }) =
   await expect(tracker.getByTestId('pass-run')).toBeHidden();
   await expect(tracker).not.toHaveAccessibleName(/in a row/);
 });
+
+test('a long list of habits scrolls inside the popover', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 640 });
+  const habits = Array.from({ length: 24 }, (_, i) => ({ id: `h${i}`, name: `Habit ${i + 1}` }));
+  await importPlainIcs(page, diaryIcs([SAMPLE_ENTRY], { ...SAMPLE_TRACKER, habits }));
+  await openDay(page, SAMPLE_ENTRY.date);
+  await page.getByTestId('day-tracker').click();
+  const panel = page.getByRole('dialog', { name: 'Score and habits' });
+
+  const box = (await panel.boundingBox())!;
+  expect(box.y + box.height).toBeLessThanOrEqual(640);
+  // The last habit and the field after it can still be reached.
+  await panel.getByRole('button', { name: /^Habit 24: not marked/ }).click();
+  await panel.getByRole('textbox', { name: 'New habit' }).fill('Stretch');
+});

@@ -51,6 +51,14 @@
       .join(', '),
   );
 
+  // Where the popover starts on screen, so it can stop short of the bottom
+  // edge and scroll a long list of habits instead.
+  let trigger = $state<HTMLElement | null>(null);
+  let popoverTop = $state(0);
+  $effect(() => {
+    if (open && trigger) popoverTop = trigger.getBoundingClientRect().bottom + 8;
+  });
+
   function manageHabits() {
     open = false;
     app.settingsOpen = true;
@@ -70,6 +78,7 @@
       keys: writing ? undefined : ['R'],
     }}
     onclick={() => (open = !open)}
+    bind:this={trigger}
     data-testid="day-tracker"
   >
     <span class="flex items-center gap-1 tabular-nums">
@@ -128,7 +137,8 @@
       </div>
     {:else}
       <div
-        class="absolute top-full left-0 z-popover mt-2 w-[19.5rem] origin-top-left rounded-2xl border border-slate bg-surface p-4 shadow-2xl shadow-black/50"
+        class="absolute top-full left-0 z-popover mt-2 max-h-[calc(var(--screen-h)-var(--tracker-top,9rem)-1rem)] w-[19.5rem] origin-top-left overflow-y-auto overscroll-contain rounded-2xl border border-slate bg-surface p-4 shadow-2xl shadow-black/50"
+        style:--tracker-top="{popoverTop}px"
         transition:scale={{ duration: viewport.reducedMotion ? 0 : 160, start: 0.96, easing: cubicOut }}
         use:trapFocus={() => (open = false)}
         role="dialog"
