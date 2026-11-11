@@ -1,6 +1,6 @@
-import { devices, expect, test, type CDPSession, type Page } from '@playwright/test';
+import { devices, expect, test, type Page } from '@playwright/test';
 import { dateKey } from '../src/lib/date';
-import { diaryIcs, importPlainIcs, openSearch, startPlainDiary, searchResult } from './helpers';
+import { diaryIcs, importPlainIcs, openSearch, startPlainDiary, searchResult, touchDrag as drag } from './helpers';
 
 /**
  * Phone layout: every entry in one feed with a calendar sheet to jump around,
@@ -15,18 +15,6 @@ const DIARY_ICS = diaryIcs([
   { date: '2026-06-08', title: 'Morning walk', location: 'Lisbon' },
   { date: '2026-06-20', title: 'Midsummer' },
 ]);
-
-async function drag(cdp: CDPSession, from: [number, number], to: [number, number], ms = 160) {
-  const steps = 8;
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from[0], y: from[1] }] });
-  for (let i = 1; i <= steps; i++) {
-    const x = from[0] + ((to[0] - from[0]) * i) / steps;
-    const y = from[1] + ((to[1] - from[1]) * i) / steps;
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
-    await new Promise((r) => setTimeout(r, ms / steps));
-  }
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-}
 
 test('lists every entry, jumps through the calendar sheet and swipes days', async ({ page, context }) => {
   await importPlainIcs(page, DIARY_ICS);

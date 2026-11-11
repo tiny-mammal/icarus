@@ -5,7 +5,7 @@
 
 <span
   class:still
-  class="mark relative grid shrink-0 place-items-center rounded-full border border-[#f5b452]/30 bg-[#f5b452]/10 text-[#f7c77a]
+  class="mark relative grid shrink-0 place-items-center rounded-full border border-sun/30 bg-sun/10 text-[#f7c77a]
     {size === 'md' ? 'h-9 w-9' : 'h-7 w-7'}"
   aria-hidden="true"
 >

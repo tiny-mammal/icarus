@@ -10,8 +10,10 @@
  * keep whatever data is already in memory.
  */
 import ICAL from 'ical.js';
-import type { Diary, DiaryEntry, ParseResult } from './types';
+import type { DayRecord, Diary, DiaryEntry, Habit, ParseResult, Tracker } from './types';
+import { DEFAULT_SCORE_SCALE, DEFAULT_UNMARKED_DAYS, EMPTY_TRACKER } from './tracker';
 import { randomId } from './random';
+import { dateKey } from './date';
 
 const PRODID = '-//Icarus Diary//Local-First Diary//EN';
 const CRLF = '\r\n';
@@ -31,10 +33,47 @@ function str(value: unknown): string | undefined {
 type JCalProperty = [name: string, params: object, type: string, ...values: unknown[]];
 type JCalComponent = [name: string, properties: JCalProperty[], components: JCalComponent[]];
 
+// Icarus's own properties. Day tracking lives in the calendar (settings and
+// habits) and in one VJOURNAL per day, which calendar apps don't show.
+const HABIT = 'x-icarus-habit';
+const SCORE_SCALE = 'x-icarus-score-scale';
+const UNMARKED_DAYS = 'x-icarus-unmarked-days';
+const PASS_MARK = 'x-icarus-pass-mark';
+const PASS_STREAK = 'x-icarus-pass-streak';
+const SCORE = 'x-icarus-score';
+const MARK = 'x-icarus-mark';
+const STREAK = 'x-icarus-streak';
+
+// Tell ical.js their value types, so it decodes them like standard ones.
+const OWN_TYPES: Record<string, string> = {
+  [HABIT]: 'text',
+  [SCORE_SCALE]: 'integer',
+  [UNMARKED_DAYS]: 'text',
+  [PASS_MARK]: 'integer',
+  [PASS_STREAK]: 'boolean',
+  [SCORE]: 'integer',
+  [MARK]: 'text',
+  [STREAK]: 'integer',
+};
+for (const [name, defaultType] of Object.entries(OWN_TYPES)) {
+  (ICAL.design.icalendar.property as Record<string, unknown>)[name] = { defaultType };
+}
+
 /** Calendar properties Icarus writes itself; the rest are kept as-is. */
-const CALENDAR_PROPERTIES = new Set(['version', 'prodid', 'calscale']);
+const CALENDAR_PROPERTIES = new Set([
+  'version',
+  'prodid',
+  'calscale',
+  HABIT,
+  SCORE_SCALE,
+  UNMARKED_DAYS,
+  PASS_MARK,
+  PASS_STREAK,
+]);
 /** Entry properties Icarus reads (or regenerates, like DTSTAMP). */
 const ENTRY_PROPERTIES = new Set(['uid', 'dtstamp', 'dtstart', 'summary', 'description', 'location']);
+/** Properties of a day's record. */
+const DAY_PROPERTIES = new Set(['uid', 'dtstamp', 'dtstart', SCORE, MARK, STREAK]);
 
 /**
  * iCalendar text for the properties not in `known`, then for every
@@ -72,6 +111,91 @@ function dtToDate(property: JCalProperty | undefined): Date | null {
   return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
 }
 
+// --- day tracking -------------------------------------------------------------
+
+/** A parameter of `property`, as text. */
+function param(property: JCalProperty, name: string): string | undefined {
+  const value = (property[1] as Record<string, unknown>)[name];
+  return typeof value === 'string' ? value : undefined;
+}
+
+/** A whole number of at least `min`, or undefined. */
+function whole(value: unknown, min: number): number | undefined {
+  const n = Number(value);
+  return Number.isInteger(n) && n >= min ? n : undefined;
+}
+
+/**
+ * Add the day recorded by a VJOURNAL to `days`, merging with a record already
+ * read for the same day. False when it isn't a day record Icarus wrote.
+ */
+function readDay(days: Map<string, DayRecord>, props: JCalProperty[], children: JCalComponent[]): boolean {
+  if (!props.some((p) => p[0] === SCORE || p[0] === MARK || p[0] === STREAK)) return false;
+  const date = dtToDate(props.find((p) => p[0] === 'dtstart'));
+  if (!date) return false;
+  const key = dateKey(date);
+  const previous = days.get(key);
+  const marks = { ...previous?.marks };
+  const streaks = { ...previous?.streaks };
+  let score = previous?.score;
+  for (const p of props) {
+    const habit = param(p, 'x-habit');
+    if (p[0] === SCORE) {
+      const scale = whole(param(p, 'x-scale') ?? DEFAULT_SCORE_SCALE, 2);
+      const value = whole(p[3], 1);
+      if (scale && value && value <= scale) score = { value, scale };
+    } else if (p[0] === MARK && habit) {
+      const mark = String(p[3]).toUpperCase();
+      if (mark === 'DONE') marks[habit] = 'done';
+      else if (mark === 'MISSED') marks[habit] = 'missed';
+    } else if (p[0] === STREAK && habit) {
+      const length = whole(p[3], 0);
+      if (length !== undefined) streaks[habit] = length;
+    }
+  }
+  const extra = joinLines([
+    ...(previous?.extra ? [previous.extra] : []),
+    ...keepUnknown(props, DAY_PROPERTIES, children),
+  ]);
+  days.set(key, { ...(score && { score }), marks, streaks, ...(extra && { extra }) });
+  return true;
+}
+
+/** The calendar's habits and settings with the days read, or undefined if there are none. */
+function readTracker(props: JCalProperty[], days: Map<string, DayRecord>): Tracker | undefined {
+  const habits: Habit[] = [];
+  let scoreScale = DEFAULT_SCORE_SCALE;
+  let unmarkedDays = DEFAULT_UNMARKED_DAYS;
+  let passMark: number | undefined;
+  let passStreak = true;
+  let found = days.size > 0;
+  for (const p of props) {
+    if (p[0] === HABIT) {
+      const id = param(p, 'x-id');
+      const name = str(p[3]);
+      if (!id || !name || habits.some((h) => h.id === id)) continue;
+      habits.push(param(p, 'x-archived')?.toUpperCase() === 'TRUE' ? { id, name, archived: true } : { id, name });
+      found = true;
+    } else if (p[0] === SCORE_SCALE) {
+      scoreScale = whole(p[3], 2) ?? scoreScale;
+      found = true;
+    } else if (p[0] === UNMARKED_DAYS) {
+      if (String(p[3]).toUpperCase() === 'END') unmarkedDays = 'end';
+      found = true;
+    } else if (p[0] === PASS_MARK) {
+      passMark = whole(p[3], 2);
+      found = true;
+    } else if (p[0] === PASS_STREAK) {
+      passStreak = p[3] !== false && String(p[3]).toUpperCase() !== 'FALSE';
+      found = true;
+    }
+  }
+  if (!found) return undefined;
+  const tracker: Tracker = { ...EMPTY_TRACKER, habits, days, scoreScale, unmarkedDays, passStreak };
+  if (passMark !== undefined && passMark <= scoreScale) tracker.passMark = passMark;
+  return tracker;
+}
+
 /**
  * Parse raw `.ics` text into entries. Never throws — returns a typed result.
  *
@@ -93,10 +217,12 @@ export function parseIcs(text: string): ParseResult {
     // Everything but the entries; concatenated calendars merge into one.
     const calendarProperties: JCalProperty[] = [];
     const otherComponents: JCalComponent[] = [];
+    const days = new Map<string, DayRecord>();
     for (const root of roots) {
       calendarProperties.push(...(root[1] ?? []));
       for (const component of root[2] ?? []) {
         const [name, props, children] = component;
+        if (name === 'vjournal' && readDay(days, props, children ?? [])) continue;
         if (name !== 'vevent') {
           otherComponents.push(component);
           continue;
@@ -132,8 +258,12 @@ export function parseIcs(text: string): ParseResult {
       );
     }
 
+    const diary: Diary = { entries };
+    const tracker = readTracker(calendarProperties, days);
+    if (tracker) diary.tracker = tracker;
     const extra = joinLines(keepUnknown(calendarProperties, CALENDAR_PROPERTIES, otherComponents));
-    return extra ? { ok: true, entries, extra } : { ok: true, entries };
+    if (extra) diary.extra = extra;
+    return { ok: true, ...diary };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown parse error';
     return { ok: false, error: message };
@@ -212,7 +342,7 @@ function icsDateTime(d: Date): string {
  * Serialize a diary to valid `.ics` text. DTSTART is written as a date-only
  * value (VALUE=DATE) since entries belong to a day, not a moment.
  */
-export function serializeIcs({ entries, extra }: Diary): string {
+export function serializeIcs({ entries, tracker, extra }: Diary): string {
   const stamp = `DTSTAMP:${icsDateTime(new Date())}`;
   const lines = [
     'BEGIN:VCALENDAR',
@@ -220,6 +350,7 @@ export function serializeIcs({ entries, extra }: Diary): string {
     textLine('PRODID', PRODID),
     'CALSCALE:GREGORIAN',
   ];
+  if (tracker) lines.push(...trackerSettingLines(tracker));
   if (extra) lines.push(extra);
   for (const e of entries) {
     lines.push(
@@ -234,6 +365,46 @@ export function serializeIcs({ entries, extra }: Diary): string {
     if (e.extra) lines.push(e.extra);
     lines.push('END:VEVENT');
   }
+  if (tracker) lines.push(...dayLines(tracker, stamp));
   lines.push('END:VCALENDAR');
   return lines.join(CRLF);
+}
+
+/** A parameter value, quoted when it holds characters that would end it. */
+function paramValue(value: string): string {
+  return /[;:,]/.test(value) ? `"${value.replace(/"/g, '')}"` : value;
+}
+
+/** The calendar properties holding the tracker's settings and habits. */
+function trackerSettingLines(tracker: Tracker): string[] {
+  const lines: string[] = [];
+  if (tracker.scoreScale !== DEFAULT_SCORE_SCALE) lines.push(`X-ICARUS-SCORE-SCALE:${tracker.scoreScale}`);
+  if (tracker.unmarkedDays !== DEFAULT_UNMARKED_DAYS) lines.push('X-ICARUS-UNMARKED-DAYS:END');
+  if (tracker.passMark !== undefined) lines.push(`X-ICARUS-PASS-MARK:${tracker.passMark}`);
+  if (!tracker.passStreak) lines.push('X-ICARUS-PASS-STREAK:FALSE');
+  for (const habit of tracker.habits) {
+    const archived = habit.archived ? ';X-ARCHIVED=TRUE' : '';
+    lines.push(textLine(`X-ICARUS-HABIT;X-ID=${paramValue(habit.id)}${archived}`, habit.name));
+  }
+  return lines;
+}
+
+/** One VJOURNAL per tracked day, oldest first. */
+function dayLines(tracker: Tracker, stamp: string): string[] {
+  const lines: string[] = [];
+  for (const key of [...tracker.days.keys()].sort()) {
+    const record = tracker.days.get(key)!;
+    const day = key.replace(/-/g, '');
+    lines.push('BEGIN:VJOURNAL', `UID:day-${day}@icarus.diary`, stamp, `DTSTART;VALUE=DATE:${day}`);
+    if (record.score) lines.push(`X-ICARUS-SCORE;X-SCALE=${record.score.scale}:${record.score.value}`);
+    for (const [habit, mark] of Object.entries(record.marks)) {
+      lines.push(fold(`X-ICARUS-MARK;X-HABIT=${paramValue(habit)}:${mark === 'done' ? 'DONE' : 'MISSED'}`));
+    }
+    for (const [habit, length] of Object.entries(record.streaks)) {
+      lines.push(fold(`X-ICARUS-STREAK;X-HABIT=${paramValue(habit)}:${length}`));
+    }
+    if (record.extra) lines.push(record.extra);
+    lines.push('END:VJOURNAL');
+  }
+  return lines;
 }

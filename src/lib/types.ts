@@ -17,9 +17,55 @@ export interface DiaryEntry {
   extra?: string;
 }
 
+/** A daily habit. Archived habits keep their history but leave the day's list. */
+export interface Habit {
+  id: string;
+  name: string;
+  archived?: boolean;
+}
+
+/** How a habit went on one day. A habit not marked at all has no mark. */
+export type HabitMark = 'done' | 'missed';
+
+/** A day's score, kept with the scale it was given on. */
+export interface DayScore {
+  value: number;
+  scale: number;
+}
+
+/** What was tracked on one day, apart from its entries. */
+export interface DayRecord {
+  score?: DayScore;
+  /** Habit id → how the day went. */
+  marks: Readonly<Record<string, HabitMark>>;
+  /** Habit id → a streak length set by hand on this day; counting goes on from it. */
+  streaks: Readonly<Record<string, number>>;
+  /** iCalendar text Icarus doesn't use, written back verbatim. */
+  extra?: string;
+}
+
+/** What a day without a mark does to a streak: nothing, or end it. */
+export type UnmarkedDays = 'pause' | 'end';
+
+/** Habits, day scores and how streaks are counted. */
+export interface Tracker {
+  habits: readonly Habit[];
+  /** Keyed by `YYYY-MM-DD`. */
+  days: ReadonlyMap<string, DayRecord>;
+  /** Highest score a day can get (the lowest is 1). */
+  scoreScale: number;
+  unmarkedDays: UnmarkedDays;
+  /** Show how many days in a row the score passed, or failed. */
+  passStreak: boolean;
+  /** Lowest passing score on the current scale; half of it when unset. */
+  passMark?: number;
+}
+
 /** Everything one `.ics` file holds. */
 export interface Diary {
   entries: DiaryEntry[];
+  /** Absent for a diary that has never tracked anything. */
+  tracker?: Tracker;
   /**
    * Calendar properties and components (other than entries) that Icarus
    * doesn't use, as iCalendar text written back verbatim. Properties come

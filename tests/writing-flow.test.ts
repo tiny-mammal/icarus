@@ -281,3 +281,27 @@ describe('saving a diary written by another app', () => {
     }
   });
 });
+
+describe('day tracking', () => {
+  it('saves scores and habits beside the entries, quietly', async () => {
+    const app = await openApp();
+    app.addHabit('Morning run');
+    const habit = app.tracker.habits[0].id;
+    app.setDayScore('2026-10-01', 8);
+    app.setHabitMark('2026-10-01', habit, 'done');
+
+    // Then an entry save must keep them.
+    await app.editEntry(app.entries[0]);
+    app.draftContent = 'Changed text';
+    await app.commit();
+
+    const { storage } = await import('../src/lib/storage');
+    const saved = await storage.readVault({ kind: 'app' });
+    expect(saved).toContain('X-ICARUS-HABIT;X-ID=');
+    expect(saved).toContain('X-ICARUS-SCORE;X-SCALE=10:8');
+    expect(saved).toContain(`X-ICARUS-MARK;X-HABIT=${habit}:DONE`);
+    expect(saved).toContain('DESCRIPTION:Changed text');
+    // Tracking changes don't toast; only the entry save did.
+    expect(app.toasts.filter((t) => t.message.startsWith('Saved'))).toHaveLength(1);
+  });
+});

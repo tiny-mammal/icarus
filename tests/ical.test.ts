@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import ICAL from 'ical.js';
 import { isInvalidDate, parseIcs, serializeIcs } from '../src/lib/ical';
-import type { DiaryEntry } from '../src/lib/types';
+import type { DayRecord, DiaryEntry, Tracker } from '../src/lib/types';
 import { dateKey } from '../src/lib/date';
 
 const sample: DiaryEntry[] = [
@@ -270,7 +270,7 @@ describe('content Icarus does not use', () => {
     `X-LONG:${'abcdé'.repeat(30)}`,
     'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Ring', 'TRIGGER:-PT5M', 'END:VALARM',
     'END:VEVENT',
-    'BEGIN:VJOURNAL', 'UID:j', 'DTSTART;VALUE=DATE:20240101', 'X-ICARUS-SCORE:4', 'END:VJOURNAL',
+    'BEGIN:VJOURNAL', 'UID:j', 'DTSTART;VALUE=DATE:20240101', 'DESCRIPTION:A note from another app', 'END:VJOURNAL',
     'END:VCALENDAR',
   ].join('\r\n');
 
@@ -318,5 +318,69 @@ describe('content Icarus does not use', () => {
     const res = parseIcs(serializeIcs({ entries: sample }));
     expect(res.ok && res.extra).toBeUndefined();
     expect(res.ok && res.entries.every((e) => e.extra === undefined)).toBe(true);
+  });
+});
+
+describe('day tracking', () => {
+  const tracker: Tracker = {
+    habits: [
+      { id: 'gym', name: 'Gym; legs, back' },
+      { id: 'read', name: 'Read', archived: true },
+    ],
+    days: new Map<string, DayRecord>([
+      ['2024-01-01', { score: { value: 8, scale: 10 }, marks: { gym: 'done', read: 'missed' }, streaks: {} }],
+      ['2024-01-02', { score: { value: 4, scale: 5 }, marks: {}, streaks: { gym: 45 } }],
+    ]),
+    scoreScale: 5,
+    unmarkedDays: 'end',
+    passStreak: false,
+    passMark: 4,
+  };
+
+  it('round-trips habits, settings and days', () => {
+    const res = parseIcs(serializeIcs({ entries: sample, tracker }));
+    if (!res.ok) throw new Error(res.error);
+    expect(res.tracker).toEqual(tracker);
+    expect(res.entries).toHaveLength(sample.length);
+    expect(res.extra).toBeUndefined();
+  });
+
+  it('writes each day as a VJOURNAL that calendar apps leave alone', () => {
+    const ics = serializeIcs({ entries: [], tracker });
+    expect(ics.match(/BEGIN:VJOURNAL/g)).toHaveLength(2);
+    expect(ics).toContain('X-ICARUS-SCORE;X-SCALE=10:8');
+    expect(ics).toContain('X-ICARUS-STREAK;X-HABIT=gym:45');
+    expect(ics).toContain('X-ICARUS-HABIT;X-ID=gym:Gym\\; legs\\, back');
+  });
+
+  it('merges records of the same day and keeps what it does not use', () => {
+    const res = parseIcs(
+      [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//test//EN',
+        'BEGIN:VJOURNAL', 'UID:x', 'DTSTART;VALUE=DATE:20240101', 'X-ICARUS-MARK;X-HABIT=gym:DONE',
+        'X-OTHER:kept', 'END:VJOURNAL',
+        'BEGIN:VJOURNAL', 'UID:y', 'DTSTART;VALUE=DATE:20240101', 'X-ICARUS-SCORE:7', 'END:VJOURNAL',
+        'END:VCALENDAR',
+      ].join('\r\n'),
+    );
+    if (!res.ok) throw new Error(res.error);
+    expect(res.tracker?.days.get('2024-01-01')).toEqual({
+      score: { value: 7, scale: 10 },
+      marks: { gym: 'done' },
+      streaks: {},
+      extra: 'X-OTHER:kept',
+    });
+    expect(serializeIcs(res)).toContain('X-OTHER:kept');
+  });
+
+  it('ignores scores outside their scale', () => {
+    const res = parseIcs(
+      [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//test//EN',
+        'BEGIN:VJOURNAL', 'DTSTART;VALUE=DATE:20240101', 'X-ICARUS-SCORE;X-SCALE=5:9', 'END:VJOURNAL',
+        'END:VCALENDAR',
+      ].join('\r\n'),
+    );
+    expect(res.ok && res.tracker?.days.get('2024-01-01')?.score).toBeUndefined();
   });
 });
