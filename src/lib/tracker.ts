@@ -242,10 +242,9 @@ export function passRun(
  */
 export function setScoreScale(tracker: Tracker, scale: number): Tracker {
   if (scale === tracker.scoreScale) return tracker;
-  const mark = tracker.passMark === undefined
-    ? undefined
-    : Math.round(1 + scoreLevel(tracker.passMark, tracker.scoreScale) * (scale - 1));
-  return { ...tracker, scoreScale: scale, passMark: mark };
+  const scaled = { ...tracker, scoreScale: scale, passMark: undefined };
+  if (tracker.passMark === undefined) return scaled;
+  return setPassMark(scaled, 1 + scoreLevel(tracker.passMark, tracker.scoreScale) * (scale - 1));
 }
 
 export function setPassMark(tracker: Tracker, mark: number): Tracker {
