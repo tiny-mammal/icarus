@@ -1311,6 +1311,17 @@ class AppStore {
     return this.flushDraft();
   }
 
+  /**
+   * Before the app closes: save the draft and let diary writes still on
+   * their way (a score or habit just changed) reach storage. False when the
+   * draft couldn't be saved; a failed diary write has already been reported.
+   */
+  async flushBeforeQuit(): Promise<boolean> {
+    const draftSaved = await this.flushDraftNow();
+    await this.writeDiary.idle();
+    return draftSaved;
+  }
+
   private async removeDraft(id: string): Promise<boolean> {
     const previous = this.drafts;
     this.drafts = this.drafts.filter((d) => d.id !== id);
@@ -1489,7 +1500,7 @@ class AppStore {
    */
   private async persist(quiet = false): Promise<boolean> {
     if (!this.vault) return false;
-    const saved = await this.writeDiary();
+    const saved = await this.writeDiary.run();
     if (!saved) this.toast('error', 'Write failed — your changes are still in memory.');
     else if (!quiet) this.toast('success', `Saved ${this.appPlaceIn}`);
     return saved;

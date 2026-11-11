@@ -28,7 +28,8 @@ function controlledWrites() {
 describe('createWriteQueue', () => {
   it('runs one write at a time and coalesces a burst into one follow-up', async () => {
     const w = controlledWrites();
-    const run = createWriteQueue(w.write);
+    const run = () => queue.run();
+    const queue = createWriteQueue(w.write);
     w.set(1);
     const first = run();
     w.set(2);
@@ -47,13 +48,34 @@ describe('createWriteQueue', () => {
 
   it('keeps going after a failed write', async () => {
     let fail = true;
-    const run = createWriteQueue(async () => {
+    const queue = createWriteQueue(async () => {
       if (fail) throw new Error('disk full');
       return 'ok';
     });
+    const run = () => queue.run();
     const failed = run();
     fail = false;
     await expect(failed).rejects.toThrow('disk full');
     expect(await run()).toBe('ok');
+  });
+});
+
+describe('idle', () => {
+  it('waits for the running write and the follow-up', async () => {
+    const w = controlledWrites();
+    const queue = createWriteQueue(w.write);
+    void queue.run();
+    void queue.run();
+    let settled = false;
+    const idle = queue.idle().then(() => (settled = true));
+    await w.release();
+    expect(settled).toBe(false);
+    await w.release();
+    await idle;
+    expect(w.seen).toHaveLength(2);
+  });
+
+  it('settles straight away with nothing to write', async () => {
+    await expect(createWriteQueue(async () => 1).idle()).resolves.toBeUndefined();
   });
 });

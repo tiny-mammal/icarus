@@ -305,3 +305,15 @@ describe('day tracking', () => {
     expect(app.toasts.filter((t) => t.message.startsWith('Saved'))).toHaveLength(1);
   });
 });
+
+describe('closing the app', () => {
+  it('waits for a tracker change still on its way to storage', async () => {
+    const app = await openApp();
+    app.setDayScore('2026-10-01', 6);
+    app.setDayScore('2026-10-01', 7);
+    expect(await app.flushBeforeQuit()).toBe(true);
+
+    const { storage } = await import('../src/lib/storage');
+    expect(await storage.readVault({ kind: 'app' })).toContain('X-ICARUS-SCORE;X-SCALE=10:7');
+  });
+});
