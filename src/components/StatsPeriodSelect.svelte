@@ -5,6 +5,7 @@
     STATS_PRESETS,
     isCustomRange,
     periodLabel,
+    diaryDates,
     periodRange,
     type StatsPeriod,
     type StatsPreset,
@@ -52,7 +53,7 @@
   {#snippet panel({ close, back })}
     <!-- The calendar opens on the period on show: a preset is a starting point to adjust. -->
     <DateRangePicker
-      initial={periodRange(period, app.entries)}
+      initial={periodRange(period, diaryDates(app.entries, app.tracker))}
       onapply={(range) => {
         period = { start: dateKey(range.start), end: dateKey(range.end) };
         close();
