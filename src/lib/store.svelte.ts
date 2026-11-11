@@ -587,10 +587,14 @@ class AppStore {
 
   /**
    * Lock the open encrypted diary: save the draft (encrypted), forget the key
-   * and clear the diary from memory. Refuses while a write is in flight or if
-   * the draft cannot be saved, so locking never loses work.
+   * and clear the diary from memory. Waits for a diary write already under
+   * way (a tap on a habit starts one at once, and a lock asked for when the
+   * page is hidden is not asked again); refuses while anything else holds the
+   * app busy or if the draft cannot be saved, so locking never loses work.
    */
   async lock(): Promise<boolean> {
+    if (!this.encrypted || !this.vault) return false;
+    await this.writeDiary.idle();
     if (!this.encrypted || !this.vault || this.busy) return false;
     if (!(await this.flushDraftNow())) return false;
     await this.showLockScreen(this.vault);

@@ -36,6 +36,29 @@ test('scores a day, marks habits and keeps a streak set by hand', async ({ page 
   await expect(panel.getByRole('button', { name: /^Streak for Morning run: 40 days/ })).toBeVisible();
 });
 
+test('leaving the streak field for another one keeps focus there', async ({ page }) => {
+  await importPlainIcs(page, diaryIcs([SAMPLE_ENTRY], SAMPLE_TRACKER));
+  await openDay(page, SAMPLE_ENTRY.date);
+  await page.getByTestId('day-tracker').click();
+  const panel = page.getByRole('dialog', { name: 'Score and habits' });
+
+  await panel.getByRole('button', { name: /^Streak for Morning run/ }).click();
+  const streak = panel.getByRole('textbox', { name: /^Streak for Morning run/ });
+  await streak.fill('12');
+
+  // Moving on to the New habit field commits the number without pulling focus back.
+  const newHabit = panel.getByRole('textbox', { name: 'New habit' });
+  await newHabit.click();
+  await page.keyboard.type('Stretch');
+  await expect(newHabit).toHaveValue('Stretch');
+  await expect(panel.getByRole('button', { name: /^Streak for Morning run: 12 days, set by hand/ })).toBeVisible();
+
+  // Enter still hands focus back to the number it replaced.
+  await panel.getByRole('button', { name: /^Streak for Morning run/ }).click();
+  await panel.getByRole('textbox', { name: /^Streak for Morning run/ }).press('Enter');
+  await expect(panel.getByRole('button', { name: /^Streak for Morning run/ })).toBeFocused();
+});
+
 /** The centre of `locator` on screen. */
 async function centre(locator: Locator): Promise<[number, number]> {
   const box = (await locator.boundingBox())!;

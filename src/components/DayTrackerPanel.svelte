@@ -42,17 +42,20 @@
     streakInput?.select();
   }
 
-  /** Leave the streak field, keeping focus on the number it replaced. */
-  async function closeStreak(id: string) {
+  /**
+   * Leave the streak field, keeping focus on the number it replaced unless
+   * focus was on its way to another control.
+   */
+  async function closeStreak(id: string, restoreFocus = true) {
     editingStreak = null;
     await tick();
-    list?.querySelector<HTMLElement>(`[data-streak="${id}"]`)?.focus();
+    if (restoreFocus) list?.querySelector<HTMLElement>(`[data-streak="${id}"]`)?.focus();
   }
 
-  function commitStreak() {
+  function commitStreak(restoreFocus = true) {
     const id = editingStreak;
     if (!id) return;
-    void closeStreak(id);
+    void closeStreak(id, restoreFocus);
     const text = streakDraft.trim();
     if (!text) {
       app.setHabitStreak(dayKey, id, null);
@@ -143,7 +146,7 @@
               pattern="[0-9]*"
               aria-label="Streak for {habit.name} on this day"
               onkeydown={onStreakKey}
-              onblur={commitStreak}
+              onblur={(e) => commitStreak(e.relatedTarget === null)}
             />
           {:else}
             <button
