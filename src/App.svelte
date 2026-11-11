@@ -83,7 +83,7 @@
     // Last-chance draft flush when the window is hidden or about to close, so
     // an in-progress entry is never lost to a quit or a power cut. These web
     // handlers can't await, so they're a best-effort fallback.
-    const flush = () => void app.flushDraftNow();
+    const flush = () => void app.flushBeforeQuit();
     const onVisibility = () => {
       if (!document.hidden) return;
       // Locking flushes the draft (encrypted) first.
@@ -95,7 +95,7 @@
     window.addEventListener('beforeunload', flush);
 
     // The reliable path under Tauri: intercept the window close, finish the
-    // (async) flush, then actually close. If the draft cannot be saved, ask
+    // (async) flush and any diary write still under way, then actually close. If the draft cannot be saved, ask
     // before discarding the unsaved editor content.
     let unlistenClose: (() => void) | undefined;
     void (async () => {
@@ -104,7 +104,7 @@
         const win = getCurrentWindow();
         unlistenClose = await win.onCloseRequested(async (event) => {
           event.preventDefault();
-          if (await app.flushDraftNow()) {
+          if (await app.flushBeforeQuit()) {
             await win.destroy();
             return;
           }
