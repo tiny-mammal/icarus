@@ -114,3 +114,17 @@ test('the search order preference sets where each search starts', async ({ page 
   await (await openSearch(page)).fill('walk');
   await expect(titles.first()).toContainText('Evening walk 0');
 });
+
+test('Escape closes the results once, without echoing back', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await importPlainIcs(page, manyMatchesIcs(3));
+  const field = await openSearch(page);
+  await field.fill('walk');
+  const list = page.getByRole('list').filter({ hasText: 'Evening walk' });
+  await expect(list).toBeVisible();
+
+  await field.press('Escape');
+  await expect(list).toBeHidden();
+  expect(errors).toEqual([]);
+});
