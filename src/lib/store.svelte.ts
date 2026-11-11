@@ -597,14 +597,27 @@ class AppStore {
    */
   async lock(): Promise<boolean> {
     if (!this.encrypted || !this.vault) return false;
-    await this.writeDiary.idle();
-    // A write that failed left changes only in memory, which locking clears:
-    // try once more, and keep the diary open if it still cannot be saved.
-    if (this.unsavedDiary && !(await this.persist(true))) return false;
-    if (!this.encrypted || !this.vault || this.busy) return false;
+    // The draft first: saving it takes a while, during which a tap can start
+    // a diary write, and those must be settled last.
     if (!(await this.flushDraftNow())) return false;
+    if (!(await this.settleDiaryWrites())) return false;
+    // Nothing is awaited from here to the clear, so no write can start in between.
+    if (!this.encrypted || !this.vault || this.busy) return false;
     await this.showLockScreen(this.vault);
     return true;
+  }
+
+  /**
+   * Let diary writes under way reach storage, and write once more one that
+   * failed: whatever clears the diary from memory (locking, quitting) would
+   * lose the changes only held there. False if they still cannot be saved.
+   */
+  private async settleDiaryWrites(): Promise<boolean> {
+    await this.writeDiary.idle();
+    if (this.unsavedDiary && !(await this.persist(true))) return false;
+    // Taps made while that retry ran.
+    await this.writeDiary.idle();
+    return !this.unsavedDiary;
   }
 
   /**
@@ -1324,12 +1337,12 @@ class AppStore {
   /**
    * Before the app closes: save the draft and let diary writes still on
    * their way (a score or habit just changed) reach storage. False when the
-   * draft couldn't be saved; a failed diary write has already been reported.
+   * draft or the diary couldn't be saved; a failed diary write has already
+   * been reported.
    */
   async flushBeforeQuit(): Promise<boolean> {
     const draftSaved = await this.flushDraftNow();
-    await this.writeDiary.idle();
-    return draftSaved;
+    return (await this.settleDiaryWrites()) && draftSaved;
   }
 
   private async removeDraft(id: string): Promise<boolean> {
@@ -1497,6 +1510,8 @@ class AppStore {
       // Serializing a huge diary blocks the main thread: let the "Saving…"
       // state reach the screen first.
       await nextPaint();
+      // Locked or deleted while waiting: this.diary is empty by now.
+      if (this.vault !== vault) return false;
       await storage.writeVault(vault, serializeIcs(this.diary));
       this.unsavedDiary = false;
       return true;
