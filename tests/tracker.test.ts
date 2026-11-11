@@ -5,6 +5,7 @@ import {
   addHabit,
   dayRecord,
   habitStreaks,
+  importScores,
   nextMark,
   passingRuns,
   passMark,
@@ -283,3 +284,39 @@ describe('scoreOn', () => {
     expect(scoreOn({ value: 5, scale: 5 }, 10)).toBe(10);
   });
 });
+
+describe('importScores', () => {
+  it('scores many days at once, each on the scale it was given on', () => {
+    const fiveScale = { ...EMPTY_TRACKER, scoreScale: 5 };
+    const t = importScores(
+      fiveScale,
+      new Map([
+        ['2024-01-01', { value: 8, scale: 10 }],
+        ['2024-01-02', { value: 3, scale: 5 }],
+      ]),
+    );
+    expect(dayRecord(t, '2024-01-01').score).toEqual({ value: 8, scale: 10 });
+    expect(dayRecord(t, '2024-01-02').score).toEqual({ value: 3, scale: 5 });
+    expect(t.scoreScale).toBe(5);
+  });
+
+  it('keeps what else a day holds, and replaces its score', () => {
+    const marked = setScore(marked_('2024-01-01'), '2024-01-01', 4);
+    const t = importScores(marked, new Map([['2024-01-01', { value: 9, scale: 10 }]]));
+    expect(dayRecord(t, '2024-01-01')).toMatchObject({ score: { value: 9, scale: 10 }, marks: { gym: 'done' } });
+  });
+
+  it('leaves the tracker as it was with nothing to import', () => {
+    expect(importScores(EMPTY_TRACKER, new Map())).toBe(EMPTY_TRACKER);
+  });
+
+  it('does not touch the tracker it is given', () => {
+    const before = new Map(EMPTY_TRACKER.days);
+    importScores(EMPTY_TRACKER, new Map([['2024-01-01', { value: 5, scale: 10 }]]));
+    expect(EMPTY_TRACKER.days).toEqual(before);
+  });
+});
+
+function marked_(key: string): Tracker {
+  return marked({ [key]: 'done' });
+}
