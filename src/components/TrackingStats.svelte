@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
+  import HabitMarkIcon from './HabitMarkIcon.svelte';
   import HabitStatsRow from './HabitStatsRow.svelte';
   import StatTile from './StatTile.svelte';
   import TrendChart from './TrendChart.svelte';
@@ -148,6 +149,12 @@
         {#each stats.habits as habitStats (habitStats.habit.id)}
           <HabitStatsRow stats={habitStats} />
         {/each}
+      </div>
+      <!-- Says what the dots in each habit's last days mean. -->
+      <div class="mt-1 flex items-center justify-end gap-4 text-[0.65rem] text-muted">
+        <span class="flex items-center gap-1.5"><HabitMarkIcon mark="done" dot />Done</span>
+        <span class="flex items-center gap-1.5"><HabitMarkIcon mark="missed" dot />Missed</span>
+        <span class="flex items-center gap-1.5"><HabitMarkIcon mark={undefined} dot />Not marked</span>
       </div>
     </div>
   {/if}
