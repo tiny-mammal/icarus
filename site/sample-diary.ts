@@ -1,13 +1,11 @@
 /**
- * The sample diary behind the landing pages: the app screenshots
- * (`scripts/landing-screenshots.ts`) are taken with it, and the pages draw
- * from it directly, so both always show the same diary. Unlike the dev seed
+ * The sample diary used by `scripts/landing-screenshots.ts`. Unlike the dev seed
  * (`src/lib/seed.ts`), it reads like one person's real diary: hand-written
  * entries around the month the screenshots show, and years of quieter history
  * behind them so search and statistics have something to find.
  */
 
-export interface SampleEntry {
+interface SampleEntry {
   date: string; // YYYY-MM-DD
   title: string;
   location?: string;
@@ -230,15 +228,15 @@ function escapeText(value: string): string {
 }
 
 /** The year the sample diary starts. */
-export const FIRST_YEAR = 2019;
+const FIRST_YEAR = 2019;
 
 /** Every sample entry, oldest first. */
-export function sampleEntries(): SampleEntry[] {
+function sampleEntries(): SampleEntry[] {
   return [...history(FIRST_YEAR), ...FEATURED].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /** One entry as the VEVENT lines it is stored as. */
-export function veventLines(entry: SampleEntry, uid: string): string[] {
+function veventLines(entry: SampleEntry, uid: string): string[] {
   return [
     'BEGIN:VEVENT',
     `UID:${uid}@icarus.diary`,

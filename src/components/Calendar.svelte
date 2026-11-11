@@ -6,8 +6,8 @@
   import { app } from '../lib/store.svelte';
   import { clickOutside, trapFocus } from '../lib/actions';
   import {
-    addDays,
     addMonths,
+    calendarKeyTarget,
     dateKey,
     keyToDate,
     isSameDay,
@@ -66,20 +66,8 @@
     // While the day pane is open, the arrows belong to its day navigation.
     if (app.selectedKey) return;
     const base = keyToDate(focusedKey ?? rovingKey);
-    // Offset of `base` within its week, honouring the configured week start.
-    const dow = (base.getDay() - app.weekStart + 7) % 7;
-    let target: Date | null = null;
-    switch (e.key) {
-      case 'ArrowLeft': target = addDays(base, -1); break;
-      case 'ArrowRight': target = addDays(base, 1); break;
-      case 'ArrowUp': target = addDays(base, -7); break;
-      case 'ArrowDown': target = addDays(base, 7); break;
-      case 'Home': target = addDays(base, -dow); break;
-      case 'End': target = addDays(base, 6 - dow); break;
-      case 'PageUp': target = new Date(base.getFullYear(), base.getMonth() - 1, base.getDate()); break;
-      case 'PageDown': target = new Date(base.getFullYear(), base.getMonth() + 1, base.getDate()); break;
-      default: return;
-    }
+    const target = calendarKeyTarget(base, e.key, app.weekStart);
+    if (!target) return;
     e.preventDefault();
     void focusDay(target);
   }

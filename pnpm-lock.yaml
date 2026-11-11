@@ -236,9 +236,6 @@ importers:
       '@types/markdown-it':
         specifier: ^14.2.0
         version: 14.2.0
-      dictionary-en:
-        specifier: ^4.0.0
-        version: 4.0.0
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -1523,9 +1520,6 @@ packages:
 
   devalue@5.9.4:
     resolution: {integrity: sha512-sPAT4pztbu6586/hrhOnMKS17IJrvg12mXiSPSS3W5qDeN2RGgvZ0diZCm31dBbnevfVmujNO3IM2wrS4Y2Rhg==}
-
-  dictionary-en@4.0.0:
-    resolution: {integrity: sha512-3NHnE1uq33ZE/CIwaZ6gqxa4BnglHnxeAcTM0GJ7cmtRGcvX9InMK/IqLtYcUMFCUpUNgybH+DzkqdgAo3F1zg==}
 
   dompurify@3.4.17:
     resolution: {integrity: sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==}
@@ -3042,8 +3036,6 @@ snapshots:
   detect-libc@2.1.2: {}
 
   devalue@5.9.4: {}
-
-  dictionary-en@4.0.0: {}
 
   dompurify@3.4.17:
     optionalDependencies:

@@ -8,7 +8,6 @@
 @source './404.html';
 @source './download.html';
 @source './download.ts';
-@source './mockups/*.html';
 
 @import '../src/styles/theme.css';
 

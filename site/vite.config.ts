@@ -38,10 +38,6 @@ export default defineConfig({
         index: root + 'index.html',
         404: root + '404.html',
         download: root + 'download.html',
-        // Landing page directions that were not chosen, kept unlisted.
-        'mockups/index': root + 'mockups/index.html',
-        'mockups/sealed': root + 'mockups/sealed.html',
-        'mockups/years': root + 'mockups/years.html',
       },
     },
   },
