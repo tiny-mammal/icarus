@@ -175,6 +175,16 @@ function countBack(
   return length;
 }
 
+/** What a day does to a habit's streak: its length set by hand, the mark, or nothing. */
+function habitStep(habitId: string): (record: DayRecord) => DayStep {
+  return (record) => {
+    const set = record.streaks[habitId];
+    if (set !== undefined) return set;
+    const mark = record.marks[habitId];
+    return mark === 'done' ? 'count' : mark === 'missed' ? 'stop' : undefined;
+  };
+}
+
 /**
  * How long a habit's streak was on day `key`: each day marked done adds one,
  * a day marked missed ends it, and a length set by hand is taken as is.
@@ -186,12 +196,75 @@ export function streakOn(
   key: string,
   todayKey: string,
 ): number {
-  return countBack(tracker, days, key, todayKey, (record) => {
-    const set = record.streaks[habitId];
-    if (set !== undefined) return set;
-    const mark = record.marks[habitId];
-    return mark === 'done' ? 'count' : mark === 'missed' ? 'stop' : undefined;
-  });
+  return countBack(tracker, days, key, todayKey, habitStep(habitId));
+}
+
+/** A streak that ran from `start` to `end` (both `YYYY-MM-DD`). */
+export interface StreakRun {
+  length: number;
+  /** The first day that counted towards it; the day a length was set by hand when it began there. */
+  start: string;
+  end: string;
+}
+
+/** A streak as it stands today, and the longest it ever got. */
+export interface StreakHistory {
+  current: number;
+  best: StreakRun | null;
+}
+
+const dayAfter = (key: string) => dateKey(addDays(keyToDate(key), 1));
+
+/**
+ * Walk the tracked days once, oldest first, and keep the streak as it grows.
+ * It follows the same rules as {@link countBack} (a test keeps the two in
+ * step), but one pass gives every streak the diary ever had where counting
+ * back from each day would go over the days again and again.
+ */
+function streakHistory(
+  tracker: Tracker,
+  days: readonly string[],
+  todayKey: string,
+  step: (record: DayRecord) => DayStep,
+): StreakHistory {
+  const ends = tracker.unmarkedDays === 'end';
+  let run = 0;
+  let start = '';
+  let last = '';
+  let best: StreakRun | null = null;
+  for (const day of days) {
+    if (day > todayKey) break;
+    const result = step(tracker.days.get(day)!);
+    if (result === undefined) continue;
+    // In 'end' mode a day nobody marked between two marked ones ends the streak.
+    if (ends && last && day !== dayAfter(last)) run = 0;
+    last = day;
+    if (result === 'stop') {
+      run = 0;
+      continue;
+    }
+    if (typeof result === 'number') {
+      run = result;
+      start = day;
+    } else {
+      if (run === 0) start = day;
+      run++;
+    }
+    if (run > (best?.length ?? 0)) best = { length: run, start, end: day };
+  }
+  // Today can still be marked, but yesterday going unmarked has ended it.
+  const open = !ends || last === todayKey || (last !== '' && dayAfter(last) === todayKey);
+  return { current: open ? run : 0, best };
+}
+
+/** The streak of a habit as it stands today, and its longest. */
+export function habitStreaks(
+  tracker: Tracker,
+  days: readonly string[],
+  habitId: string,
+  todayKey: string,
+): StreakHistory {
+  return streakHistory(tracker, days, todayKey, habitStep(habitId));
 }
 
 // --- passing and failing ------------------------------------------------------
@@ -204,6 +277,11 @@ export function passMark(tracker: Tracker): number {
 /** How far up its scale a score is, from 0 (the lowest) to 1 (the best). */
 export function scoreLevel(value: number, scale: number): number {
   return (value - 1) / Math.max(1, scale - 1);
+}
+
+/** A score restated on `scale`, at the same height on it: 8 of 10 is about 4.1 of 5. */
+export function scoreOn(score: DayScore, scale: number): number {
+  return 1 + scoreLevel(score.value, score.scale) * (scale - 1);
 }
 
 /** Whether `score` passes. A score given on another scale is judged by its level on it. */
@@ -234,6 +312,16 @@ export function passRun(
   return side === undefined || length === 0 ? null : { passed: side, length };
 }
 
+/**
+ * The longest run of days in a row that passed, and the one under way. A day
+ * that failed ends it; the habits' rule for unmarked days applies to the rest.
+ */
+export function passingRuns(tracker: Tracker, days: readonly string[], todayKey: string): StreakHistory {
+  return streakHistory(tracker, days, todayKey, (record) =>
+    record.score ? (passes(tracker, record.score) ? 'count' : 'stop') : undefined,
+  );
+}
+
 // --- settings -----------------------------------------------------------------
 
 /**
@@ -244,7 +332,7 @@ export function setScoreScale(tracker: Tracker, scale: number): Tracker {
   if (scale === tracker.scoreScale) return tracker;
   const scaled = { ...tracker, scoreScale: scale, passMark: undefined };
   if (tracker.passMark === undefined) return scaled;
-  return setPassMark(scaled, 1 + scoreLevel(tracker.passMark, tracker.scoreScale) * (scale - 1));
+  return setPassMark(scaled, scoreOn({ value: tracker.passMark, scale: tracker.scoreScale }, scale));
 }
 
 export function setPassMark(tracker: Tracker, mark: number): Tracker {

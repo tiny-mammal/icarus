@@ -58,6 +58,7 @@ const fmtMonthYear = new Intl.DateTimeFormat(undefined, {
   year: 'numeric',
 });
 const fmtMonthShort = new Intl.DateTimeFormat(undefined, { month: 'short' });
+const fmtMonthYearShort = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' });
 const fmtWeekdayShort = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 
 // 1 Jan 2023 was a Sunday — a convenient anchor for naming weekdays by index.
@@ -66,6 +67,11 @@ const WEEKDAY_ANCHOR = new Date(2023, 0, 1);
 /** Localised "<Month> <year>" label, e.g. "June 2026" / "junio de 2026". */
 export function monthLabel(d: Date): string {
   return fmtMonthYear.format(d);
+}
+
+/** Short localised "<Mon> <year>" label, e.g. "Jun 2026". */
+export function monthYearLabel(d: Date): string {
+  return fmtMonthYearShort.format(d);
 }
 
 /**

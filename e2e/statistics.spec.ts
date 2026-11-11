@@ -1,10 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { dateKey } from '../src/lib/date';
+import type { Tracker } from '../src/lib/types';
 import { diaryIcs, importPlainIcs } from './helpers';
 
 /**
  * The statistics modal: headline totals, the period selector, the characters
- * chart and the top-days ranking. Dates are relative to today so the
+ * chart and the top-days ranking, and the tracking view of scores and habits. Dates are relative to today so the
  * assertions hold whenever the suite runs.
  */
 
@@ -116,4 +117,62 @@ test('a ranking row opens that day and Escape closes the modal', async ({ page }
   await expect(dialog(page)).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog(page)).toBeHidden();
+});
+
+// Scores 8, 6 and 2 in the last 30 days and a 4 two months ago; the habit is
+// done today and yesterday, missed three days ago and done once, long before.
+const TRACKER: Tracker = {
+  habits: [{ id: 'run', name: 'Morning run' }],
+  days: new Map([
+    [day(0), { score: { value: 8, scale: 10 }, marks: { run: 'done' }, streaks: {} }],
+    [day(-1), { score: { value: 6, scale: 10 }, marks: { run: 'done' }, streaks: {} }],
+    [day(-3), { score: { value: 2, scale: 10 }, marks: { run: 'missed' }, streaks: {} }],
+    [day(-60), { score: { value: 4, scale: 10 }, marks: { run: 'done' }, streaks: {} }],
+  ]),
+  scoreScale: 10,
+  unmarkedDays: 'pause',
+  passStreak: true,
+};
+
+test('has no tracking view in a diary that never tracked anything', async ({ page }) => {
+  await importDiary(page);
+  await page.getByRole('button', { name: 'Statistics' }).click();
+  await expect(dialog(page)).toBeVisible();
+  await expect(dialog(page).getByRole('button', { name: 'Tracking' })).toHaveCount(0);
+});
+
+test('the tracking view shows scores and habit streaks for the period', async ({ page }) => {
+  await importPlainIcs(page, diaryIcs([{ date: day(0), title: 'Walk', body: 'hello' }], TRACKER));
+  await page.getByRole('button', { name: 'Statistics' }).click();
+  await dialog(page).getByRole('button', { name: 'Tracking' }).click();
+
+  // All time: four scores averaging 5, two of them passing.
+  await expect(card(page, 'Avg. score')).toContainText('5');
+  await expect(card(page, 'Passing days')).toContainText('50%');
+  await expect(card(page, 'Current run')).toContainText('2');
+  await expect(card(page, 'Current run')).toContainText('Passing');
+  await expect(card(page, 'Best run')).toContainText('Still going');
+  await expect(
+    dialog(page).getByRole('img', { name: 'Average score over the selected period' }),
+  ).toBeVisible();
+
+  const habit = dialog(page).getByText('Morning run').locator('xpath=ancestor::div[contains(@class, "grid")][1]');
+  await expect(habit).toContainText('2 days'); // current streak
+  await expect(habit).toContainText('Your longest'); // it is the longest the habit has had
+
+  // The last 30 days leave out the old 4, but not the streak.
+  await switchPeriod(page, 'Last 30 days');
+  await expect(card(page, 'Avg. score')).toContainText('5.3');
+  await expect(card(page, 'Passing days')).toContainText('67%');
+  await expect(habit).toContainText('2 days');
+});
+
+test('switching to the tracking view and back keeps the period', async ({ page }) => {
+  await importPlainIcs(page, diaryIcs([{ date: day(0), title: 'Walk', body: 'hello' }], TRACKER));
+  await page.getByRole('button', { name: 'Statistics' }).click();
+  await switchPeriod(page, 'Last 30 days');
+  await dialog(page).getByRole('button', { name: 'Tracking' }).click();
+  await expect(card(page, 'Avg. score')).toContainText('5.3');
+  await dialog(page).getByRole('button', { name: 'Writing' }).click();
+  await expect(card(page, 'Entries')).toContainText('1');
 });

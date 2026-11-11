@@ -18,7 +18,9 @@
   let {
     timeline,
     label,
+    yMin = 0,
     yMax: fixedMax,
+    ticks,
     reference,
     rate = true,
     tooltip,
@@ -26,8 +28,12 @@
     timeline: Timeline;
     /** What the chart shows, for assistive tech. */
     label: string;
+    /** Bottom of the value axis: a bar for the lowest value would be no height at all. */
+    yMin?: number;
     /** Top of the value axis; the data's own maximum (rounded up) when unset. */
     yMax?: number;
+    /** The values labelled on the axis; the bottom, middle and top when unset. */
+    ticks?: readonly number[];
     /** A level worth marking across the chart, such as a pass mark. */
     reference?: { value: number; label: string };
     /** Bars are amounts per day, so a week or month bar says so in the legend. */
@@ -59,7 +65,8 @@
   const barGap = $derived(bandWidth >= 4 ? 1 : 0);
 
   function yOf(value: number): number {
-    return BASELINE - (yMax > 0 ? (value / yMax) * PLOT_HEIGHT : 0);
+    const span = yMax - yMin;
+    return BASELINE - (span > 0 ? (Math.max(0, value - yMin) / span) * PLOT_HEIGHT : 0);
   }
 
   const bars = $derived(
@@ -95,13 +102,13 @@
   });
 
   const yTicks = $derived(
-    yMax > 0
-      ? [0, yMax / 2, yMax].map((value) => ({
+    yMax > yMin
+      ? (ticks ?? [yMin, (yMin + yMax) / 2, yMax]).map((value) => ({
           value,
           y: yOf(value),
           label: compactNumber(value),
         }))
-      : [{ value: 0, y: BASELINE, label: '0' }],
+      : [{ value: yMin, y: BASELINE, label: compactNumber(yMin) }],
   );
 
   // Labels sit under their bin; ones near an edge are anchored inward so they
@@ -164,9 +171,9 @@
         x2={Math.max(PAD.left, chartWidth - PAD.right)}
         y1={tick.y}
         y2={tick.y}
-        stroke={tick.value === 0 ? 'var(--color-faint)' : 'var(--color-slate)'}
+        stroke={tick.value === yMin ? 'var(--color-faint)' : 'var(--color-slate)'}
         stroke-width="1"
-        stroke-dasharray={tick.value === 0 ? undefined : '2 6'}
+        stroke-dasharray={tick.value === yMin ? undefined : '2 6'}
       />
     {/each}
 

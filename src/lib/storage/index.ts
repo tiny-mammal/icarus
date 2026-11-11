@@ -15,17 +15,22 @@ import { webBackend } from './web';
 import { createMemoryBackend } from './memory';
 import { withEncryption, type SecureStorage } from './encrypted';
 import { serializeIcs } from '../ical';
-import { SEED_SPELL_WORDS, seedEntries } from '../seed';
+import { SEED_SPELL_WORDS, seedEntries, seedTracker } from '../seed';
 import { SPELL_WORDS_ITEM, type StorageBackend } from './types';
+import type { Diary } from '../types';
 
 function platformBackend(): StorageBackend {
   return runningUnderTauri() ? deviceBackend : webBackend;
 }
 
+function seedDiary(years?: number): Diary {
+  return { entries: seedEntries(years), tracker: seedTracker(years) };
+}
+
 export const storage: SecureStorage = withEncryption(
   import.meta.env.MODE === 'seed'
     ? createMemoryBackend(
-        serializeIcs({ entries: seedEntries(Number(import.meta.env.VITE_SEED_YEARS) || undefined) }),
+        serializeIcs(seedDiary(Number(import.meta.env.VITE_SEED_YEARS) || undefined)),
         platformBackend(),
         [[SPELL_WORDS_ITEM, SEED_SPELL_WORDS]],
       )

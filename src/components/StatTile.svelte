@@ -6,7 +6,7 @@
     unit,
     sub,
     small = false,
-    accent = false,
+    color,
   }: {
     label: string;
     value: string;
@@ -15,18 +15,19 @@
     sub: string;
     /** A value that is text rather than a number, set smaller so it fits. */
     small?: boolean;
-    /** Lights the value, for something that is happening right now. */
-    accent?: boolean;
+    /** Tints the value, for something worth lighting up. */
+    color?: string;
   } = $props();
 </script>
 
 <div class="min-w-0 rounded-xl border border-slate bg-slate-soft px-3.5 py-3">
   <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">{label}</p>
   <p
-    class="mt-1 truncate font-semibold tracking-tight tabular-nums {small ? 'text-sm' : 'text-lg'}
-      {accent ? 'text-sun' : 'text-text'}"
+    class="mt-1 truncate font-semibold tracking-tight tabular-nums text-text {small ? 'text-sm' : 'text-lg'}"
+    style:color
   >
-    {value}{#if unit}<span class="ml-1 text-xs font-normal text-muted">{unit}</span>{/if}
+    {value}
+    {#if unit}<span class="text-xs font-normal text-muted">{unit}</span>{/if}
   </p>
   <p class="mt-0.5 truncate text-[0.7rem] text-muted">{sub}</p>
 </div>

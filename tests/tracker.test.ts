@@ -4,7 +4,9 @@ import {
   activeHabits,
   addHabit,
   dayRecord,
+  habitStreaks,
   nextMark,
+  passingRuns,
   passMark,
   passRun,
   passes,
@@ -16,10 +18,12 @@ import {
   setScore,
   setScoreScale,
   setStreak,
+  scoreOn,
   streakOn,
   trackedDays,
 } from '../src/lib/tracker';
 import { isBestScore, sunColor } from '../src/lib/sun';
+import { addDays, dateKey, keyToDate } from '../src/lib/date';
 import type { HabitMark, Tracker } from '../src/lib/types';
 
 const TODAY = '2024-01-10';
@@ -176,5 +180,106 @@ describe('passRun', () => {
   it('is off when the pass streak is', () => {
     const t = setPassStreak(scored({ '2024-01-09': 8 }), false);
     expect(run(t, '2024-01-09')).toBeNull();
+  });
+});
+
+describe('habitStreaks', () => {
+  const history = (tracker: Tracker) => habitStreaks(tracker, trackedDays(tracker), 'gym', TODAY);
+
+  it('has no streak without marks', () => {
+    expect(history(EMPTY_TRACKER)).toEqual({ current: 0, best: null });
+  });
+
+  it('finds the longest streak even when it is over', () => {
+    const t = marked({
+      '2024-01-01': 'done',
+      '2024-01-02': 'done',
+      '2024-01-03': 'done',
+      '2024-01-04': 'missed',
+      '2024-01-09': 'done',
+      '2024-01-10': 'done',
+    });
+    expect(history(t)).toEqual({
+      current: 2,
+      best: { length: 3, start: '2024-01-01', end: '2024-01-03' },
+    });
+  });
+
+  it('keeps the earliest of two streaks as long as each other', () => {
+    const t = marked({ '2024-01-01': 'done', '2024-01-02': 'missed', '2024-01-03': 'done' });
+    expect(history(t).best).toEqual({ length: 1, start: '2024-01-01', end: '2024-01-01' });
+  });
+
+  it('takes a length set by hand as the start and counts on from it', () => {
+    const t = setStreak(marked({ '2024-01-06': 'done', '2024-01-07': 'done' }), '2024-01-05', 'gym', 40);
+    expect(history(t)).toEqual({
+      current: 42,
+      best: { length: 42, start: '2024-01-05', end: '2024-01-07' },
+    });
+  });
+
+  it('ignores days after today', () => {
+    const t = marked({ '2024-01-10': 'done', '2024-01-11': 'done', '2024-01-12': 'done' });
+    expect(history(t).current).toBe(1);
+    expect(history(t).best?.end).toBe('2024-01-10');
+  });
+
+  it('ends the current streak once a day goes unmarked when set to, but not today', () => {
+    const base = { ...EMPTY_TRACKER, unmarkedDays: 'end' as const };
+    expect(history(marked({ '2024-01-09': 'done' }, base)).current).toBe(1); // today still open
+    expect(history(marked({ '2024-01-08': 'done' }, base)).current).toBe(0); // the 9th went unmarked
+    expect(history(marked({ '2024-01-08': 'done' }, base)).best?.length).toBe(1);
+  });
+
+  it('agrees with counting back from every day, whatever the rules', () => {
+    // Deterministic pseudo-random diaries: marks, misses, gaps and hand-set lengths.
+    let seed = 20240110;
+    const random = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+    const first = keyToDate('2023-11-01');
+    for (let round = 0; round < 60; round++) {
+      let tracker: Tracker = {
+        ...EMPTY_TRACKER,
+        unmarkedDays: round % 2 ? 'end' : 'pause',
+      };
+      for (let i = 0; i < 80; i++) {
+        const key = dateKey(addDays(first, i));
+        const roll = random();
+        if (roll < 0.45) tracker = setMark(tracker, key, 'gym', 'done');
+        else if (roll < 0.55) tracker = setMark(tracker, key, 'gym', 'missed');
+        else if (roll < 0.58) tracker = setStreak(tracker, key, 'gym', Math.floor(random() * 30));
+      }
+      const days = trackedDays(tracker);
+      const counted = days.filter((key) => key <= TODAY).map((key) => streakOn(tracker, days, 'gym', key, TODAY));
+      const { current, best } = habitStreaks(tracker, days, 'gym', TODAY);
+      expect(current, `current, round ${round}`).toBe(streakOn(tracker, days, 'gym', TODAY, TODAY));
+      expect(best?.length ?? 0, `best, round ${round}`).toBe(Math.max(0, ...counted));
+    }
+  });
+});
+
+describe('passingRuns', () => {
+  it('finds the longest run of days that passed', () => {
+    const scores: Record<string, number> = {
+      '2024-01-01': 8,
+      '2024-01-02': 7,
+      '2024-01-03': 9,
+      '2024-01-04': 2,
+      '2024-01-05': 6,
+      '2024-01-06': 6,
+    };
+    const t = Object.entries(scores).reduce((tracker, [key, value]) => setScore(tracker, key, value), EMPTY_TRACKER);
+    expect(passingRuns(t, trackedDays(t), TODAY)).toEqual({
+      current: 2,
+      best: { length: 3, start: '2024-01-01', end: '2024-01-03' },
+    });
+  });
+});
+
+describe('scoreOn', () => {
+  it('keeps a score at the same height on another scale', () => {
+    expect(scoreOn({ value: 10, scale: 10 }, 5)).toBe(5);
+    expect(scoreOn({ value: 1, scale: 10 }, 5)).toBe(1);
+    expect(scoreOn({ value: 3, scale: 5 }, 5)).toBe(3);
+    expect(scoreOn({ value: 5, scale: 5 }, 10)).toBe(10);
   });
 });
