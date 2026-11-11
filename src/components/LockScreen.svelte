@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
+  import BusyLabel from './BusyLabel.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import NewPasswordFields from './NewPasswordFields.svelte';
   import PasswordField from './PasswordField.svelte';
@@ -103,7 +104,7 @@
           disabled={!canSubmit || working}
         >
           {#if working}
-            Unlocking…
+            <BusyLabel>Unlocking</BusyLabel>
           {:else}
             {mode === 'password' ? 'Unlock' : 'Unlock and set new password'}
           {/if}

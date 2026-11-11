@@ -11,6 +11,7 @@
 </script>
 
 <script lang="ts">
+  import BusyLabel from './BusyLabel.svelte';
   import { tooltip } from '../lib/tooltip';
   import { app } from '../lib/store.svelte';
   import { spellCheck } from '../lib/actions';
@@ -236,7 +237,7 @@
       onclick={commit}
       disabled={saving}
     >
-      <span>{saving ? 'Saving…' : 'Save'}</span>
+      <span><BusyLabel busy={saving}>{saving ? 'Saving' : 'Save'}</BusyLabel></span>
       <span class="hidden items-center gap-1 text-ink/60 sm:flex">
         <kbd class="font-mono text-xs">⌘/Ctrl</kbd>
         <kbd class="font-mono text-xs">↵</kbd>

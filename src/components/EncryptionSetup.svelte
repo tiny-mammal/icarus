@@ -1,5 +1,6 @@
 <script lang="ts">
   import { slide } from 'svelte/transition';
+  import BusyLabel from './BusyLabel.svelte';
   import Modal from './Modal.svelte';
   import NewPasswordFields from './NewPasswordFields.svelte';
   import RecoveryKeyPanel from './RecoveryKeyPanel.svelte';
@@ -193,7 +194,7 @@
         {#if choice === 'encrypt'}
           Continue
         {:else}
-          {working ? 'Saving…' : plainAction}
+          {#if working}<BusyLabel>Saving</BusyLabel>{:else}{plainAction}{/if}
         {/if}
       </button>
     </div>
@@ -220,7 +221,7 @@
           {onboarding ? 'Back' : 'Cancel'}
         </button>
         <button type="submit" class={primary} disabled={!passwordValid || working}>
-          {working ? 'Preparing…' : 'Continue'}
+          {#if working}<BusyLabel>Preparing</BusyLabel>{:else}Continue{/if}
         </button>
       </div>
     </form>
@@ -234,7 +235,7 @@
       <button class={secondary} onclick={close} disabled={working}>Cancel</button>
       <button class={primary} onclick={encrypt} disabled={!recoverySaved || working}>
         {#if working}
-          Encrypting…
+          <BusyLabel>Encrypting</BusyLabel>
         {:else}
           {source === 'new' ? 'Create encrypted diary' : source === 'import' ? 'Import encrypted' : 'Encrypt diary'}
         {/if}

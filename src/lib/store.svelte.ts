@@ -13,6 +13,7 @@ import type {
   ToastLevel,
 } from './types';
 import { generateUid, parseIcs, serializeIcs } from './ical';
+import { nextPaint } from './paint';
 import {
   createDraftPersistenceQueue,
   findEntryDraft,
@@ -1424,6 +1425,9 @@ class AppStore {
     const vault = this.vault;
     this.busy = true;
     try {
+      // Serializing a huge diary blocks the main thread: let the "Saving…"
+      // state reach the screen first.
+      await nextPaint();
       await storage.writeVault(vault, serializeIcs(this.entries));
       this.toast('success', `Saved ${this.appPlaceIn}`);
       return true;

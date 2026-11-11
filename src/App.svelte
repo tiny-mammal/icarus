@@ -17,6 +17,7 @@
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import ReplaceDiaryDialog from './components/ReplaceDiaryDialog.svelte';
   import Toasts from './components/Toasts.svelte';
+  import BusyBar from './components/BusyBar.svelte';
   import LockScreen from './components/LockScreen.svelte';
   import EncryptionSetup from './components/EncryptionSetup.svelte';
   import PrivacyDialog from './components/PrivacyDialog.svelte';
@@ -172,6 +173,7 @@
 <EntryDeleteDialog />
 <ReplaceDiaryDialog />
 <Toasts />
+<BusyBar />
 
 {#if gestureRecorder}
   {#await gestureRecorder then { default: GestureRecorder }}<GestureRecorder />{/await}

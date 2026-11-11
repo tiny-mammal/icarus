@@ -18,6 +18,7 @@
   --z-index-dialog: 60; /* default modal, also opened over a sheet    */
   --z-index-confirm: 70; /* confirmations, over any dialog             */
   --z-index-toast: 80; /* notifications, over everything              */
+  --z-index-progress: 85; /* app-wide progress line along the top edge */
   --z-index-hint: 90; /* hover hints on controls (lib/tooltip.ts)     */
   --z-index-debug: 100; /* developer tooling                          */
 }

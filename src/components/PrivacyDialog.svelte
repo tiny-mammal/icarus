@@ -1,5 +1,6 @@
 <script lang="ts">
   import Modal from './Modal.svelte';
+  import BusyLabel from './BusyLabel.svelte';
   import NewPasswordFields from './NewPasswordFields.svelte';
   import PasswordField from './PasswordField.svelte';
   import RecoveryKeyPanel from './RecoveryKeyPanel.svelte';
@@ -84,10 +85,12 @@
   });
 
   const submitLabel = $derived.by(() => {
-    if (kind === 'password') return working ? 'Changing…' : 'Change password';
-    if (kind === 'recovery') return recoveryKey ? 'Replace recovery key' : working ? 'Generating…' : 'Continue';
-    return working ? 'Decrypting…' : 'Remove encryption';
+    if (kind === 'password') return working ? 'Changing' : 'Change password';
+    if (kind === 'recovery') return recoveryKey ? 'Replace recovery key' : working ? 'Generating' : 'Continue';
+    return working ? 'Decrypting' : 'Remove encryption';
   });
+  // 'Replace recovery key' is a resting label even while `working` is set.
+  const submitBusy = $derived(working && !(kind === 'recovery' && recoveryKey));
 </script>
 
 {#if kind}
@@ -133,7 +136,7 @@
             {kind === 'disable' ? 'btn-danger' : 'bg-text text-ink hover:bg-text/90'}"
           disabled={!canSubmit || working}
         >
-          {submitLabel}
+          <BusyLabel busy={submitBusy}>{submitLabel}</BusyLabel>
         </button>
       </div>
     </form>

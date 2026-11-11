@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import BusyLabel from './BusyLabel.svelte';
   import Modal from './Modal.svelte';
 
   /**
@@ -41,7 +42,7 @@
       onclick={onconfirm}
       disabled={busy}
     >
-      {confirmLabel}
+      <BusyLabel {busy}>{confirmLabel}</BusyLabel>
     </button>
   </div>
 </Modal>

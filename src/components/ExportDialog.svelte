@@ -1,4 +1,5 @@
 <script lang="ts">
+  import BusyLabel from './BusyLabel.svelte';
   import Modal from './Modal.svelte';
   import { app } from '../lib/store.svelte';
 
@@ -7,16 +8,26 @@
    * default; a plain `.ics` needs an explicit, clearly-labelled second step.
    */
   let confirmPlain = $state(false);
+  /** Which export is running, so only its button shows the progress dots. */
+  let running = $state<'encrypted' | 'plain' | null>(null);
+
+  async function run(format: 'encrypted' | 'plain') {
+    running = format;
+    await app.exportVault(format);
+    running = null;
+  }
 </script>
 
 <Modal title="Export backup" onclose={() => (app.exportOpen = false)}>
   <div class="space-y-2">
     <button
       class="flex w-full flex-col rounded-lg border border-faint bg-slate-soft px-3.5 py-3 text-left text-sm text-text transition-colors hover:bg-slate disabled:opacity-60"
-      onclick={() => app.exportVault('encrypted')}
+      onclick={() => run('encrypted')}
       disabled={app.busy}
     >
-      <span class="font-medium">Encrypted backup (.icarus)</span>
+      <span class="font-medium"
+        ><BusyLabel busy={running === 'encrypted'}>Encrypted backup (.icarus)</BusyLabel></span
+      >
       <span class="text-xs text-muted">Recommended. Opens in Icarus with the same password or recovery key.</span>
     </button>
     {#if !confirmPlain}
@@ -42,10 +53,10 @@
           </button>
           <button
             class="rounded-lg border border-amber-300/40 px-3 py-1.5 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-300/10 disabled:opacity-60"
-            onclick={() => app.exportVault('plain')}
+            onclick={() => run('plain')}
             disabled={app.busy}
           >
-            Export unencrypted
+            <BusyLabel busy={running === 'plain'}>Export unencrypted</BusyLabel>
           </button>
         </div>
       </div>
