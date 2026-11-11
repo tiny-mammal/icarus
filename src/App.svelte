@@ -28,7 +28,7 @@
   import { isPlainShortcut } from './lib/keyboard';
   import { dismissBootSplash } from './lib/boot-splash';
   import { gestureLog } from './lib/gesture-log';
-  import { syncBackButton, layerOpen } from './lib/back-button.svelte';
+  import { dismissTopLayer, syncBackButton, layerOpen } from './lib/back-button.svelte';
 
   // Development only (`?debug=gestures`): the gesture recorder, loaded on demand.
   const gestureRecorder =
@@ -68,7 +68,10 @@
         return;
       }
       if (e.key !== 'Escape') return;
-      if (app.statsOpen) app.statsOpen = false;
+      // A popover whose focus strayed outside it (its field just went away)
+      // still closes before what lies under it.
+      if (layerOpen()) dismissTopLayer();
+      else if (app.statsOpen) app.statsOpen = false;
       else if (app.settingsOpen) app.settingsOpen = false;
       else if (app.editing) app.closeEditor();
       else if (app.selectedKey) app.closeDay();
