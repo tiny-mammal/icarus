@@ -77,8 +77,8 @@ describe('computeStats — this year (calendar year)', () => {
 
   it('puts characters on the right day', () => {
     const stats = computeStats(entries, 'year', NOW);
-    expect(stats.timeline.bins[0].chars).toBe(2);
-    expect(stats.timeline.bins.at(-1)?.chars).toBe(5);
+    expect(stats.timeline.bins[0].total).toBe(2);
+    expect(stats.timeline.bins.at(-1)?.total).toBe(5);
   });
 });
 

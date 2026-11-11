@@ -1,13 +1,15 @@
 /**
- * The "characters per day" time series behind the statistics chart: bars of
- * what was written in each day (or week, or month on very long ranges) and a
- * trailing moving average drawn as a line on top.
+ * The time series behind the statistics charts: bars for each day (or week, or
+ * month on very long ranges) and a moving average drawn as a line on top.
  *
  * The average is centred on each bar (half its window before, half after), so
- * a gap or a burst of writing shows up exactly where it happened instead of
- * trailing behind it. Every value is a rate in characters per day, so bins of different lengths
- * (a 28-day February, a week clipped by the range edge, the month still in
- * progress) stay comparable. Pure and DOM-free so it can be unit-tested.
+ * a gap or a burst shows up exactly where it happened instead of trailing
+ * behind it. A series is either a *rate* (characters written per day, where a
+ * day with nothing counts as zero) or a *mean* (the score given on the days
+ * that have one, where a day without is simply missing). Either way bins of
+ * different lengths (a 28-day February, a week clipped by the range edge, the
+ * month still in progress) stay comparable. Pure and DOM-free so it can be
+ * unit-tested.
  */
 import {
   addDays,
@@ -24,25 +26,37 @@ import {
 /** How many days one bar of the chart covers. */
 export type BinUnit = 'day' | 'week' | 'month';
 
-/** What was written on one day. */
+/**
+ * What one day holds: `total` is the characters written or the score given,
+ * `count` the entries or scores behind it.
+ */
 export interface DayTotal {
-  chars: number;
-  entries: number;
+  total: number;
+  count: number;
 }
+
+/**
+ * How a series turns days into values. A `rate` divides by days (characters
+ * per day); a `mean` divides by the days that have a value (the average score).
+ */
+export type TimelineMeasure = 'rate' | 'mean';
 
 export interface TimelineBin {
   /** First day of the bin inside the range, `YYYY-MM-DD`. */
   key: string;
   /** Readable tooltip label, e.g. "Thursday, July 10, 2025" / "July 2025". */
   fullLabel: string;
-  chars: number;
-  entries: number;
+  total: number;
+  count: number;
   /** Days of the bin inside the range (a clipped edge bin has fewer). */
   days: number;
-  /** `chars / days`: the bar height. */
-  perDay: number;
-  /** Centred `averageDays` mean of daily characters, at the bin's middle day. */
-  average: number;
+  /** The bar height: `total / days` for a rate, `total / count` for a mean. */
+  value: number;
+  /**
+   * The centred `averageDays` average at the bin's middle day. Null for a mean
+   * with no value anywhere in the window.
+   */
+  average: number | null;
 }
 
 export interface TimelineTick {
@@ -122,15 +136,16 @@ function thin<T>(items: T[], max: number): T[] {
  * Build the chart series for the inclusive day range `start`…`end` from
  * per-day totals keyed by `YYYY-MM-DD`. `days` may hold days outside the
  * range: those before `start` feed the first averages, so the line does not
- * dive at the left edge. A window is clipped to the days that could hold
- * writing — none before the first written day, none after `end` — and divided
- * by the days it kept, so neither edge reads as an artificial drop.
+ * dive at the left edge. For a rate, a window is clipped to the days that
+ * could hold writing — none before the first written day, none after `end` —
+ * and divided by the days it kept, so neither edge reads as an artificial drop.
  */
 export function buildTimeline(
   days: ReadonlyMap<string, DayTotal>,
   start: Date,
   end: Date,
   format: DateFormat = 'auto',
+  measure: TimelineMeasure = 'rate',
 ): Timeline {
   const span = daysBetween(start, end) + 1;
   if (span <= 0) return EMPTY_TIMELINE;
@@ -147,7 +162,8 @@ export function buildTimeline(
   }
 
   // Daily series from `lead` days before the range through `end`, as running
-  // sums of characters and of countable days: any window is two subtractions.
+  // sums of the totals and of what they are divided by (countable days for a
+  // rate, values for a mean): any window is two subtractions.
   const lead = Math.floor(window / 2);
   const length = lead + span;
   const sums = new Float64Array(length + 1);
@@ -160,10 +176,16 @@ export function buildTimeline(
   let day = origin;
   for (let j = 0; j < length; j++, day = addDays(day, 1)) {
     const key = dateKey(day);
-    const total = days.get(key);
-    const chars = total?.chars ?? 0;
-    sums[j + 1] = sums[j] + chars;
-    counted[j + 1] = counted[j] + (firstWritten !== null && day >= firstWritten ? 1 : 0);
+    const dayTotal = days.get(key);
+    const total = dayTotal?.total ?? 0;
+    sums[j + 1] = sums[j] + total;
+    counted[j + 1] =
+      counted[j] +
+      (measure === 'mean'
+        ? (dayTotal?.count ?? 0)
+        : firstWritten !== null && day >= firstWritten
+          ? 1
+          : 0);
 
     const i = j - lead; // index within the range
     if (i < 0) continue;
@@ -172,18 +194,18 @@ export function buildTimeline(
       bins.push({
         key,
         fullLabel: binLabel(day, unit, format),
-        chars: 0,
-        entries: 0,
+        total: 0,
+        count: 0,
         days: 0,
-        perDay: 0,
-        average: 0,
+        value: 0,
+        average: null,
       });
     }
     const bin = bins[bins.length - 1];
-    bin.chars += chars;
-    bin.entries += total?.entries ?? 0;
+    bin.total += total;
+    bin.count += dayTotal?.count ?? 0;
     bin.days += 1;
-    bin.perDay = bin.chars / bin.days;
+    bin.value = measure === 'mean' ? (bin.count > 0 ? bin.total / bin.count : 0) : bin.total / bin.days;
 
     if (tickMode === 'month' && day.getDate() === 1) {
       const month = day.getMonth();
@@ -202,7 +224,7 @@ export function buildTimeline(
     const lo = Math.max(0, middle - lead);
     const hi = Math.min(length, lo + window); // exclusive
     const n = counted[hi] - counted[lo];
-    bin.average = n > 0 ? (sums[hi] - sums[lo]) / n : 0;
+    bin.average = n > 0 ? (sums[hi] - sums[lo]) / n : measure === 'mean' ? null : 0;
   });
 
   const ticks =

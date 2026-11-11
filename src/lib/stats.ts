@@ -3,7 +3,7 @@
  * statistics modal. Deliberately free of Svelte and DOM concerns so the maths
  * can be unit-tested and the modal only has to worry about presentation.
  */
-import type { DiaryEntry } from './types';
+import type { DiaryEntry, Tracker } from './types';
 import {
   addMonths,
   dateKey,
@@ -110,14 +110,20 @@ export interface StatsRange {
   end: Date;
 }
 
+/** Every day something happened in the diary: entries and tracked days. */
+export function diaryDates(entries: readonly DiaryEntry[], tracker: Tracker): Date[] {
+  return [...entries.map((entry) => entry.date), ...[...tracker.days.keys()].map(keyToDate)];
+}
+
 /**
  * The days `period` covers, or null when there is nothing to cover (all time
- * over a diary without real dates). Custom ranges are taken as given, either
- * way round.
+ * over a diary without real dates). `dates` are the days with something in
+ * them, which all time stretches over. Custom ranges are taken as given,
+ * either way round.
  */
 export function periodRange(
   period: StatsPeriod,
-  entries: readonly DiaryEntry[],
+  dates: Iterable<Date>,
   now: Date = new Date(),
 ): StatsRange | null {
   if (isCustomRange(period)) {
@@ -138,28 +144,27 @@ export function periodRange(
     return { start: new Date(today.getFullYear(), 0, 1), end: today };
   }
 
-  // All time: from the first entry to the latest entry (or today, whichever
-  // is later). Entries with an unparseable DTSTART carry the year-9999
+  // All time: from the first day to the latest (or today, whichever is
+  // later). Entries with an unparseable DTSTART carry the year-9999
   // sentinel, and a corrupt far-off date (a stray 3000 or 0300 VEVENT) must
   // not stretch the chart across centuries — both are skipped, so real
-  // entries around today always survive. Without any real date there is
+  // dates around today always survive. Without any real date there is
   // nothing to chart.
   let first: Date | null = null;
   let last: Date | null = null;
-  for (const entry of entries) {
-    if (!isChartable(entry, now)) continue;
-    if (first === null || entry.date < first) first = entry.date;
-    if (last === null || entry.date > last) last = entry.date;
+  for (const date of dates) {
+    if (!isChartable(date, now)) continue;
+    if (first === null || date < first) first = date;
+    if (last === null || date > last) last = date;
   }
   if (first === null || last === null) return null;
   return { start: startOfDay(first), end: last > today ? startOfDay(last) : today };
 }
 
 /** A real date within the window statistics consider at all. */
-function isChartable(entry: DiaryEntry, now: Date): boolean {
-  if (isInvalidDate(entry.date)) return false;
-  const year = entry.date.getFullYear();
-  return Math.abs(year - now.getFullYear()) <= MAX_YEARS_FROM_TODAY;
+export function isChartable(date: Date, now: Date): boolean {
+  if (isInvalidDate(date)) return false;
+  return Math.abs(date.getFullYear() - now.getFullYear()) <= MAX_YEARS_FROM_TODAY;
 }
 
 /** Aggregate `entries` for the given period. */
@@ -169,7 +174,7 @@ export function computeStats(
   now: Date = new Date(),
   format: DateFormat = 'auto',
 ): DiaryStats {
-  const range = periodRange(period, entries, now);
+  const range = periodRange(period, entries.map((entry) => entry.date), now);
   if (!range) {
     return {
       period,
@@ -190,16 +195,16 @@ export function computeStats(
   let totalChars = 0;
   for (const entry of entries) {
     // Unparseable dates are placeholders, not days the user wrote on.
-    if (!isChartable(entry, now)) continue;
+    if (!isChartable(entry.date, now)) continue;
     const key = dateKey(entry.date);
     const chars = entryChars(entry);
 
-    const total = totals.get(key);
-    if (total) {
-      total.chars += chars;
-      total.entries += 1;
+    const sum = totals.get(key);
+    if (sum) {
+      sum.total += chars;
+      sum.count += 1;
     } else {
-      totals.set(key, { chars, entries: 1 });
+      totals.set(key, { total: chars, count: 1 });
     }
 
     const day = startOfDay(entry.date);

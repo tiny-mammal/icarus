@@ -3,7 +3,7 @@ import { averageDaysFor, binUnitFor, buildTimeline, type DayTotal } from '../src
 import { keyToDate } from '../src/lib/date';
 
 function days(totals: Record<string, number>): Map<string, DayTotal> {
-  return new Map(Object.entries(totals).map(([key, chars]) => [key, { chars, entries: 1 }]));
+  return new Map(Object.entries(totals).map(([key, chars]) => [key, { total: chars, count: 1 }]));
 }
 
 describe('binUnitFor', () => {
@@ -33,8 +33,8 @@ describe('buildTimeline', () => {
       keyToDate('2026-03-03'),
     );
     expect(t.unit).toBe('day');
-    expect(t.bins.map((b) => b.perDay)).toEqual([70, 0, 14]);
-    expect(t.bins.map((b) => b.chars)).toEqual([70, 0, 14]);
+    expect(t.bins.map((b) => b.value)).toEqual([70, 0, 14]);
+    expect(t.bins.map((b) => b.total)).toEqual([70, 0, 14]);
   });
 
   it('centres the seven-day average on each day, looking before the range', () => {
@@ -58,7 +58,7 @@ describe('buildTimeline', () => {
       totals[`2026-02-${String(d).padStart(2, '0')}`] = 70;
     }
     const t = buildTimeline(days(totals), keyToDate('2026-02-01'), keyToDate('2026-02-28'));
-    const lowest = t.bins.reduce((min, bin) => (bin.average < min.average ? bin : min));
+    const lowest = t.bins.reduce((min, bin) => (bin.average! < min.average! ? bin : min));
     expect(lowest.key).toBe('2026-02-13'); // the middle of the break
     expect(lowest.average).toBe(0);
   });
@@ -83,7 +83,7 @@ describe('buildTimeline', () => {
     );
     expect(t.unit).toBe('week');
     expect(t.averageDays).toBe(30);
-    expect(t.bins[0]).toMatchObject({ key: '2023-01-02', chars: 1400, days: 7, perDay: 200 });
+    expect(t.bins[0]).toMatchObject({ key: '2023-01-02', total: 1400, days: 7, value: 200 });
     expect(t.bins[1].key).toBe('2023-01-09');
   });
 
@@ -95,7 +95,7 @@ describe('buildTimeline', () => {
     );
     expect(t.unit).toBe('month');
     const last = t.bins.at(-1)!;
-    expect(last).toMatchObject({ key: '2026-09-01', days: 3, perDay: 100 });
+    expect(last).toMatchObject({ key: '2026-09-01', days: 3, value: 100 });
   });
 
   it('labels month starts on mid-length ranges and marks January with the year', () => {
@@ -115,5 +115,31 @@ describe('buildTimeline', () => {
 
   it('is empty for an inverted range', () => {
     expect(buildTimeline(new Map(), keyToDate('2026-03-02'), keyToDate('2026-03-01')).bins).toEqual([]);
+  });
+});
+
+describe('buildTimeline as a mean', () => {
+  const build = (scores: Record<string, number>, start: string, end: string) =>
+    buildTimeline(days(scores), keyToDate(start), keyToDate(end), 'auto', 'mean');
+
+  it('averages the days that have a value and leaves the others out', () => {
+    const t = build({ '2026-03-01': 8, '2026-03-04': 4 }, '2026-03-01', '2026-03-04');
+    expect(t.bins.map((b) => b.value)).toEqual([8, 0, 0, 4]);
+    expect(t.bins.map((b) => b.count)).toEqual([1, 0, 0, 1]);
+    // The seven-day window sees both scores, so a day without one still has an average.
+    expect(t.bins.map((b) => b.average)).toEqual([6, 6, 6, 6]);
+  });
+
+  it('has no average where the window holds no value', () => {
+    const t = build({ '2026-03-01': 8 }, '2026-03-01', '2026-03-20');
+    expect(t.bins[0].average).toBe(8);
+    expect(t.bins.at(-1)?.average).toBeNull();
+  });
+
+  it('weighs a week bar by its scored days, not by the days in it', () => {
+    // 2 Jan 2023 is a Monday; the range spans 420 days → weekly bins.
+    const t = build({ '2023-01-02': 9, '2023-01-03': 7 }, '2023-01-02', '2024-02-25');
+    expect(t.unit).toBe('week');
+    expect(t.bins[0]).toMatchObject({ total: 16, count: 2, days: 7, value: 8 });
   });
 });
