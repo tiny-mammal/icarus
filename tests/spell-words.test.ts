@@ -22,7 +22,7 @@ beforeEach(async () => {
   const base = { kind: 'browser' } as unknown as import('../src/lib/storage/types').StorageBackend;
   backend.storage = withEncryption(
     createMemoryBackend(
-      serializeIcs([{ uid: 'e1', title: 'First entry', content: 'Text', date: new Date(2026, 9, 1) }]),
+      serializeIcs({ entries: [{ uid: 'e1', title: 'First entry', content: 'Text', date: new Date(2026, 9, 1) }] }),
       base,
     ),
   );

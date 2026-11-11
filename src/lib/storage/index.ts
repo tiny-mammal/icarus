@@ -25,7 +25,7 @@ function platformBackend(): StorageBackend {
 export const storage: SecureStorage = withEncryption(
   import.meta.env.MODE === 'seed'
     ? createMemoryBackend(
-        serializeIcs(seedEntries(Number(import.meta.env.VITE_SEED_YEARS) || undefined)),
+        serializeIcs({ entries: seedEntries(Number(import.meta.env.VITE_SEED_YEARS) || undefined) }),
         platformBackend(),
         [[SPELL_WORDS_ITEM, SEED_SPELL_WORDS]],
       )

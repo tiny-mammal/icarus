@@ -36,15 +36,15 @@ function localDay(date: string): Date {
 
 /** `.ics` text for `entries`, written by the app's own serializer. */
 export function diaryIcs(entries: TestEntry[]): string {
-  return serializeIcs(
-    entries.map((e, i) => ({
+  return serializeIcs({
+    entries: entries.map((e, i) => ({
       uid: e.uid ?? `e${i}@icarus.diary`,
       date: localDay(e.date),
       title: e.title,
       content: e.body ?? '',
       location: e.location,
     })),
-  );
+  });
 }
 
 /** A realistic entry with some Markdown, for screenshots and visual checks. */

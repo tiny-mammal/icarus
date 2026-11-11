@@ -26,7 +26,7 @@ beforeEach(async () => {
   const base = { kind: 'browser' } as unknown as import('../src/lib/storage/types').StorageBackend;
   backend.storage = withEncryption(
     createMemoryBackend(
-      serializeIcs([{ uid: 'e1', title: 'First entry', content: 'Original text', date: new Date(2026, 9, 1) }]),
+      serializeIcs({ entries: [{ uid: 'e1', title: 'First entry', content: 'Original text', date: new Date(2026, 9, 1) }] }),
       base,
     ),
   );
@@ -245,5 +245,39 @@ describe('writing in the day pane', () => {
     app.closeEditor();
     expect(app.selectedKey).toBeNull();
     expect(app.parkedDraft?.revision).toBe(true);
+  });
+});
+
+describe('saving a diary written by another app', () => {
+  it('keeps everything Icarus does not use', async () => {
+    const { withEncryption } = await import('../src/lib/storage/encrypted');
+    const { createMemoryBackend } = await import('../src/lib/storage/memory');
+    const base = { kind: 'browser' } as unknown as import('../src/lib/storage/types').StorageBackend;
+    const storage = withEncryption(
+      createMemoryBackend(
+        [
+          'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Other//EN', 'X-WR-CALNAME:Journal',
+          'BEGIN:VTODO', 'UID:t', 'SUMMARY:Chore', 'END:VTODO',
+          'BEGIN:VEVENT', 'UID:e1', 'DTSTART;VALUE=DATE:20261001', 'SUMMARY:First entry',
+          'DESCRIPTION:Original text', 'CATEGORIES:travel,family',
+          'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Ring', 'TRIGGER:-PT5M', 'END:VALARM',
+          'END:VEVENT',
+          'END:VCALENDAR',
+        ].join('\r\n'),
+        base,
+      ),
+    );
+    backend.storage = storage;
+    const app = await openApp();
+
+    await app.editEntry(app.entries[0]);
+    app.draftContent = 'Changed text';
+    await app.commit();
+
+    const saved = await storage.readVault({ kind: 'app' });
+    expect(saved).toContain('DESCRIPTION:Changed text');
+    for (const kept of ['X-WR-CALNAME:Journal', 'BEGIN:VTODO', 'CATEGORIES:travel,family', 'TRIGGER:-PT5M']) {
+      expect(saved).toContain(kept);
+    }
   });
 });

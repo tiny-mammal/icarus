@@ -29,7 +29,7 @@ const sample: DiaryEntry[] = [
 
 describe('ical roundtrip', () => {
   it('preserves all fields through serialize → parse', () => {
-    const ics = serializeIcs(sample);
+    const ics = serializeIcs({ entries: sample });
     const res = parseIcs(ics);
 
     expect(res.ok).toBe(true);
@@ -50,7 +50,7 @@ describe('ical roundtrip', () => {
   });
 
   it('handles multiple entries on the same date', () => {
-    const ics = serializeIcs(sample);
+    const ics = serializeIcs({ entries: sample });
     const res = parseIcs(ics);
     expect(res.ok).toBe(true);
     if (!res.ok) return;
@@ -62,7 +62,7 @@ describe('ical roundtrip', () => {
   });
 
   it('produces a valid VCALENDAR wrapper', () => {
-    const ics = serializeIcs(sample);
+    const ics = serializeIcs({ entries: sample });
     expect(ics).toContain('BEGIN:VCALENDAR');
     expect(ics).toContain('END:VCALENDAR');
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(3);
@@ -125,7 +125,7 @@ describe('unparseable DTSTART', () => {
     expect(res.ok).toBe(true);
     if (!res.ok) return;
 
-    const written = serializeIcs(res.entries);
+    const written = serializeIcs(res);
     const reparsed = parseIcs(written);
     expect(reparsed.ok).toBe(true);
     if (!reparsed.ok) return;
@@ -186,21 +186,21 @@ describe('serializeIcs matches ical.js', () => {
 
   it('writes the same bytes', () => {
     const noStamp = (ics: string) => ics.replace(/^DTSTAMP:.*$/gm, '');
-    expect(noStamp(serializeIcs(entries))).toBe(noStamp(icalJsReference(entries)));
+    expect(noStamp(serializeIcs({ entries }))).toBe(noStamp(icalJsReference(entries)));
   });
 
   it('writes the same DTSTAMP', () => {
     const stamp = (ics: string) => ics.match(/^DTSTAMP:.*$/m)?.[0];
     // Retry across a second boundary rather than flake on it.
     for (let attempt = 0; attempt < 3; attempt++) {
-      const ours = stamp(serializeIcs(sample));
+      const ours = stamp(serializeIcs({ entries: sample }));
       if (ours === stamp(icalJsReference(sample))) return;
     }
     expect.unreachable('DTSTAMP differs from ical.js');
   });
 
   it('round-trips every character', () => {
-    const res = parseIcs(serializeIcs(entries));
+    const res = parseIcs(serializeIcs({ entries }));
     expect(res.ok).toBe(true);
     if (!res.ok) return;
     // Parsing trims fields and drops empty locations, as it always has.
@@ -237,7 +237,7 @@ describe('parseIcs', () => {
     expect(res.ok && res.entries.map((e) => e.title)).toEqual(['One', 'Two']);
   });
 
-  it('ignores other components, nested ones included', () => {
+  it('reads only the entries out of other components, nested ones included', () => {
     const res = parseIcs(
       wrap(
         'BEGIN:VTODO', 'UID:t', 'SUMMARY:Chore', 'END:VTODO',
@@ -247,5 +247,76 @@ describe('parseIcs', () => {
       ),
     );
     expect(res.ok && res.entries.map((e) => [e.title, e.content])).toEqual([['Kept', '']]);
+  });
+});
+
+describe('content Icarus does not use', () => {
+  const foreign = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Other app//EN',
+    'X-WR-CALNAME:Mi diario',
+    'BEGIN:VTIMEZONE', 'TZID:Europe/Madrid',
+    'BEGIN:STANDARD', 'DTSTART:19701025T030000', 'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100',
+    'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU', 'END:STANDARD',
+    'END:VTIMEZONE',
+    'BEGIN:VEVENT',
+    'UID:a',
+    'DTSTAMP:20240101T000000Z',
+    'DTSTART;VALUE=DATE:20240101',
+    'SUMMARY:One',
+    'CATEGORIES:a,b\\,c',
+    'ATTENDEE;CN="Doe, J":mailto:j@example.com',
+    `X-LONG:${'abcdé'.repeat(30)}`,
+    'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:Ring', 'TRIGGER:-PT5M', 'END:VALARM',
+    'END:VEVENT',
+    'BEGIN:VJOURNAL', 'UID:j', 'DTSTART;VALUE=DATE:20240101', 'X-ICARUS-SCORE:4', 'END:VJOURNAL',
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  type Jcal = [string, [string, ...unknown[]][], Jcal[]];
+  /** The file as ical.js reads it, in any order, minus what Icarus writes itself. */
+  function meaning(ics: string): string {
+    const own = new Set(['prodid', 'calscale', 'dtstamp']);
+    const strip = ([name, props, children]: Jcal): string =>
+      JSON.stringify([
+        name,
+        props.filter((p) => !own.has(p[0])).map((p) => JSON.stringify(p)).sort(),
+        children.map(strip).sort(),
+      ]);
+    return strip(ICAL.parse(ics) as Jcal);
+  }
+
+  it('writes it back on save', () => {
+    const res = parseIcs(foreign);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(meaning(serializeIcs(res))).toEqual(meaning(foreign));
+  });
+
+  it('survives editing an entry', () => {
+    const res = parseIcs(foreign);
+    if (!res.ok) throw new Error(res.error);
+    const edited = { ...res, entries: res.entries.map((e) => ({ ...e, content: 'New body' })) };
+    const reparsed = parseIcs(serializeIcs(edited));
+    expect(reparsed.ok && reparsed.entries[0].content).toBe('New body');
+    expect(reparsed.ok && reparsed.entries[0].extra).toBe(res.entries[0].extra);
+    expect(reparsed.ok && reparsed.extra).toBe(res.extra);
+  });
+
+  it('is stable across repeated saves', () => {
+    const once = parseIcs(foreign);
+    if (!once.ok) throw new Error(once.error);
+    const first = serializeIcs(once);
+    const twice = parseIcs(first);
+    if (!twice.ok) throw new Error(twice.error);
+    const noStamp = (ics: string) => ics.replace(/^DTSTAMP:.*$/gm, '');
+    expect(noStamp(serializeIcs(twice))).toBe(noStamp(first));
+  });
+
+  it('adds nothing to a diary Icarus wrote', () => {
+    const res = parseIcs(serializeIcs({ entries: sample }));
+    expect(res.ok && res.extra).toBeUndefined();
+    expect(res.ok && res.entries.every((e) => e.extra === undefined)).toBe(true);
   });
 });
