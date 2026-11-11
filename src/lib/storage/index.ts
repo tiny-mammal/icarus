@@ -15,8 +15,8 @@ import { webBackend } from './web';
 import { createMemoryBackend } from './memory';
 import { withEncryption, type SecureStorage } from './encrypted';
 import { serializeIcs } from '../ical';
-import { seedEntries } from '../seed';
-import type { StorageBackend } from './types';
+import { SEED_SPELL_WORDS, seedEntries } from '../seed';
+import { SPELL_WORDS_ITEM, type StorageBackend } from './types';
 
 function platformBackend(): StorageBackend {
   return runningUnderTauri() ? deviceBackend : webBackend;
@@ -27,6 +27,7 @@ export const storage: SecureStorage = withEncryption(
     ? createMemoryBackend(
         serializeIcs(seedEntries(Number(import.meta.env.VITE_SEED_YEARS) || undefined)),
         platformBackend(),
+        [[SPELL_WORDS_ITEM, SEED_SPELL_WORDS]],
       )
     : platformBackend(),
 );

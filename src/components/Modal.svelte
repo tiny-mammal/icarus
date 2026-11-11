@@ -29,6 +29,7 @@
     z = 'z-dialog',
     divided = false,
     bodyClass = 'px-6',
+    backLabel,
     actions,
     children,
   }: {
@@ -51,6 +52,11 @@
     divided?: boolean;
     /** Horizontal padding (and any extra classes) for the scrolling body. */
     bodyClass?: string;
+    /**
+     * For a step opened over another dialog: a back arrow beside the title,
+     * named by this label (e.g. "Back to Settings"), replaces the Close button.
+     */
+    backLabel?: string;
     /** Extra header controls, placed before the Close button. */
     actions?: Snippet;
     children: Snippet;
@@ -118,13 +124,25 @@
         <h2 id={titleId} class="sr-only">{title}</h2>
       {:else}
         <div class="flex items-center justify-between gap-4">
-          <div class="min-w-0">
-            <h2 id={titleId} class="text-base font-semibold tracking-tight text-text">{title}</h2>
-            {#if subtitle}<p class="mt-0.5 text-xs text-muted">{subtitle}</p>{/if}
+          <div class="flex min-w-0 items-center gap-1.5">
+            {#if backLabel && !locked}
+              <button
+                class="-ml-2 grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
+                aria-label={backLabel}
+                use:tooltip={{ label: backLabel, keys: ['Esc'] }}
+                onclick={close}
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+              </button>
+            {/if}
+            <div class="min-w-0">
+              <h2 id={titleId} class="text-base font-semibold tracking-tight text-text">{title}</h2>
+              {#if subtitle}<p class="mt-0.5 text-xs text-muted">{subtitle}</p>{/if}
+            </div>
           </div>
           <div class="-mr-1.5 flex shrink-0 items-center gap-2">
             {@render actions?.()}
-            {#if !locked}
+            {#if !locked && !backLabel}
               <button
                 class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
                 aria-label="Close"

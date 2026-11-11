@@ -62,7 +62,7 @@ import {
 } from './config';
 import { resetSearch, warmSearch } from './search';
 import { addMonths, adjacentKey, dateKey, keyToDate, startOfMonth } from './date';
-import { addUserWord, setUserWords } from './spellcheck';
+import { addUserWord, removeUserWord, setUserWords } from './spellcheck';
 import { updates } from './updates.svelte';
 import { randomId } from './random';
 import { devError } from './log';
@@ -1140,11 +1140,43 @@ class AppStore {
     }
   }
 
-  /** Add a word to the personal dictionary and persist the updated list. */
-  addSpellWord(word: string): void {
-    this.spellWords = addUserWord(word);
-    void setSavedSpellWords(this.spellWords).catch((err) => {
-      devError('addSpellWord: could not persist the personal dictionary', err);
+  /**
+   * Add a word to the personal dictionary and persist the updated list. With
+   * `announce` (adding from the editor, where nothing else shows it) a toast
+   * confirms it and offers an Undo.
+   */
+  addSpellWord(word: string, announce = false): void {
+    this.saveSpellWords(addUserWord(word));
+    if (announce) {
+      this.toast('success', `Added “${word}” to your dictionary`, {
+        label: 'Undo',
+        run: () => this.removeSpellWord(word, false),
+      });
+    }
+  }
+
+  /**
+   * Remove a word from the personal dictionary. With `announce` (the default)
+   * a toast offers an Undo to bring it back.
+   */
+  removeSpellWord(word: string, announce = true): void {
+    this.saveSpellWords(removeUserWord(word));
+    if (announce) {
+      this.toast('info', `Removed “${word}”`, {
+        label: 'Undo',
+        run: () => this.addSpellWord(word),
+      });
+    }
+  }
+
+  /**
+   * Show `words` and persist them. The plain array is what gets stored: the
+   * reactive proxy `spellWords` becomes cannot be structured-cloned by IndexedDB.
+   */
+  private saveSpellWords(words: string[]): void {
+    this.spellWords = words;
+    void setSavedSpellWords(words).catch((err) => {
+      devError('saveSpellWords: could not persist the personal dictionary', err);
       this.toast('error', 'Could not save settings.');
     });
   }

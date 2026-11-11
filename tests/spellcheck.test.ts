@@ -1,11 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import nspell from 'nspell';
 import { Schema, type Mark, type Node as PMNode } from '@tiptap/pm/model';
 import aff from '../src/assets/spellcheck/en.aff?raw';
 import dic from '../src/assets/spellcheck/en.dic?raw';
 import {
+  addUserWord,
+  ensureSpellchecker,
+  isCorrect,
   matchCase,
   misspelledRanges,
+  parseUserWord,
+  removeUserWord,
+  setUserWords,
   shouldCheck,
   spellingWindow,
 } from '../src/lib/spellcheck';
@@ -118,5 +124,53 @@ describe('spellingWindow', () => {
   it('preserves inline positions across hard breaks', () => {
     const block = para(text('hello'), schema.node('hard_break'), text('diery'));
     expect(spellingWindow(block, 8, 9)).toEqual({ from: 6, to: 11 });
+  });
+});
+
+describe('personal dictionary', () => {
+  beforeAll(async () => {
+    await ensureSpellchecker();
+  });
+  afterEach(() => setUserWords([]));
+
+  it('accepts an added word and flags it again once removed', () => {
+    expect(isCorrect('Zorblax')).toBe(false);
+    expect(addUserWord('Zorblax')).toEqual(['Zorblax']);
+    expect(isCorrect('Zorblax')).toBe(true);
+    expect(removeUserWord('Zorblax')).toEqual([]);
+    expect(isCorrect('Zorblax')).toBe(false);
+  });
+
+  it('returns the words sorted', () => {
+    addUserWord('Zorblax');
+    addUserWord('Quuxify');
+    expect(removeUserWord('nothing')).toEqual(['Quuxify', 'Zorblax']);
+  });
+
+  it('never erases a stock word the user also added', () => {
+    addUserWord('diary');
+    removeUserWord('diary');
+    expect(isCorrect('diary')).toBe(true);
+  });
+
+  it('forgets the previous words when the dictionary is replaced', () => {
+    addUserWord('Zorblax');
+    setUserWords(['Quuxify']);
+    expect(isCorrect('Zorblax')).toBe(false);
+    expect(isCorrect('Quuxify')).toBe(true);
+  });
+});
+
+describe('parseUserWord', () => {
+  it('accepts one word, tidying apostrophes and spaces', () => {
+    expect(parseUserWord('  Zorblax ')).toBe('Zorblax');
+    expect(parseUserWord('o’clock')).toBe("o'clock");
+    expect(parseUserWord('well-being')).toBe('well-being');
+  });
+
+  it('rejects anything that is not a single checkable word', () => {
+    for (const input of ['', '   ', 'a', 'two words', 'abc123', '42', 'hi!']) {
+      expect(parseUserWord(input)).toBeNull();
+    }
   });
 });

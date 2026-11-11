@@ -7,6 +7,9 @@
  */
 import type { DiaryEntry } from './types';
 
+/** Names the spell checker would flag, already in the sample personal dictionary. */
+export const SEED_SPELL_WORDS = ['Ana', 'Baiona', 'Cíes', 'Marisol', 'Sanxenxo', 'Vigo', 'Xoán'];
+
 const TITLES = [
   'Morning walk', 'Quiet Sunday', 'Coffee with Ana', 'Rainy afternoon',
   'Long day at work', 'Trip to the coast', 'Reading in the park', 'Late dinner',

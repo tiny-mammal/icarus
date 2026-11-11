@@ -162,10 +162,12 @@
     if (app.spellcheck) refreshSpellcheck(editor);
   });
 
-  // Load the dictionary on demand and (re)paint the underlines when it arrives
-  // or the preference flips. Nothing is underlined before it loads.
+  // Load the dictionary on demand and (re)paint the underlines when it arrives,
+  // the preference flips or the personal dictionary changes (a word added here,
+  // or added/removed in Settings). Nothing is underlined before it loads.
   $effect(() => {
     const enabled = app.spellcheck;
+    void app.spellWords;
     const current = editor;
     if (!current) return;
 
@@ -194,8 +196,7 @@
 
   function addToDictionary() {
     if (!menu) return;
-    app.addSpellWord(menu.hit.word);
-    if (editor) refreshSpellcheck(editor);
+    app.addSpellWord(menu.hit.word, true);
     closeMenu();
   }
 

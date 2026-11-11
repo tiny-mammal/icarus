@@ -28,6 +28,11 @@ let loading: Promise<NSpell> | null = null;
 
 /** Personal dictionary, restored from settings (Add to dictionary). */
 const userWords = new Set<string>();
+/**
+ * The personal words taught to the engine. A word the dictionary already knows
+ * is never taught, so forgetting it later cannot erase the stock entry.
+ */
+const learned = new Set<string>();
 /** Words ignored for this session only (Ignore in the menu). */
 const ignoredWords = new Set<string>();
 /** Verdict cache, cleared whenever the dictionary or ignore list changes. */
@@ -41,8 +46,8 @@ function loadSpeller(): Promise<NSpell> {
       import('../assets/spellcheck/en.dic?raw'),
     ]);
     const instance = nspell.default(aff.default, dic.default);
-    for (const word of userWords) instance.add(word);
     speller = instance;
+    syncSpeller();
     return instance;
   })().catch((err) => {
     // Let a later attempt retry instead of caching the failure forever.
@@ -57,21 +62,55 @@ export function ensureSpellchecker(): Promise<NSpell> {
   return loadSpeller();
 }
 
-/** Replace the personal dictionary (used on boot). */
+/** Bring the engine in line with the personal dictionary and drop stale verdicts. */
+function syncSpeller(): void {
+  verdicts.clear();
+  if (!speller) return;
+  for (const word of learned) {
+    if (userWords.has(word)) continue;
+    speller.remove(word);
+    learned.delete(word);
+  }
+  for (const word of userWords) {
+    if (learned.has(word) || speller.correct(word)) continue;
+    speller.add(word);
+    learned.add(word);
+  }
+}
+
+function sortedUserWords(): string[] {
+  return [...userWords].sort((a, b) => a.localeCompare(b));
+}
+
+/** Replace the personal dictionary (on boot, and when another diary is opened). */
 export function setUserWords(words: string[]): void {
   userWords.clear();
   for (const word of words) userWords.add(normalize(word));
-  verdicts.clear();
-  if (speller) for (const word of userWords) speller.add(word);
+  syncSpeller();
 }
 
 /** Add one word to the personal dictionary; returns the updated word list. */
 export function addUserWord(word: string): string[] {
-  const clean = normalize(word);
-  userWords.add(clean);
-  verdicts.clear();
-  speller?.add(clean);
-  return [...userWords].sort((a, b) => a.localeCompare(b));
+  userWords.add(normalize(word));
+  syncSpeller();
+  return sortedUserWords();
+}
+
+/** Remove one word from the personal dictionary; returns the updated word list. */
+export function removeUserWord(word: string): string[] {
+  userWords.delete(normalize(word));
+  syncSpeller();
+  return sortedUserWords();
+}
+
+/**
+ * The word a typed entry stands for, or null when it is not one single
+ * checkable word (spaces, digits, punctuation, a lone letter).
+ */
+export function parseUserWord(input: string): string | null {
+  const word = normalize(input.trim());
+  const whole = word.match(WORD_RE);
+  return whole?.length === 1 && whole[0] === word && word.length >= MIN_LENGTH ? word : null;
 }
 
 /** Ignore a word for the rest of the session. */

@@ -5,15 +5,19 @@
  * File pickers and exports are delegated to `base`, since they only move data
  * the user explicitly chooses.
  */
-import { APP_VAULT, type StorageBackend, type StoreName } from './types';
+import { APP_VAULT, type StorageBackend, type StoreItem, type StoreName } from './types';
 
 export function createMemoryBackend(
   initialIcs: string | null,
   base: StorageBackend,
+  /** Preferences and other items the page starts with. */
+  initialItems: [StoreItem, unknown][] = [],
 ): StorageBackend {
   let vault = initialIcs;
-  const stores = new Map<string, unknown>();
   const id = (store: StoreName, key: string) => `${store}:${key}`;
+  const stores = new Map<string, unknown>(
+    initialItems.map(([item, value]) => [id(item.store, item.key), structuredClone(value)]),
+  );
 
   return {
     kind: base.kind,

@@ -22,9 +22,17 @@
   import SettingsRow from './SettingsRow.svelte';
   import SettingsSection from './SettingsSection.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import DictionaryDialog from './DictionaryDialog.svelte';
 
   // Local confirmation step for the destructive vault action.
   let confirmForget = $state(false);
+  // The personal dictionary opens over Settings, so closing it returns here.
+  let dictionaryOpen = $state(false);
+  const dictionaryHint = $derived(
+    app.spellWords.length
+      ? `${app.spellWords.length} ${app.spellWords.length === 1 ? 'word' : 'words'} added`
+      : 'Words you add while writing show up here',
+  );
 
   // Localised long names for the two week-start choices (Sun = index 0).
   const fmtWeekday = new Intl.DateTimeFormat(undefined, { weekday: 'long' });
@@ -160,6 +168,7 @@
       <SettingsRow label="Spell check" hint="Underline misspellings in English">
         <Switch checked={app.spellcheck} label="Spell check" onchange={(on) => app.setSpellcheck(on)} />
       </SettingsRow>
+      <SettingsRow label="Personal dictionary" hint={dictionaryHint} onclick={() => (dictionaryOpen = true)} />
       <SettingsRow label="Length count" hint={countPreview}>
         <Select
           value={app.lengthCount}
@@ -349,6 +358,10 @@
       </SettingsSection>
     {/if}
   </Modal>
+
+  {#if dictionaryOpen}
+    <DictionaryDialog onclose={() => (dictionaryOpen = false)} />
+  {/if}
 
   {#if confirmForget}
     <ConfirmDialog
