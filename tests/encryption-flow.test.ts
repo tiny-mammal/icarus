@@ -131,6 +131,20 @@ describe('encrypted diary flow', () => {
     expect(await app.lock()).toBe(false);
   });
 
+  it('waits for a diary write under way instead of refusing to lock', async () => {
+    const { app } = await encryptedApp();
+    // A tap on a day's score starts a write at once, and that write holds busy.
+    app.setDayScore('2026-10-01', 7);
+    expect(app.busy).toBe(true);
+
+    expect(await app.lock()).toBe(true);
+    expect(app.view).toBe('locked');
+    expect(app.busy).toBe(false);
+    // The write finished first: the score is in the stored diary, not lost to the lock.
+    expect(await app.unlock({ password: PASSWORD })).toBe('ok');
+    expect(app.tracker.days.get('2026-10-01')?.score).toEqual({ value: 7, scale: 10 });
+  });
+
   it('exports encrypted by default and plain only on request', async () => {
     const { app } = await encryptedApp();
     await app.exportVault();
