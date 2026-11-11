@@ -28,6 +28,8 @@ test('scores a day, marks habits and keeps a streak set by hand', async ({ page 
   await expect(panel).toBeHidden();
   await expect(tracker).toHaveAccessibleName(/Score 7 of 10, 1 of 1 habits done/);
 
+  // Each tap saves in the background: reload only once the last one has landed.
+  await expect(page.getByRole('progressbar', { name: 'Working' })).toHaveCount(0);
   await page.reload();
   await openDay(page, SAMPLE_ENTRY.date);
   await expect(page.getByTestId('day-tracker')).toHaveAccessibleName(/Score 7 of 10, 1 of 1 habits done/);
