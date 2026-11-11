@@ -1593,6 +1593,21 @@ class AppStore {
     if (next >= 0 && next < this.selectedEntries.length) this.readEntry(next);
     else this.stepDay(dir, dir === 1 ? 'first' : 'last');
   }
+  /**
+   * The page `turnPage(dir)` would open: the day it is on and the entry shown
+   * there (null on an empty day), or null past the first/last entry.
+   */
+  pageBeside(dir: -1 | 1): { key: string; entry: DiaryEntry | null } | null {
+    if (!this.selectedKey) return null;
+    const next = this.readingIndex + dir;
+    if (next >= 0 && next < this.selectedEntries.length) {
+      return { key: this.selectedKey, entry: this.selectedEntries[next] };
+    }
+    const key = dir === 1 ? this.nextDayKey : this.prevDayKey;
+    if (!key) return null;
+    const entries = this.entriesByDay.get(key) ?? [];
+    return { key, entry: (dir === 1 ? entries[0] : entries.at(-1)) ?? null };
+  }
   navigateMonth(delta: number): void {
     this.currentMonth = addMonths(this.currentMonth, delta);
   }

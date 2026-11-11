@@ -1,11 +1,12 @@
 <script lang="ts">
   import { tooltip } from '../lib/tooltip';
+  import { tick } from 'svelte';
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
   import { keyToDate } from '../lib/date';
   import { isPlainShortcut } from '../lib/keyboard';
-  import { swipe } from '../lib/gestures';
+  import { dragPager, pageTurner } from '../lib/gestures';
   import { queryTerms, countMatches } from '../lib/highlight';
   import { loadRichEditor } from '../lib/editor-loader';
   import { viewport } from '../lib/viewport.svelte';
@@ -121,12 +122,39 @@
   const paneIn = (node: HTMLElement) => paneMotion(node, app.editing, 320);
   const paneOut = (node: HTMLElement) => paneMotion(node, showedEditor, showedEditor ? 260 : 320);
 
-  // Touch: swipe sideways to turn the page, through the day's entries and then
-  // on to the next day with entries, the same move as ←/→ on a keyboard.
-  const pageSwipe = $derived({
-    onswipe: (dir: -1 | 1) => app.turnPage(dir),
-    enabled: !app.overlayOpen,
-  });
+  // --- page turning -----------------------------------------------------------
+  // Pages run through the day's entries and then on to the next day with
+  // entries, like a book. The previous, current and next pages sit side by
+  // side on a track that follows a finger on a touch screen or two on a
+  // touchpad, the same as the calendar's months (see `dragPager`); ←/→ slide
+  // it too.
+  type Page = { key: string; entry: DiaryEntry | null };
+  let trackEl = $state<HTMLElement | null>(null);
+  const pages = $derived<(Page | null)[]>(
+    app.selectedKey ? [app.pageBeside(-1), { key: app.selectedKey, entry }, app.pageBeside(1)] : [],
+  );
+  const pageId = (p: Page | null, i: number) => (p ? (p.entry?.uid ?? `day:${p.key}`) : `edge:${i}`);
+
+  async function showPage(dir: -1 | 1): Promise<void> {
+    app.turnPage(dir);
+    await tick();
+  }
+
+  const turn = pageTurner(showPage);
+  const page = (dir: -1 | 1) => turn(trackEl, dir, !viewport.reducedMotion && !!app.pageBeside(dir));
+
+  // The back-to-top button follows the current page's scroller.
+  function currentReader(node: HTMLElement, current: boolean) {
+    if (current) reader = node;
+    return {
+      update(next: boolean) {
+        if (next) reader = node;
+      },
+      destroy() {
+        if (reader === node) reader = null;
+      },
+    };
+  }
 
   // Reader shortcuts: ←/→ turn the page (entry by entry, then day by day),
   // Shift+←/→ skip straight to the previous/next day with entries, N writes a new entry on the open day, E edits
@@ -152,12 +180,60 @@
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     const dir = e.key === 'ArrowLeft' ? -1 : 1;
     if (e.shiftKey) app.stepDay(dir);
-    else app.turnPage(dir);
+    else void page(dir);
     e.preventDefault();
   }
 </script>
 
 <svelte:window onkeydown={onKeydown} />
+
+{#snippet readerPage(page: DiaryEntry | null, current: boolean)}
+  {#if !page}
+    <div class="flex h-full flex-col items-center justify-center text-center text-muted">
+      <p class="text-sm">No entries on this day yet.</p>
+      <button
+        class="mt-4 flex items-center gap-2 rounded-lg border border-slate px-3.5 py-2 text-sm text-text transition-colors hover:bg-slate"
+        onclick={writeHere}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        Write an entry for this day
+      </button>
+    </div>
+  {:else}
+    {#if app.hasPendingEdit(page.uid)}
+      <!-- The edit is kept apart until saved: say so, or it looks lost. -->
+      <div
+        class="mb-5 flex items-center justify-between gap-3 rounded-xl border border-slate bg-slate-soft py-2 pr-2 pl-3.5 text-sm text-muted"
+        role="status"
+      >
+        <span class="min-w-0">Unsaved changes to this entry</span>
+        <button
+          class="shrink-0 rounded-lg px-2.5 py-1.5 font-medium text-text transition-colors hover:bg-slate"
+          onclick={() => edit(page, { field: 'body', at: 'end' })}
+        >
+          Continue editing
+        </button>
+      </div>
+    {/if}
+    <!-- Tapping the text starts editing it; the edit button and E do the same. -->
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+    <article class="min-h-full cursor-text" in:fade={{ duration: 150 }} onclick={editAtTap}>
+      <h1 class="text-xl font-semibold tracking-tight text-text" data-field="title">
+        <Highlight text={page.title} {terms} />
+      </h1>
+      {#if page.location}
+        <p class="mt-1 text-sm text-muted" data-field="location">
+          <Highlight text={page.location} {terms} />
+        </p>
+      {/if}
+      {#if page.content}
+        <div class="mt-4" data-field="body">
+          <MarkdownView source={page.content} {terms} onhighlight={current ? onBodyHighlight : undefined} />
+        </div>
+      {/if}
+    </article>
+  {/if}
+{/snippet}
 
 {#if app.selectedKey && dayDate}
   <!-- Backdrop -->
@@ -250,58 +326,33 @@
         </div>
       {/if}
 
+      <!-- Edge to edge, so the neighbouring page slides in from the edge. -->
       <div
-        bind:this={reader}
-        class="min-h-0 flex-1 [touch-action:pan-y] overflow-y-auto overscroll-contain px-5 pt-5 {app.parkedDraft ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} [scroll-padding-block:2rem] sm:px-[var(--pane-gutter)] sm:pt-6"
-        use:swipe={pageSwipe}
+        class="min-h-0 flex-1 [touch-action:pan-y] overflow-hidden"
+        use:dragPager={{
+          track: trackEl,
+          onpage: showPage,
+          canPage: (dir) => !!app.pageBeside(dir),
+          enabled: !app.overlayOpen,
+          reducedMotion: viewport.reducedMotion,
+        }}
       >
-        {#if !entry}
-          <div class="flex h-full flex-col items-center justify-center text-center text-muted">
-            <p class="text-sm">No entries on this day yet.</p>
-            <button
-              class="mt-4 flex items-center gap-2 rounded-lg border border-slate px-3.5 py-2 text-sm text-text transition-colors hover:bg-slate"
-              onclick={writeHere}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-              Write an entry for this day
-            </button>
-          </div>
-        {:else}
-          {#if app.hasPendingEdit(entry.uid)}
-            <!-- The edit is kept apart until saved: say so, or it looks lost. -->
+        <div bind:this={trackEl} class="flex h-full will-change-transform" style="transform: translateX(-100%)">
+          <!-- Keyed by entry, so a page turn keeps the two pages already drawn
+               and only builds the one sliding in. -->
+          {#each pages as p, i (pageId(p, i))}
             <div
-              class="mb-5 flex items-center justify-between gap-3 rounded-xl border border-slate bg-slate-soft py-2 pr-2 pl-3.5 text-sm text-muted"
-              role="status"
+              class="h-full w-full shrink-0 [touch-action:pan-y] overflow-y-auto overscroll-contain px-5 pt-5 {app.parkedDraft ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-[calc(4rem+env(safe-area-inset-bottom))]'} [scroll-padding-block:2rem] sm:px-[var(--pane-gutter)] sm:pt-6"
+              aria-hidden={i === 1 ? undefined : 'true'}
+              inert={i !== 1}
+              use:currentReader={i === 1}
             >
-              <span class="min-w-0">Unsaved changes to this entry</span>
-              <button
-                class="shrink-0 rounded-lg px-2.5 py-1.5 font-medium text-text transition-colors hover:bg-slate"
-                onclick={() => entry && edit(entry, { field: 'body', at: 'end' })}
-              >
-                Continue editing
-              </button>
+              {#if p}
+                {@render readerPage(p.entry, i === 1)}
+              {/if}
             </div>
-          {/if}
-          {#key entry.uid}
-            <!-- Tapping the text starts editing it; the edit button and E do the same. -->
-            <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-            <article class="min-h-full cursor-text" in:fade={{ duration: 150 }} onclick={editAtTap}>
-              <h1 class="text-xl font-semibold tracking-tight text-text" data-field="title">
-                <Highlight text={entry.title} {terms} />
-              </h1>
-              {#if entry.location}
-                <p class="mt-1 text-sm text-muted" data-field="location">
-                  <Highlight text={entry.location} {terms} />
-                </p>
-              {/if}
-              {#if entry.content}
-                <div class="mt-4" data-field="body">
-                  <MarkdownView source={entry.content} {terms} onhighlight={onBodyHighlight} />
-                </div>
-              {/if}
-            </article>
-          {/key}
-        {/if}
+          {/each}
+        </div>
       </div>
       <ScrollTopButton target={reader} />
     {/if}

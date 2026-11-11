@@ -16,7 +16,7 @@
     weekdayLabels,
     longDayLabel,
   } from '../lib/date';
-  import { dragPager, turnPage } from '../lib/gestures';
+  import { dragPager, pageTurner } from '../lib/gestures';
   import MonthYearGrid from './MonthYearGrid.svelte';
   import { viewport } from '../lib/viewport.svelte';
   import type { DiaryEntry } from '../lib/types';
@@ -104,7 +104,6 @@
   // follows a finger on a touch screen or two on a touchpad (see `dragPager`);
   // the arrows slide it too.
   let trackEl = $state<HTMLElement | null>(null);
-  let paging = false;
   const panelMonths = $derived([-1, 0, 1].map((offset) => addMonths(app.currentMonth, offset)));
 
   async function showMonth(dir: -1 | 1): Promise<void> {
@@ -112,19 +111,8 @@
     await tick();
   }
 
-  async function page(dir: -1 | 1): Promise<void> {
-    if (!trackEl || viewport.reducedMotion) {
-      app.navigateMonth(dir);
-      return;
-    }
-    if (paging) return;
-    paging = true;
-    try {
-      await turnPage(trackEl, dir, showMonth);
-    } finally {
-      paging = false;
-    }
-  }
+  const turn = pageTurner(showMonth);
+  const page = (dir: -1 | 1) => turn(trackEl, dir, !viewport.reducedMotion);
 
   // Keyboard focus lives in the current month's grid only.
   function currentGrid(node: HTMLElement, current: boolean) {

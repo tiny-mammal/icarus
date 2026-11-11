@@ -1,32 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISMISS_DISTANCE,
+  edgeResistance,
   PAGE_COMMIT_FRACTION,
   pageDecision,
   settleDuration,
-  SWIPE_MAX_DURATION,
-  SWIPE_MIN_DISTANCE,
   shouldDismiss,
-  swipeDirection,
 } from '../src/lib/gestures';
 
-describe('swipeDirection', () => {
-  it('reads a left swipe as "next" and a right swipe as "previous"', () => {
-    expect(swipeDirection(-120, 10, 200)).toBe(1);
-    expect(swipeDirection(120, -10, 200)).toBe(-1);
+describe('edgeResistance', () => {
+  it('moves a fraction of the drag past the last page, in its direction', () => {
+    expect(edgeResistance(-40, 400)).toBe(-10);
+    expect(edgeResistance(40, 400)).toBe(10);
   });
 
-  it('ignores short drags', () => {
-    expect(swipeDirection(SWIPE_MIN_DISTANCE - 1, 0, 100)).toBe(0);
-  });
-
-  it('ignores mostly vertical movement, i.e. scrolling', () => {
-    expect(swipeDirection(80, 70, 200)).toBe(0);
-    expect(swipeDirection(-80, -200, 200)).toBe(0);
-  });
-
-  it('ignores slow drags', () => {
-    expect(swipeDirection(-200, 0, SWIPE_MAX_DURATION + 1)).toBe(0);
+  it('never moves far enough to show the blank beyond', () => {
+    expect(edgeResistance(-400, 400)).toBe(-50);
   });
 });
 

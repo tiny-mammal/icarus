@@ -1,126 +1,16 @@
 /**
- * Touch and touchpad gestures: horizontal swipes (one finger on a screen, two
- * on a touchpad) that page through months or days, and the drag-down that
- * dismisses a bottom sheet. All are Svelte actions; the thresholds live in
+ * Touch and touchpad gestures: the pager that follows one finger on a screen,
+ * or two on a touchpad, through months or diary pages, and the drag-down that
+ * dismisses a bottom sheet. Both are Svelte actions; the thresholds live in
  * pure helpers so they can be tested.
  */
 
 import { gestureLog } from './gesture-log';
 import { listenWheelGesture, OWN_GESTURES } from './wheel-gesture';
 
-/** Minimum horizontal travel (px) for a swipe. */
-export const SWIPE_MIN_DISTANCE = 56;
-/** A swipe must be clearly more horizontal than vertical. */
-export const SWIPE_MAX_SLOPE = 0.6;
-/** Slower drags are treated as reading/scrolling, not swipes. */
-export const SWIPE_MAX_DURATION = 700;
-
-/**
- * Classify a finished touch. Returns 1 for a swipe to the left (reveal what
- * comes next), -1 for a swipe to the right (go back), or 0 for anything else.
- */
-export function swipeDirection(dx: number, dy: number, ms: number): -1 | 0 | 1 {
-  if (ms > SWIPE_MAX_DURATION) return 0;
-  if (Math.abs(dx) < SWIPE_MIN_DISTANCE) return 0;
-  if (Math.abs(dy) > Math.abs(dx) * SWIPE_MAX_SLOPE) return 0;
-  return dx < 0 ? 1 : -1;
-}
-
-
-export interface SwipeOptions {
-  onswipe: (dir: -1 | 1) => void;
-  enabled?: boolean;
-}
-
-/** Travel (px) a touchpad swipe needs to turn the page without a flick. */
-export const WHEEL_SWIPE_DISTANCE = 60;
-
 /** Smoothed speed (px/ms), so one jittery sample doesn't decide a flick. */
 export function smoothVelocity(previous: number, delta: number, dt: number): number {
   return dt > 0 ? previous * 0.6 + (delta / dt) * 0.4 : previous;
-}
-
-/**
- * Call `onswipe` when two fingers swipe sideways on a touchpad over `node`
- * and lift (see `wheel-gesture`). Vertical scrolling and pinch-zoom are left
- * alone, and content that scrolls sideways keeps its own horizontal scrolling.
- */
-export function trackpadSwipe(node: HTMLElement, options: SwipeOptions) {
-  let opts = options;
-  let swipe: { offset: number; velocity: number; t: number } | null = null;
-
-  const stop = listenWheelGesture(
-    node,
-    () => opts.enabled !== false,
-    (action, t) => {
-      if (action.type === 'move') {
-        if (action.start || !swipe) swipe = { offset: 0, velocity: 0, t };
-        swipe.velocity = smoothVelocity(swipe.velocity, action.delta, t - swipe.t);
-        swipe.offset += action.delta;
-        swipe.t = t;
-      } else if (action.type === 'release' && swipe) {
-        const dir = releaseDecision(swipe.offset, WHEEL_SWIPE_DISTANCE, swipe.velocity);
-        swipe = null;
-        if (dir !== 0) {
-          gestureLog.record('swipe', { dir }, t);
-          opts.onswipe(dir);
-        }
-      }
-    },
-  );
-  return {
-    update(next: SwipeOptions) {
-      opts = next;
-    },
-    destroy: stop,
-  };
-}
-
-/**
- * Call `onswipe` on a horizontal single-finger swipe over `node`, or a
- * two-finger swipe on a touchpad (see `trackpadSwipe`). Vertical scrolling is
- * left alone; give the node `touch-action: pan-y` so the browser doesn't claim
- * horizontal pans for itself.
- */
-export function swipe(node: HTMLElement, options: SwipeOptions) {
-  let opts = options;
-  let start: { x: number; y: number; t: number } | null = null;
-  const trackpad = trackpadSwipe(node, options);
-
-  const onStart = (e: TouchEvent) => {
-    const target = e.target as Element | null;
-    if (opts.enabled === false || e.touches.length !== 1 || target?.closest(OWN_GESTURES)) {
-      start = null;
-      return;
-    }
-    const t = e.touches[0];
-    start = { x: t.clientX, y: t.clientY, t: e.timeStamp };
-  };
-  const onEnd = (e: TouchEvent) => {
-    if (!start) return;
-    const t = e.changedTouches[0];
-    const dir = swipeDirection(t.clientX - start.x, t.clientY - start.y, e.timeStamp - start.t);
-    start = null;
-    // Selecting text with a long press must not page away.
-    if (dir !== 0 && !window.getSelection()?.toString()) opts.onswipe(dir);
-  };
-  const onCancel = () => (start = null);
-
-  node.addEventListener('touchstart', onStart, { passive: true });
-  node.addEventListener('touchend', onEnd, { passive: true });
-  node.addEventListener('touchcancel', onCancel, { passive: true });
-  return {
-    update(next: SwipeOptions) {
-      opts = next;
-      trackpad.update(next);
-    },
-    destroy() {
-      trackpad.destroy();
-      node.removeEventListener('touchstart', onStart);
-      node.removeEventListener('touchend', onEnd);
-      node.removeEventListener('touchcancel', onCancel);
-    },
-  };
 }
 
 /** Drag distance (px) past which releasing a sheet dismisses it. */
@@ -271,13 +161,39 @@ export async function turnPage(
   placeTrack(track, '-100%');
 }
 
+/**
+ * Turn a pager's track from a button or key: `turn(track, dir)` slides it a
+ * page (see `turnPage`), ignoring presses while it is still sliding, or just
+ * calls `onpage` when there is no track or `animate` is off.
+ */
+export function pageTurner(onpage: (dir: -1 | 1) => void | Promise<void>) {
+  let turning = false;
+  return async (track: HTMLElement | null, dir: -1 | 1, animate = true): Promise<void> => {
+    if (!track || !animate) return void (await onpage(dir));
+    if (turning) return;
+    turning = true;
+    try {
+      await turnPage(track, dir, onpage);
+    } finally {
+      turning = false;
+    }
+  };
+}
+
 export interface DragPagerOptions {
   /** The sliding row holding the previous, current and next pages. */
   track: HTMLElement | null;
   /** Make the page in `dir` the current one (resolve once it's rendered). */
   onpage: (dir: -1 | 1) => void | Promise<void>;
+  /** Whether there is a page in `dir`; past the last one the drag resists. */
+  canPage?: (dir: -1 | 1) => boolean;
   enabled?: boolean;
   reducedMotion?: boolean;
+}
+
+/** How far a drag past the first or last page moves the track (px). */
+export function edgeResistance(dx: number, width: number): number {
+  return Math.sign(dx) * Math.min(Math.abs(dx) / 4, width / 8);
 }
 
 /**
@@ -286,21 +202,31 @@ export interface DragPagerOptions {
  * out, at most one page either way. When the fingers lift it settles on
  * whichever page the drag or flick points at; a touchpad's momentum after the
  * lift is ignored (see `wheel-gesture`). Vertical moves are left to
- * scrolling, and mouse drags to the arrow buttons.
+ * scrolling, mouse drags to the arrow buttons, and content that scrolls
+ * sideways (see `OWN_GESTURES`) keeps its own horizontal pans.
  */
 export function dragPager(node: HTMLElement, options: DragPagerOptions) {
   let opts = options;
 
   // --- the track, whatever moves it ---------------------------------------
-  // `dx` is the track's offset from rest (negative shows the next page) and
-  // `velocity` its smoothed speed in px/ms, signed like `dx`.
+  // `dx` is how far the fingers dragged the track from rest (negative shows
+  // the next page), `shown` where it actually is, and `velocity` its smoothed
+  // speed in px/ms, signed like `dx`.
   let dx = 0;
+  let shown = 0;
   let velocity = 0;
   let lastT = 0;
   let settling = false;
 
+  /** The page a drag of `offset` px reaches, or 0 when there is none there. */
+  function pageThere(offset: number): -1 | 0 | 1 {
+    const dir = offset < 0 ? 1 : offset > 0 ? -1 : 0;
+    return dir !== 0 && opts.canPage?.(dir) !== false ? dir : 0;
+  }
+
   function begin(t: number): void {
     dx = 0;
+    shown = 0;
     velocity = 0;
     lastT = t;
   }
@@ -313,7 +239,8 @@ export function dragPager(node: HTMLElement, options: DragPagerOptions) {
     lastT = t;
     // Only the neighbouring pages are rendered: never past them.
     dx = Math.max(-width, Math.min(width, dx + delta));
-    placeTrack(track, `calc(-100% + ${dx}px)`);
+    shown = pageThere(dx) !== 0 ? dx : edgeResistance(dx, width);
+    placeTrack(track, `calc(-100% + ${shown}px)`);
     gestureLog.record('move', { offset: Math.round(dx), v: Math.round(velocity * 1000) / 1000, width }, t);
   }
 
@@ -323,10 +250,10 @@ export function dragPager(node: HTMLElement, options: DragPagerOptions) {
     settling = true;
     try {
       const width = node.clientWidth;
-      const dir = cancel ? 0 : pageDecision(dx, width, velocity);
+      const dir = cancel || pageThere(dx) === 0 ? 0 : pageDecision(dx, width, velocity);
       gestureLog.record('settle', { dir, cancel, offset: Math.round(dx), v: Math.round(velocity * 1000) / 1000, width });
       if (dir === 0) {
-        placeTrack(track, '-100%', opts.reducedMotion ? 0 : settleDuration(dx, velocity));
+        placeTrack(track, '-100%', opts.reducedMotion ? 0 : settleDuration(shown, velocity));
       } else {
         const ms = opts.reducedMotion ? 0 : settleDuration(width - Math.abs(dx), velocity);
         await turnPage(track, dir, opts.onpage, ms);
@@ -334,6 +261,7 @@ export function dragPager(node: HTMLElement, options: DragPagerOptions) {
     } finally {
       settling = false;
       dx = 0;
+      shown = 0;
       velocity = 0;
       gestureLog.record('settled');
     }
@@ -346,6 +274,7 @@ export function dragPager(node: HTMLElement, options: DragPagerOptions) {
 
   const onDown = (e: PointerEvent) => {
     if (opts.enabled === false || settling || wheelDragging || e.pointerType === 'mouse' || !opts.track) return;
+    if ((e.target as Element | null)?.closest(OWN_GESTURES)) return;
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, lastX: e.clientX, axis: null };
     gestureLog.record('pointerdown', { x: e.clientX, y: e.clientY, type: e.pointerType }, e.timeStamp);
     begin(e.timeStamp);
@@ -380,7 +309,8 @@ export function dragPager(node: HTMLElement, options: DragPagerOptions) {
     if (axis !== 'x') return;
     // The finger moved the page; the lift must not also tap a day.
     swallowClicksUntil = performance.now() + 400;
-    void settle(e.type === 'pointercancel');
+    // Selecting text with a long press must not page away.
+    void settle(e.type === 'pointercancel' || !!window.getSelection()?.toString());
   };
 
   const onClick = (e: MouseEvent) => {

@@ -46,6 +46,12 @@ test('lists every entry, jumps through the calendar sheet and swipes days', asyn
   await pane.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
   await drag(cdp, [340, 500], [60, 510]);
   await expect(pane.getByRole('article')).toContainText('Midsummer');
+  // Past the last entry the page resists and springs back.
+  await page.waitForTimeout(450);
+  await drag(cdp, [340, 500], [60, 510]);
+  await page.waitForTimeout(450);
+  await expect(pane.getByRole('article')).toContainText('Midsummer');
+  await expect(pane.locator('.will-change-transform')).toHaveAttribute('style', /translateX\(-100%\)/);
   await pane.getByRole('button', { name: 'Close' }).click();
 
   // The pinned month opens the calendar on it; it pages with a swipe.
@@ -151,7 +157,7 @@ test('a back-to-top button returns a long feed and a long entry to the top', asy
 
   // A long entry read in the day pane.
   await page.getByRole('button', { name: /Day 59$/ }).tap();
-  const reader = page.locator('aside .overflow-y-auto');
+  const reader = page.locator('aside .overflow-y-auto:not([inert])');
   await reader.evaluate((el) => el.scrollTo(0, el.scrollHeight));
   await page.locator('aside').getByRole('button', { name: 'Back to top' }).tap();
   await expect.poll(() => reader.evaluate((el) => el.scrollTop)).toBe(0);
