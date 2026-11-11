@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, untrack } from 'svelte';
   import { fly } from 'svelte/transition';
   import type { SearchHit } from '../lib/search';
   import type { DiaryEntry } from '../lib/types';
@@ -13,6 +14,8 @@
     activeIndex,
     query,
     oldestFirst,
+    initialScroll,
+    onscrolled,
     ontoggleorder,
     onloadmore,
     onselect,
@@ -22,6 +25,9 @@
     activeIndex: number;
     query: string;
     oldestFirst: boolean;
+    /** Where the list was left when these results were last on screen. */
+    initialScroll: number;
+    onscrolled: (top: number) => void;
     ontoggleorder: () => void;
     onloadmore: () => void;
     onselect: (entry: DiaryEntry) => void;
@@ -47,10 +53,18 @@
     if (listEl) listEl.scrollTop = 0;
   });
 
+  // Reopened results (after reading a hit) return to where they were left.
+  onMount(() => {
+    if (listEl) listEl.scrollTop = initialScroll;
+  });
+
   // Keyboard navigation keeps the active row in view. Only on a change of
-  // row: following the list's own growth would yank a scrolled list back up.
+  // row: following the list's own growth would yank a scrolled list back up,
+  // and reopening the list must not undo its restored scroll position.
+  let lastActive = untrack(() => activeIndex);
   $effect(() => {
-    void activeIndex;
+    if (activeIndex === lastActive) return;
+    lastActive = activeIndex;
     requestAnimationFrame(() => {
       listEl
         ?.querySelector<HTMLElement>('[data-active="true"]')
@@ -69,6 +83,7 @@
 
 <!-- Phones: spans the screen under the top bar; wider: hangs from the field. -->
 <div
+  data-search-results
   class="fixed inset-x-3 top-14 z-popover mt-2 flex max-h-[min(60vh,calc(var(--screen-h)-6rem))] flex-col overflow-hidden rounded-xl border border-slate bg-surface shadow-2xl shadow-black/50 sm:absolute sm:inset-x-auto sm:left-1/2 sm:top-full sm:w-full sm:[transform:translateX(-50%)]"
   transition:fly={{ y: -6, duration: 150 }}
 >
@@ -92,7 +107,10 @@
     <ul
       bind:this={listEl}
       class="min-h-0 overflow-y-auto overscroll-contain py-1"
-      onscroll={loadMoreIfNeeded}
+      onscroll={() => {
+        onscrolled(listEl?.scrollTop ?? 0);
+        loadMoreIfNeeded();
+      }}
     >
       {#each hits as hit, i (hit.entry.uid)}
         <li>

@@ -54,6 +54,9 @@ import {
   setSavedLockWhenHidden,
   getSavedLengthCount,
   setSavedLengthCount,
+  getSavedSearchOrder,
+  setSavedSearchOrder,
+  type SearchOrder,
   getSavedCountHidesWhileTyping,
   setSavedCountHidesWhileTyping,
   type AutoLockMinutes,
@@ -197,6 +200,8 @@ class AppStore {
 
   /** How day labels are written (system locale by default). User preference. */
   dateFormat = $state<DateFormat>('auto');
+  /** Which end of the diary a new search starts from. */
+  searchOrder = $state<SearchOrder>('newest');
 
   /** Underline misspellings in the writing fields. User preference. */
   spellcheck = $state(true);
@@ -277,6 +282,7 @@ class AppStore {
     void this.loadDraftsFromDisk();
     void this.loadWeekStart();
     void this.loadDateFormat();
+    void this.loadSearchOrder();
     void this.loadSpellcheck();
     void this.loadCountPreferences();
     void this.loadSpellWords();
@@ -505,6 +511,7 @@ class AppStore {
     this.drafts = [];
     this.weekStart = 1;
     this.dateFormat = 'auto';
+    this.searchOrder = 'newest';
     this.spellcheck = true;
     this.lengthCount = 'both';
     this.countHidesWhileTyping = true;
@@ -514,6 +521,7 @@ class AppStore {
       this.loadDraftsFromDisk(),
       this.loadWeekStart(),
       this.loadDateFormat(),
+      this.loadSearchOrder(),
       this.loadSpellcheck(),
       this.loadCountPreferences(),
       this.loadSpellWords(),
@@ -1090,6 +1098,21 @@ class AppStore {
   async setDateFormat(format: DateFormat): Promise<void> {
     this.dateFormat = format;
     await this.savePreference('setDateFormat', setSavedDateFormat(format));
+  }
+
+  /** Restore the saved search order on boot (defaults to newest first). */
+  async loadSearchOrder(): Promise<void> {
+    try {
+      this.searchOrder = await getSavedSearchOrder();
+    } catch (err) {
+      devError('loadSearchOrder: could not read the search-order preference', err);
+    }
+  }
+
+  /** Choose which end of the diary search results start from and persist it. */
+  async setSearchOrder(order: SearchOrder): Promise<void> {
+    this.searchOrder = order;
+    await this.savePreference('setSearchOrder', setSavedSearchOrder(order));
   }
 
   /** Restore the saved spell-check preference on boot (defaults to on). */

@@ -7,8 +7,9 @@ import { storage } from './storage';
 import { parseDateFormat, type DateFormat, type WeekStart } from './date';
 import { SPELL_WORDS_ITEM } from './storage/types';
 import { parseLengthCount, type LengthCount } from './text-count';
+import { parseSearchOrder, type SearchOrder } from './search';
 
-export type { DateFormat, WeekStart, LengthCount };
+export type { DateFormat, WeekStart, LengthCount, SearchOrder };
 
 const STORE = 'settings' as const;
 
@@ -77,6 +78,15 @@ export async function getSavedDateFormat(): Promise<DateFormat> {
 
 export async function setSavedDateFormat(format: DateFormat): Promise<void> {
   await storage.setItem(STORE, 'dateFormat', format);
+}
+
+/** Which end of the diary search results start from (defaults to the newest). */
+export async function getSavedSearchOrder(): Promise<SearchOrder> {
+  return parseSearchOrder(await storage.getItem<SearchOrder>(STORE, 'searchOrder'));
+}
+
+export async function setSavedSearchOrder(order: SearchOrder): Promise<void> {
+  await storage.setItem(STORE, 'searchOrder', order);
 }
 
 /** What the editor's length count shows: words, characters, both or nothing. */

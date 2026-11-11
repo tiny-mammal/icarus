@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tooltip } from '../lib/tooltip';
-  import { flushSync, onMount } from 'svelte';
+  import { flushSync, onMount, untrack } from 'svelte';
   import { fade, fly, type TransitionConfig } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
@@ -38,10 +38,20 @@
   });
 
   // Newest first suits most searches; oldest first follows a story from its
-  // start. Back to newest whenever the search is left.
-  let oldestFirst = $state(false);
+  // start. The button flips it for one search; leaving the search goes back to
+  // the order chosen in Settings.
+  let oldestFirst = $state(app.searchOrder === 'oldest');
+  // Opening a hit keeps the query, the batch, the active row and the scroll
+  // position of the list. Closing the day it opened brings the results back
+  // (`pinned`, without focus, so no keyboard pops up) until the next tap away.
+  let resumeOnClose = false;
+  let pinned = $state(false);
+  let resultsScroll = $state(0);
   $effect(() => {
-    if (!searched.trim()) oldestFirst = false;
+    if (!searched.trim()) {
+      oldestFirst = app.searchOrder === 'oldest';
+      pinned = false;
+    }
   });
 
   const newestHits = $derived<SearchHit[]>(search(app.entries, searched));
@@ -49,7 +59,7 @@
   const shownHits = $derived(hits.slice(0, shownCount));
   // Follows the searched query, so results never flash "no matches" while the
   // search catches up with the field.
-  const open = $derived(focused && searched.trim().length > 0);
+  const open = $derived((focused || pinned) && searched.trim().length > 0);
 
   // Back closes the results, then the unfolded search (Escape on the input),
   // instead of the app.
@@ -63,10 +73,34 @@
     void oldestFirst;
     activeIndex = 0;
     shownCount = 50;
+    resultsScroll = 0;
+    resumeOnClose = false;
   });
 
   $effect(() => {
     if (!viewport.compact) searchExpanded = false;
+  });
+
+  // The day opened from a hit was closed (back, Escape, its close button):
+  // show the results again, to pick the next entry to review.
+  $effect(() => {
+    if (app.selectedKey !== null || !resumeOnClose) return;
+    resumeOnClose = false;
+    if (!untrack(() => searched).trim()) return;
+    if (viewport.compact) searchExpanded = true;
+    pinned = true;
+  });
+
+  // Tapping away from the restored results dismisses them (the query stays).
+  $effect(() => {
+    if (!pinned) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target as Element;
+      if (target.closest('[data-search-results]') || inputEl?.parentElement?.contains(target)) return;
+      pinned = false;
+    };
+    window.addEventListener('pointerdown', onPointerDown, true);
+    return () => window.removeEventListener('pointerdown', onPointerDown, true);
   });
 
   function expandSearch() {
@@ -121,8 +155,13 @@
   }
 
   function choose(entry: DiaryEntry) {
+    const index = shownHits.findIndex((hit) => hit.entry.uid === entry.uid);
+    if (index >= 0) activeIndex = index;
     app.jumpToEntry(entry, searched);
-    query = '';
+    resumeOnClose = true;
+    pinned = false;
+    // Not after the blur delay: a quick back must not find the results open.
+    focused = false;
     searchExpanded = false;
     inputEl?.blur();
   }
@@ -149,7 +188,7 @@
       if (hit) choose(hit.entry);
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      query = '';
+      collapseSearch();
       inputEl?.blur();
     }
   }
@@ -175,7 +214,10 @@
     <input
       bind:this={inputEl}
       bind:value={query}
-      onfocus={() => (focused = true)}
+      onfocus={() => {
+        focused = true;
+        pinned = false;
+      }}
       onblur={onBlur}
       onkeydown={onKeydown}
       type="text"
@@ -215,6 +257,8 @@
       {activeIndex}
       query={searched}
       {oldestFirst}
+      initialScroll={resultsScroll}
+      onscrolled={(top) => (resultsScroll = top)}
       ontoggleorder={() => (oldestFirst = !oldestFirst)}
       onloadmore={showMore}
       onselect={choose}

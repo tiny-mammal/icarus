@@ -22,6 +22,14 @@ export interface SearchHit {
   entry: DiaryEntry;
 }
 
+/** Which end of the diary the results start from (user preference). */
+export const SEARCH_ORDERS = ['newest', 'oldest'] as const;
+export type SearchOrder = (typeof SEARCH_ORDERS)[number];
+
+export function parseSearchOrder(value: unknown): SearchOrder {
+  return SEARCH_ORDERS.includes(value as SearchOrder) ? (value as SearchOrder) : 'newest';
+}
+
 interface Haystack {
   /** Folded, accents stripped, whitespace runs collapsed to one space. */
   plain: string;

@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * Everything adjustable, grouped by what it is about: the diary and its
-   * backups, writing, dates, privacy, the app itself and, set apart at the
+   * backups, writing, search, dates, privacy, the app itself and, set apart at the
    * end, deleting the diary. Every setting is one row (SettingsRow) with one
    * of three controls: a switch for on/off, a segmented control for two short
    * choices, a select for more.
@@ -39,6 +39,11 @@
   const weekStartOptions = [
     { value: 1 as const, label: fmtWeekday.format(new Date(2023, 0, 2)) }, // Monday
     { value: 0 as const, label: fmtWeekday.format(new Date(2023, 0, 1)) }, // Sunday
+  ];
+
+  const searchOrderOptions = [
+    { value: 'newest' as const, label: 'Newest' },
+    { value: 'oldest' as const, label: 'Oldest' },
   ];
 
   // Each format previews itself with a fixed sample date so the order is obvious.
@@ -188,6 +193,17 @@
           label="Hide the count while typing"
           disabled={app.lengthCount === 'off'}
           onchange={(on) => app.setCountHidesWhileTyping(on)}
+        />
+      </SettingsRow>
+    </SettingsSection>
+
+    <SettingsSection title="Search">
+      <SettingsRow label="Results start with" hint="The results list can still flip it for one search">
+        <Segmented
+          value={app.searchOrder}
+          options={searchOrderOptions}
+          onchange={(order) => app.setSearchOrder(order)}
+          label="Results start with"
         />
       </SettingsRow>
     </SettingsSection>

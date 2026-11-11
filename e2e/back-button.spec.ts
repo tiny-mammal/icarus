@@ -30,9 +30,13 @@ test('back closes layers one at a time, then leaves the app', async ({ page }) =
   await expect(settings(page)).toBeHidden();
   await expect(dayPane(page).getByRole('article')).toBeVisible();
 
+  // The day closes and the search results it was opened from come back.
   await page.goBack();
   await expect(dayPane(page).getByRole('article')).toBeHidden();
-  await expect(search(page)).toBeVisible();
+  await expect(searchResult(page, 'Midsummer')).toBeVisible();
+
+  await page.goBack();
+  await expect(search(page)).toHaveValue('');
 
   // Nothing is open: back now leaves the app for the page before it.
   await page.goBack();
@@ -57,6 +61,11 @@ test('closing from the UI leaves no extra history entry behind', async ({ page }
   await expect(settings(page)).toBeHidden();
   await dayPane(page).getByRole('button', { name: 'Close' }).click();
   await expect(dayPane(page).getByRole('article')).toBeHidden();
+
+  // The search results it was opened from come back; tapping away dismisses them.
+  await expect(searchResult(page, 'Midsummer')).toBeVisible();
+  await page.getByRole('banner').getByText('Icarus').click();
+  await expect(searchResult(page, 'Midsummer')).toBeHidden();
 
   await page.goBack();
   await expect(page).toHaveURL('about:blank');

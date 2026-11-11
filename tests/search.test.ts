@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { resetSearch, search as searchIn } from '../src/lib/search';
+import { parseSearchOrder, resetSearch, search as searchIn } from '../src/lib/search';
 import type { DiaryEntry } from '../src/lib/types';
 
 function entry(uid: string, title: string, content = '', date = new Date(2026, 0, 1)): DiaryEntry {
@@ -118,5 +118,14 @@ describe('search', () => {
 
     expect(uids('ano')).toEqual(['ano']);
     expect(uids('año')).toEqual(['ano-tilde', 'nfd']);
+  });
+});
+
+describe('parseSearchOrder', () => {
+  it('keeps a known order and falls back to newest', () => {
+    expect(parseSearchOrder('oldest')).toBe('oldest');
+    expect(parseSearchOrder('newest')).toBe('newest');
+    expect(parseSearchOrder(undefined)).toBe('newest');
+    expect(parseSearchOrder('random')).toBe('newest');
   });
 });
