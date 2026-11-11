@@ -379,6 +379,7 @@ class AppStore {
     this.entries = entries;
     this.tracker = tracker ?? tracking.EMPTY_TRACKER;
     this.diaryExtra = extra;
+    this.unsavedDiary = false;
     this.vault = ref;
     this.lockedVault = null;
     storage.encryption.keepSessionFor(ref);
@@ -555,6 +556,7 @@ class AppStore {
     this.entries = [];
     this.tracker = tracking.EMPTY_TRACKER;
     this.diaryExtra = undefined;
+    this.unsavedDiary = false;
     this.drafts = [];
     this.spellWords = [];
     setUserWords([]);
@@ -590,11 +592,15 @@ class AppStore {
    * and clear the diary from memory. Waits for a diary write already under
    * way (a tap on a habit starts one at once, and a lock asked for when the
    * page is hidden is not asked again); refuses while anything else holds the
-   * app busy or if the draft cannot be saved, so locking never loses work.
+   * app busy, if the diary or the draft cannot be saved, so locking never
+   * loses work.
    */
   async lock(): Promise<boolean> {
     if (!this.encrypted || !this.vault) return false;
     await this.writeDiary.idle();
+    // A write that failed left changes only in memory, which locking clears:
+    // try once more, and keep the diary open if it still cannot be saved.
+    if (this.unsavedDiary && !(await this.persist(true))) return false;
     if (!this.encrypted || !this.vault || this.busy) return false;
     if (!(await this.flushDraftNow())) return false;
     await this.showLockScreen(this.vault);
@@ -1476,6 +1482,9 @@ class AppStore {
     if (this.vault && !(await this.persist())) this.entries = previousEntries;
   }
 
+  /** The last diary write failed: what is in memory is not what is stored. */
+  private unsavedDiary = false;
+
   /**
    * Write the diary as it is when the write starts, one write at a time. A
    * diary closed in the meantime (locked, deleted) is not written.
@@ -1489,9 +1498,11 @@ class AppStore {
       // state reach the screen first.
       await nextPaint();
       await storage.writeVault(vault, serializeIcs(this.diary));
+      this.unsavedDiary = false;
       return true;
     } catch (err) {
       devError('persist: could not write the diary', err);
+      this.unsavedDiary = true;
       return false;
     } finally {
       this.busy = false;

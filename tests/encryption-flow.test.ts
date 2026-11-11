@@ -145,6 +145,23 @@ describe('encrypted diary flow', () => {
     expect(app.tracker.days.get('2026-10-01')?.score).toEqual({ value: 7, scale: 10 });
   });
 
+  it('keeps the diary open while a failed write cannot be saved, and locks once it can', async () => {
+    const { app } = await encryptedApp();
+    const write = vi.spyOn(backup.memory, 'writeVault').mockRejectedValue(new Error('storage is full'));
+
+    app.setDayScore('2026-10-01', 7);
+    // The write fails, so the score lives only in memory: locking would lose it.
+    expect(await app.lock()).toBe(false);
+    expect(app.view).toBe('main');
+    expect(app.tracker.days.get('2026-10-01')?.score).toEqual({ value: 7, scale: 10 });
+
+    // Storage comes back: the retry saves it, then the diary locks.
+    write.mockRestore();
+    expect(await app.lock()).toBe(true);
+    expect(await app.unlock({ password: PASSWORD })).toBe('ok');
+    expect(app.tracker.days.get('2026-10-01')?.score).toEqual({ value: 7, scale: 10 });
+  });
+
   it('exports encrypted by default and plain only on request', async () => {
     const { app } = await encryptedApp();
     await app.exportVault();
