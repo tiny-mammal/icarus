@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   addMonths,
   adjacentKey,
+  calendarKeyTarget,
   dateKey,
   compactDayLabel,
   isSameDay,
@@ -16,6 +17,34 @@ import {
   weekdayLabels,
   timeAgo,
 } from '../src/lib/date';
+
+describe('calendarKeyTarget', () => {
+  it('crosses month, year and leap-day boundaries in local calendar days', () => {
+    expect(calendarKeyTarget(new Date(2026, 0, 1), 'ArrowLeft', 1)).toEqual(new Date(2025, 11, 31));
+    expect(calendarKeyTarget(new Date(2024, 1, 28), 'ArrowRight', 1)).toEqual(new Date(2024, 1, 29));
+    expect(calendarKeyTarget(new Date(2026, 0, 3), 'ArrowUp', 1)).toEqual(new Date(2025, 11, 27));
+    expect(calendarKeyTarget(new Date(2026, 11, 28), 'ArrowDown', 1)).toEqual(new Date(2027, 0, 4));
+  });
+
+  it('uses the configured week start for Home and End on a Sunday', () => {
+    const sunday = new Date(2026, 2, 1);
+    expect(calendarKeyTarget(sunday, 'Home', 1)).toEqual(new Date(2026, 1, 23));
+    expect(calendarKeyTarget(sunday, 'End', 1)).toEqual(sunday);
+    expect(calendarKeyTarget(sunday, 'Home', 0)).toEqual(sunday);
+    expect(calendarKeyTarget(sunday, 'End', 0)).toEqual(new Date(2026, 2, 7));
+  });
+
+  it('keeps the existing month-paging overflow when the target month is shorter', () => {
+    expect(calendarKeyTarget(new Date(2026, 2, 31), 'PageUp', 1)).toEqual(new Date(2026, 2, 3));
+    expect(calendarKeyTarget(new Date(2026, 0, 31), 'PageDown', 1)).toEqual(new Date(2026, 2, 3));
+  });
+
+  it('leaves selection and other shortcuts to the component', () => {
+    for (const key of ['Enter', ' ', 'Escape', 'Tab', 't']) {
+      expect(calendarKeyTarget(new Date(2026, 0, 1), key, 1)).toBeNull();
+    }
+  });
+});
 
 describe('dateKey', () => {
   it('formats a Date as YYYY-MM-DD using local time', () => {

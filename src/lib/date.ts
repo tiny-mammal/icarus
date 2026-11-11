@@ -51,6 +51,22 @@ export function daysBetween(a: Date, b: Date): number {
  */
 export type WeekStart = 0 | 1;
 
+/** A calendar key's destination, or null when it is not a navigation key. */
+export function calendarKeyTarget(day: Date, key: string, weekStart: WeekStart): Date | null {
+  const dow = (day.getDay() - weekStart + 7) % 7;
+  switch (key) {
+    case 'ArrowLeft': return addDays(day, -1);
+    case 'ArrowRight': return addDays(day, 1);
+    case 'ArrowUp': return addDays(day, -7);
+    case 'ArrowDown': return addDays(day, 7);
+    case 'Home': return addDays(day, -dow);
+    case 'End': return addDays(day, 6 - dow);
+    case 'PageUp': return new Date(day.getFullYear(), day.getMonth() - 1, day.getDate());
+    case 'PageDown': return new Date(day.getFullYear(), day.getMonth() + 1, day.getDate());
+    default: return null;
+  }
+}
+
 // All visible month/day names come from `Intl` so they follow the system locale
 // instead of being hardcoded in English. Formatters are created once and reused.
 const fmtMonthYear = new Intl.DateTimeFormat(undefined, {
@@ -229,8 +245,7 @@ const relativeTime = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 
 /** How long ago `date` was, in words: "today", "yesterday", "3 weeks ago". */
 export function timeAgo(date: Date, now: Date = new Date()): string {
-  const midnight = (d: Date) => keyToDate(dateKey(d)).getTime();
-  const days = Math.round((midnight(now) - midnight(date)) / 86_400_000);
+  const days = daysBetween(date, now);
   if (days < 7) return relativeTime.format(-Math.max(0, days), 'day');
   if (days < 30) return relativeTime.format(-Math.floor(days / 7), 'week');
   if (days < 365) return relativeTime.format(-Math.floor(days / 30), 'month');

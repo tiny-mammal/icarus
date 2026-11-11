@@ -4,8 +4,8 @@
   import { fade } from 'svelte/transition';
   import { app } from '../lib/store.svelte';
   import {
-    addDays,
     addMonths,
+    calendarKeyTarget,
     dateKey,
     longDayLabel,
     monthGrid,
@@ -88,21 +88,10 @@
   }
 
   function onKeydown(e: KeyboardEvent, day: Date) {
-    const dow = (day.getDay() - app.weekStart + 7) % 7;
-    const moves: Record<string, () => Date> = {
-      ArrowLeft: () => addDays(day, -1),
-      ArrowRight: () => addDays(day, 1),
-      ArrowUp: () => addDays(day, -7),
-      ArrowDown: () => addDays(day, 7),
-      Home: () => addDays(day, -dow),
-      End: () => addDays(day, 6 - dow),
-      PageUp: () => new Date(day.getFullYear(), day.getMonth() - 1, day.getDate()),
-      PageDown: () => new Date(day.getFullYear(), day.getMonth() + 1, day.getDate()),
-    };
-    const move = moves[e.key];
-    if (!move) return;
+    const target = calendarKeyTarget(day, e.key, app.weekStart);
+    if (!target) return;
     e.preventDefault();
-    void focusDay(move());
+    void focusDay(target);
   }
 
   // --- range drawing ------------------------------------------------------
