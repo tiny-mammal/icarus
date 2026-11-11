@@ -8,6 +8,7 @@ Runs on desktop (Windows, macOS, Linux), Android, and in the browser at
 <https://icarus.4oli.com/download>.
 
 - Calendar view, Markdown editor, and instant search across years of entries.
+- A score for each day and daily habits with streaks, kept in the same `.ics`.
 - Your diary stays on your device, and imports from and exports to `.ics`.
 - Optional password protection with a recovery key.
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * Everything adjustable, grouped by what it is about: the diary and its
-   * backups, writing, search, dates, privacy, the app itself and, set apart at the
+   * backups, writing, search, dates, day scores and habits, privacy, the app itself and, set apart at the
    * end, deleting the diary. Every setting is one row (SettingsRow) with one
    * of three controls: a switch for on/off, a segmented control for two short
    * choices, a select for more.
@@ -23,6 +23,7 @@
   import SettingsSection from './SettingsSection.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import DictionaryDialog from './DictionaryDialog.svelte';
+  import TrackerSettings from './TrackerSettings.svelte';
 
   // Local confirmation step for the destructive vault action.
   let confirmForget = $state(false);
@@ -226,6 +227,8 @@
         />
       </SettingsRow>
     </SettingsSection>
+
+    {#if app.vault}<TrackerSettings />{/if}
 
     <SettingsSection title="Privacy">
       {#snippet badge()}

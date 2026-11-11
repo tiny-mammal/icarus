@@ -8,6 +8,9 @@
 import type {
   Diary,
   DiaryEntry,
+  HabitMark,
+  Tracker,
+  UnmarkedDays,
   StoredDraft,
   Toast,
   ToastAction,
@@ -15,6 +18,8 @@ import type {
 } from './types';
 import { generateUid, parseIcs, serializeIcs } from './ical';
 import { nextPaint } from './paint';
+import * as tracking from './tracker';
+import { createWriteQueue } from './write-queue';
 import {
   createDraftPersistenceQueue,
   findEntryDraft,
@@ -138,6 +143,8 @@ class AppStore {
   // Raw: entries are replaced, never mutated, and years of them are too many
   // to wrap in deep proxies.
   entries = $state.raw<DiaryEntry[]>([]);
+  /** Day scores, habits and their marks. Raw like `entries`: replaced, never mutated. */
+  tracker = $state.raw<Tracker>(tracking.EMPTY_TRACKER);
   /** The rest of the open `.ics` file, written back untouched on every save. */
   private diaryExtra: string | undefined;
   /** Where the open diary lives (null while on the welcome or lock screen). */
@@ -362,14 +369,15 @@ class AppStore {
 
   /** The open diary, as it is written to storage. */
   private get diary(): Diary {
-    return { entries: this.entries, extra: this.diaryExtra };
+    return { entries: this.entries, tracker: this.tracker, extra: this.diaryExtra };
   }
 
   /** Show `diary` as the diary at `ref`, which is already persisted. */
-  private async enterVault(ref: VaultRef, { entries, extra }: Diary): Promise<void> {
+  private async enterVault(ref: VaultRef, { entries, tracker, extra }: Diary): Promise<void> {
     this.cancelDraftSave();
     this.resetEditor();
     this.entries = entries;
+    this.tracker = tracker ?? tracking.EMPTY_TRACKER;
     this.diaryExtra = extra;
     this.vault = ref;
     this.lockedVault = null;
@@ -545,6 +553,7 @@ class AppStore {
     this.cancelDraftSave();
     this.resetEditor();
     this.entries = [];
+    this.tracker = tracking.EMPTY_TRACKER;
     this.diaryExtra = undefined;
     this.drafts = [];
     this.spellWords = [];
@@ -1452,24 +1461,99 @@ class AppStore {
     if (this.vault && !(await this.persist())) this.entries = previousEntries;
   }
 
-  /** Write current entries to the current vault. Toasts on failure. */
-  private async persist(): Promise<boolean> {
-    if (!this.vault) return false;
+  /**
+   * Write the diary as it is when the write starts, one write at a time. A
+   * diary closed in the meantime (locked, deleted) is not written.
+   */
+  private writeDiary = createWriteQueue(async () => {
     const vault = this.vault;
+    if (!vault) return false;
     this.busy = true;
     try {
       // Serializing a huge diary blocks the main thread: let the "Saving…"
       // state reach the screen first.
       await nextPaint();
       await storage.writeVault(vault, serializeIcs(this.diary));
-      this.toast('success', `Saved ${this.appPlaceIn}`);
       return true;
-    } catch {
-      this.toast('error', 'Write failed — your changes are still in memory.');
+    } catch (err) {
+      devError('persist: could not write the diary', err);
       return false;
     } finally {
       this.busy = false;
     }
+  });
+
+  /**
+   * Write the open diary to its vault. Toasts on failure and, unless `quiet`
+   * (small changes saved as they happen), on success.
+   */
+  private async persist(quiet = false): Promise<boolean> {
+    if (!this.vault) return false;
+    const saved = await this.writeDiary();
+    if (!saved) this.toast('error', 'Write failed — your changes are still in memory.');
+    else if (!quiet) this.toast('success', `Saved ${this.appPlaceIn}`);
+    return saved;
+  }
+
+  // --- day tracking -------------------------------------------------------
+  /** Days with something tracked, oldest first, for streak lookups. */
+  trackedDayKeys = $derived.by(() => tracking.trackedDays(this.tracker));
+
+  /** A habit's streak on day `key`. */
+  streakOn(habitId: string, key: string): number {
+    return tracking.streakOn(this.tracker, this.trackedDayKeys, habitId, key, dateKey(new Date()));
+  }
+
+  /** Days in a row the score passed, or failed, up to day `key`. */
+  passRun(key: string): { passed: boolean; length: number } | null {
+    return tracking.passRun(this.tracker, this.trackedDayKeys, key, dateKey(new Date()));
+  }
+
+  /** Apply a tracker change and save it straight away, without a toast. */
+  private changeTracker(next: Tracker): void {
+    if (next === this.tracker) return;
+    this.tracker = next;
+    void this.persist(true);
+  }
+
+  setDayScore(key: string, value: number | null): void {
+    this.changeTracker(tracking.setScore(this.tracker, key, value));
+  }
+
+  setHabitMark(key: string, habitId: string, mark: HabitMark | undefined): void {
+    this.changeTracker(tracking.setMark(this.tracker, key, habitId, mark));
+  }
+
+  setHabitStreak(key: string, habitId: string, length: number | null): void {
+    this.changeTracker(tracking.setStreak(this.tracker, key, habitId, length));
+  }
+
+  addHabit(name: string): void {
+    this.changeTracker(tracking.addHabit(this.tracker, name));
+  }
+
+  renameHabit(id: string, name: string): void {
+    this.changeTracker(tracking.renameHabit(this.tracker, id, name));
+  }
+
+  setHabitArchived(id: string, archived: boolean): void {
+    this.changeTracker(tracking.setHabitArchived(this.tracker, id, archived));
+  }
+
+  setScoreScale(scale: number): void {
+    this.changeTracker(tracking.setScoreScale(this.tracker, scale));
+  }
+
+  setUnmarkedDays(rule: UnmarkedDays): void {
+    this.changeTracker(tracking.setUnmarkedDays(this.tracker, rule));
+  }
+
+  setPassMark(mark: number): void {
+    this.changeTracker(tracking.setPassMark(this.tracker, mark));
+  }
+
+  setPassStreak(on: boolean): void {
+    this.changeTracker(tracking.setPassStreak(this.tracker, on));
   }
 
   // --- import / export ----------------------------------------------------

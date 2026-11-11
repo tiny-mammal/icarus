@@ -20,6 +20,7 @@
   import PaneSizeToggle from './PaneSizeToggle.svelte';
   import ScrollTopButton from './ScrollTopButton.svelte';
   import EntryEditor, { type EditorFocus } from './EntryEditor.svelte';
+  import DayTracker from './DayTracker.svelte';
   import { formatLength } from '../lib/text-count';
 
   /**
@@ -68,6 +69,12 @@
       );
     }
   }
+
+  // The day's score and habits, open over the header.
+  let trackerOpen = $state(false);
+  $effect(() => {
+    if (!app.selectedKey || app.editing) trackerOpen = false;
+  });
 
   // --- reading → writing ----------------------------------------------------
   // Where the editor should put the caret when it opens.
@@ -158,10 +165,16 @@
 
   // Reader shortcuts: ←/→ turn the page (entry by entry, then day by day),
   // Shift+←/→ skip straight to the previous/next day with entries, N writes a new entry on the open day, E edits
-  // the one being read, F toggles full screen. Inert while writing or another
-  // overlay is up.
+  // the one being read, F toggles full screen, R opens the day's score and
+  // habits. Inert while writing or another overlay is up.
   function onKeydown(e: KeyboardEvent) {
     if (!app.selectedKey || app.overlayOpen || !isPlainShortcut(e)) return;
+    if ((e.key === 'r' || e.key === 'R') && !e.shiftKey) {
+      e.preventDefault();
+      trackerOpen = !trackerOpen;
+      return;
+    }
+    if (trackerOpen) return;
     if ((e.key === 'n' || e.key === 'N') && !e.shiftKey) {
       e.preventDefault();
       writeHere();
@@ -266,20 +279,23 @@
       <header class="flex items-center justify-between gap-2 border-b border-slate py-3 pr-2 pl-2 sm:gap-3 sm:py-5 sm:pr-[var(--pane-gutter)] sm:pl-[calc(var(--pane-gutter)-0.5rem)]">
         <div class="min-w-0">
           <DayStepper date={dayDate} />
-          {#if terms.length}
-            <p class="mt-1 pl-8 text-[0.7rem] font-medium text-muted">
-              {#if matchCount > 0}
-                <span class="text-text">{matchCount}</span>
-                {matchCount === 1 ? 'match' : 'matches'} for “{app.searchHighlight}”
-              {:else}
-                No matches for “{app.searchHighlight}” here
-              {/if}
-            </p>
-          {:else if entry?.content && app.lengthCount !== 'off'}
-            <p class="mt-1 pl-8 text-[0.7rem] font-medium text-muted tabular-nums" data-testid="entry-length">
-              {formatLength(entry.content, app.lengthCount)}
-            </p>
-          {/if}
+          <div class="mt-1 flex min-w-0 items-center gap-3 pl-8">
+            {#if terms.length}
+              <p class="min-w-0 truncate text-[0.7rem] font-medium text-muted">
+                {#if matchCount > 0}
+                  <span class="text-text">{matchCount}</span>
+                  {matchCount === 1 ? 'match' : 'matches'} for “{app.searchHighlight}”
+                {:else}
+                  No matches for “{app.searchHighlight}” here
+                {/if}
+              </p>
+            {:else if entry?.content && app.lengthCount !== 'off'}
+              <p class="min-w-0 truncate text-[0.7rem] font-medium text-muted tabular-nums" data-testid="entry-length">
+                {formatLength(entry.content, app.lengthCount)}
+              </p>
+            {/if}
+            <DayTracker dayKey={app.selectedKey} bind:open={trackerOpen} />
+          </div>
         </div>
         <div class="flex shrink-0 items-center gap-1">
           <button

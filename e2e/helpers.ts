@@ -1,6 +1,7 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type CDPSession, type Locator, type Page } from '@playwright/test';
 import { Buffer } from 'node:buffer';
 import { serializeIcs } from '../src/lib/ical';
+import type { DayRecord, Tracker } from '../src/lib/types';
 
 /** Shared onboarding steps for the browser-mode E2E suites. */
 
@@ -34,9 +35,10 @@ function localDay(date: string): Date {
   return new Date(y, m - 1, d);
 }
 
-/** `.ics` text for `entries`, written by the app's own serializer. */
-export function diaryIcs(entries: TestEntry[]): string {
+/** `.ics` text for `entries` (and any day tracking), written by the app's own serializer. */
+export function diaryIcs(entries: TestEntry[], tracker?: Tracker): string {
   return serializeIcs({
+    tracker,
     entries: entries.map((e, i) => ({
       uid: e.uid ?? `e${i}@icarus.diary`,
       date: localDay(e.date),
@@ -58,6 +60,23 @@ export const SAMPLE_ENTRY: TestEntry = {
     '- Finish the chapter draft\n- Call grandma',
     'A good, quiet day.',
   ].join('\n\n'),
+};
+
+/** Habits and scores around {@link SAMPLE_ENTRY}'s day, for screenshots. */
+export const SAMPLE_TRACKER: Tracker = {
+  habits: [
+    { id: 'run', name: 'Morning run' },
+    { id: 'read', name: 'Read 20 pages' },
+    { id: 'phone', name: 'No phone after 22:00' },
+  ],
+  days: new Map<string, DayRecord>([
+    ['2026-06-06', { score: { value: 6, scale: 10 }, marks: { run: 'done', read: 'done' }, streaks: { run: 41 } }],
+    ['2026-06-07', { score: { value: 7, scale: 10 }, marks: { run: 'done', read: 'done', phone: 'missed' }, streaks: {} }],
+    ['2026-06-08', { score: { value: 8, scale: 10 }, marks: { run: 'done', phone: 'done' }, streaks: {} }],
+  ]),
+  scoreScale: 10,
+  unmarkedDays: 'pause',
+  passStreak: true,
 };
 
 /**
@@ -163,4 +182,17 @@ export function searchResult(page: Page, text: string): Locator {
  */
 export async function hideToasts(page: Page): Promise<void> {
   await page.addStyleTag({ content: '[aria-label="Notifications"] { display: none; }' });
+}
+
+/** Drag a finger from `from` to `to`, as real touch events through CDP. */
+export async function touchDrag(cdp: CDPSession, from: [number, number], to: [number, number], ms = 160): Promise<void> {
+  const steps = 8;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: from[0], y: from[1] }] });
+  for (let i = 1; i <= steps; i++) {
+    const x = from[0] + ((to[0] - from[0]) * i) / steps;
+    const y = from[1] + ((to[1] - from[1]) * i) / steps;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
+    await new Promise((r) => setTimeout(r, ms / steps));
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }

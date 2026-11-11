@@ -2,6 +2,20 @@
 import { holdLayer } from './back-button.svelte';
 
 /**
+ * Move `node` to the end of <body>, out of any stacking context it was
+ * declared in — for a sheet opened from inside the day pane that must cover
+ * the top bar too.
+ */
+export function portal(node: HTMLElement) {
+  document.body.appendChild(node);
+  return {
+    destroy() {
+      node.remove();
+    },
+  };
+}
+
+/**
  * Call `onOutside` when a pointer press lands outside `node` — used to dismiss
  * lightweight popovers (e.g. the month/year picker) without a full backdrop.
  * For toggleable popovers, attach to the wrapper containing both the trigger

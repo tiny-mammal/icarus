@@ -365,3 +365,86 @@
 @utility btn-danger {
   @apply bg-red-600 text-white hover:bg-red-600/90;
 }
+
+/* ------------------------------------------------------------------ */
+/* The best possible day: its sun shows every colour, slowly moving.   */
+/* Spinning and sliding use transform only, which the compositor runs  */
+/* off the main thread; still for reduced motion. Plain colours, so it */
+/* renders on old WebViews too.                                        */
+/* ------------------------------------------------------------------ */
+@layer components {
+  .rainbow-spin {
+    background: conic-gradient(#ff7a7a, #ffb85c, #ffe46b, #7fdc8f, #63c7ff, #a98bff, #ff7ab8, #ff7a7a);
+    animation: rainbow-spin 6s linear infinite;
+    will-change: transform;
+  }
+  /* Twice as wide as its box and one period repeated: sliding by half loops seamlessly. */
+  .rainbow-slide {
+    width: 200%;
+    background: linear-gradient(
+      90deg,
+      #ff5f6d, #ff9f43, #ffd93d, #4cd97b, #3fb5ff, #8b6cff, #ff5fa2, #ff5f6d,
+      #ff9f43, #ffd93d, #4cd97b, #3fb5ff, #8b6cff, #ff5fa2, #ff5f6d
+    );
+    animation: rainbow-slide 8s linear infinite;
+    will-change: transform;
+  }
+  /* A glint that sweeps across, then rests before the next. */
+  .rainbow-shine {
+    width: 40%;
+    background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    transform: translateX(-120%);
+    animation: rainbow-shine 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    will-change: transform;
+  }
+  .rainbow-halo {
+    box-shadow:
+      0 0 18px rgb(255 170 120 / 0.35),
+      0 0 30px rgb(120 160 255 / 0.2);
+  }
+  /* For a mark too small to hold a gradient: its colour walks the rainbow. */
+  .rainbow-text {
+    animation: rainbow-text 6s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rainbow-spin,
+    .rainbow-slide,
+    .rainbow-text {
+      animation: none;
+    }
+    .rainbow-shine {
+      display: none;
+    }
+    .rainbow-text {
+      color: #ffe46b;
+    }
+  }
+}
+
+@keyframes rainbow-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+@keyframes rainbow-slide {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@keyframes rainbow-shine {
+  0% {
+    transform: translateX(-120%);
+  }
+  60%,
+  100% {
+    transform: translateX(280%);
+  }
+}
+@keyframes rainbow-text {
+  0%, 100% { color: #ff7a7a; }
+  16% { color: #ffb85c; }
+  33% { color: #ffe46b; }
+  50% { color: #7fdc8f; }
+  66% { color: #63c7ff; }
+  83% { color: #a98bff; }
+}
