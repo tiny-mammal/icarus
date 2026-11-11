@@ -6,6 +6,7 @@
  * vault (the app's private files, or IndexedDB in the browser) in sync.
  */
 import type {
+  Diary,
   DiaryEntry,
   StoredDraft,
   Toast,
@@ -137,6 +138,8 @@ class AppStore {
   // Raw: entries are replaced, never mutated, and years of them are too many
   // to wrap in deep proxies.
   entries = $state.raw<DiaryEntry[]>([]);
+  /** The rest of the open `.ics` file, written back untouched on every save. */
+  private diaryExtra: string | undefined;
   /** Where the open diary lives (null while on the welcome or lock screen). */
   vault = $state<VaultRef | null>(null);
   /** Which backend this session runs on — drives platform-aware UI copy. */
@@ -345,7 +348,7 @@ class AppStore {
     }
     if (save) {
       try {
-        await storage.writeVault(ref, serializeIcs(res.entries));
+        await storage.writeVault(ref, serializeIcs(res));
       } catch (err) {
         devError('adoptVault: could not save the diary', err);
         this.toast('error', 'Could not save the diary.');
@@ -353,15 +356,21 @@ class AppStore {
       }
     }
     if (save && replaces) await this.eraseReplacedItems();
-    await this.enterVault(ref, res.entries);
+    await this.enterVault(ref, res);
     return true;
   }
 
-  /** Show `entries` as the diary at `ref`, which is already persisted. */
-  private async enterVault(ref: VaultRef, entries: DiaryEntry[]): Promise<void> {
+  /** The open diary, as it is written to storage. */
+  private get diary(): Diary {
+    return { entries: this.entries, extra: this.diaryExtra };
+  }
+
+  /** Show `diary` as the diary at `ref`, which is already persisted. */
+  private async enterVault(ref: VaultRef, { entries, extra }: Diary): Promise<void> {
     this.cancelDraftSave();
     this.resetEditor();
     this.entries = entries;
+    this.diaryExtra = extra;
     this.vault = ref;
     this.lockedVault = null;
     storage.encryption.keepSessionFor(ref);
@@ -434,7 +443,7 @@ class AppStore {
   /** Start an empty diary. */
   async startNewDiary(): Promise<void> {
     try {
-      await this.proposeDiary(APP_VAULT, serializeIcs([]), 'new');
+      await this.proposeDiary(APP_VAULT, serializeIcs({ entries: [] }), 'new');
     } catch (err) {
       devError('startNewDiary: could not reach the diary storage', err);
       this.toast('error', 'Could not create the diary.');
@@ -536,6 +545,7 @@ class AppStore {
     this.cancelDraftSave();
     this.resetEditor();
     this.entries = [];
+    this.diaryExtra = undefined;
     this.drafts = [];
     this.spellWords = [];
     setUserWords([]);
@@ -631,16 +641,16 @@ class AppStore {
     if (pending?.kind !== 'enable' || !ref) return false;
     const parsed = diary ? parseIcs(diary.text) : null;
     if (parsed && !parsed.ok) return false;
-    const entries = parsed?.ok ? parsed.entries : this.entries;
+    const opened = parsed?.ok ? parsed : this.diary;
     if (this.vault && !(await this.flushDraftNow())) return false;
     this.busy = true;
     try {
-      await storage.encryption.enable(ref, serializeIcs(entries), pending.keys);
+      await storage.encryption.enable(ref, serializeIcs(opened), pending.keys);
       if (diary?.replaces) await this.eraseReplacedItems();
       this.pendingKeys = null;
       if (diary) {
         this.pendingDiary = null;
-        await this.enterVault(ref, entries);
+        await this.enterVault(ref, opened);
       } else {
         this.encrypted = true;
       }
@@ -690,7 +700,7 @@ class AppStore {
     if (!this.vault) return false;
     this.busy = true;
     try {
-      await storage.encryption.rekey(this.vault, serializeIcs(this.entries), keys);
+      await storage.encryption.rekey(this.vault, serializeIcs(this.diary), keys);
       this.warnIfCopiesRemain();
       return true;
     } catch (err) {
@@ -736,7 +746,7 @@ class AppStore {
     if (!(await this.flushDraftNow())) return 'failed';
     this.busy = true;
     try {
-      await storage.encryption.disable(ref, serializeIcs(this.entries), password);
+      await storage.encryption.disable(ref, serializeIcs(this.diary), password);
       this.encrypted = false;
       return 'ok';
     } catch (err) {
@@ -1451,7 +1461,7 @@ class AppStore {
       // Serializing a huge diary blocks the main thread: let the "Saving…"
       // state reach the screen first.
       await nextPaint();
-      await storage.writeVault(vault, serializeIcs(this.entries));
+      await storage.writeVault(vault, serializeIcs(this.diary));
       this.toast('success', `Saved ${this.appPlaceIn}`);
       return true;
     } catch {
@@ -1496,7 +1506,7 @@ class AppStore {
   async exportVault(format: BackupFormat = this.encrypted ? 'encrypted' : 'plain'): Promise<void> {
     this.busy = true;
     try {
-      const ics = serializeIcs(this.entries);
+      const ics = serializeIcs(this.diary);
       const saved = format === 'encrypted'
         ? await storage.saveBackup(
             await storage.encryption.exportEncrypted(ics),

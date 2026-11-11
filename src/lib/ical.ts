@@ -3,15 +3,18 @@
  * of the app only ever deals with the clean {@link DiaryEntry} model.
  *
  * Reads with `ical.js` (per spec) and writes its own few properties directly.
+ * Anything else in the file (other apps' properties, to-dos, alarms…) is kept
+ * as iCalendar text and written back as-is, so saving never loses data.
  * Parsing is fully defensive: a corrupt or partial
  * file yields a typed error rather than throwing, so the UI can stay alive and
  * keep whatever data is already in memory.
  */
 import ICAL from 'ical.js';
-import type { DiaryEntry, ParseResult } from './types';
+import type { Diary, DiaryEntry, ParseResult } from './types';
 import { randomId } from './random';
 
 const PRODID = '-//Icarus Diary//Local-First Diary//EN';
+const CRLF = '\r\n';
 
 /** Generate a stable, iCal-style UID for a new entry. */
 export function generateUid(): string {
@@ -28,10 +31,29 @@ function str(value: unknown): string | undefined {
 type JCalProperty = [name: string, params: object, type: string, ...values: unknown[]];
 type JCalComponent = [name: string, properties: JCalProperty[], components: JCalComponent[]];
 
-/** The first value of property `name`, as ical.js decoded it. */
-function firstValue(properties: JCalProperty[], name: string): unknown {
-  return properties.find((p) => p[0] === name)?.[3];
+/** Calendar properties Icarus writes itself; the rest are kept as-is. */
+const CALENDAR_PROPERTIES = new Set(['version', 'prodid', 'calscale']);
+/** Entry properties Icarus reads (or regenerates, like DTSTAMP). */
+const ENTRY_PROPERTIES = new Set(['uid', 'dtstamp', 'dtstart', 'summary', 'description', 'location']);
+
+/**
+ * iCalendar text for the properties not in `known`, then for every
+ * subcomponent (the format requires properties first).
+ */
+function keepUnknown(
+  properties: JCalProperty[],
+  known: Set<string>,
+  components: JCalComponent[],
+): string[] {
+  const lines: string[] = [];
+  for (const p of properties) {
+    if (!known.has(p[0])) lines.push(ICAL.stringify.property(p, ICAL.design.icalendar, false));
+  }
+  for (const c of components) lines.push(ICAL.stringify.component(c, ICAL.design.icalendar));
+  return lines;
 }
+
+const joinLines = (lines: string[]) => (lines.length ? lines.join(CRLF) : undefined);
 
 const DATE_VALUE = /^(\d{4})-(\d{2})-(\d{2})/;
 
@@ -68,10 +90,19 @@ export function parseIcs(text: string): ParseResult {
 
     let invalidDates = 0;
     const entries: DiaryEntry[] = [];
+    // Everything but the entries; concatenated calendars merge into one.
+    const calendarProperties: JCalProperty[] = [];
+    const otherComponents: JCalComponent[] = [];
     for (const root of roots) {
-      for (const [name, props] of root[2] ?? []) {
-        if (name !== 'vevent') continue;
-        let date = dtToDate(props.find((p) => p[0] === 'dtstart'));
+      calendarProperties.push(...(root[1] ?? []));
+      for (const component of root[2] ?? []) {
+        const [name, props, children] = component;
+        if (name !== 'vevent') {
+          otherComponents.push(component);
+          continue;
+        }
+        const first = (key: string) => props.find((p) => p[0] === key);
+        let date = dtToDate(first('dtstart'));
         if (!date) {
           // Unreadable DTSTART: keep the entry (so the user doesn't lose its
           // title/content) but flag it with a sentinel date and bump a counter.
@@ -80,13 +111,16 @@ export function parseIcs(text: string): ParseResult {
           invalidDates++;
           date = new Date(INVALID_DATE_SENTINEL);
         }
-        entries.push({
-          uid: str(firstValue(props, 'uid')) ?? generateUid(),
-          title: str(firstValue(props, 'summary')) ?? 'Untitled',
-          content: str(firstValue(props, 'description')) ?? '',
-          location: str(firstValue(props, 'location')),
+        const entry: DiaryEntry = {
+          uid: str(first('uid')?.[3]) ?? generateUid(),
+          title: str(first('summary')?.[3]) ?? 'Untitled',
+          content: str(first('description')?.[3]) ?? '',
+          location: str(first('location')?.[3]),
           date,
-        });
+        };
+        const extra = joinLines(keepUnknown(props, ENTRY_PROPERTIES, children ?? []));
+        if (extra) entry.extra = extra;
+        entries.push(entry);
       }
     }
 
@@ -98,7 +132,8 @@ export function parseIcs(text: string): ParseResult {
       );
     }
 
-    return { ok: true, entries };
+    const extra = joinLines(keepUnknown(calendarProperties, CALENDAR_PROPERTIES, otherComponents));
+    return extra ? { ok: true, entries, extra } : { ok: true, entries };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown parse error';
     return { ok: false, error: message };
@@ -129,7 +164,6 @@ export function isInvalidDate(date: Date): boolean {
 // builds an object per property and folds lines in quadratic time). Its
 // output is byte-for-byte what ical.js writes; the tests hold it to that.
 
-const CRLF = '\r\n';
 /** Longest content line in UTF-8 bytes before folding (RFC 5545 §3.1). */
 const FOLD_BYTES = 75;
 const TEXT_SPECIALS = /[\\;,\n]/g;
@@ -175,10 +209,10 @@ function icsDateTime(d: Date): string {
 }
 
 /**
- * Serialize entries to valid `.ics` text. DTSTART is written as a date-only
+ * Serialize a diary to valid `.ics` text. DTSTART is written as a date-only
  * value (VALUE=DATE) since entries belong to a day, not a moment.
  */
-export function serializeIcs(entries: DiaryEntry[]): string {
+export function serializeIcs({ entries, extra }: Diary): string {
   const stamp = `DTSTAMP:${icsDateTime(new Date())}`;
   const lines = [
     'BEGIN:VCALENDAR',
@@ -186,6 +220,7 @@ export function serializeIcs(entries: DiaryEntry[]): string {
     textLine('PRODID', PRODID),
     'CALSCALE:GREGORIAN',
   ];
+  if (extra) lines.push(extra);
   for (const e of entries) {
     lines.push(
       'BEGIN:VEVENT',
@@ -196,6 +231,7 @@ export function serializeIcs(entries: DiaryEntry[]): string {
     );
     if (e.content) lines.push(textLine('DESCRIPTION', e.content));
     if (e.location) lines.push(textLine('LOCATION', e.location));
+    if (e.extra) lines.push(e.extra);
     lines.push('END:VEVENT');
   }
   lines.push('END:VCALENDAR');

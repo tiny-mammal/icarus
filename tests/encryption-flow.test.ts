@@ -28,10 +28,10 @@ async function freshStorage() {
       return true;
     },
     pickDiaryText: async () =>
-      serializeIcs([{ uid: 'i1', title: 'Imported secret', content: 'Hush', date: new Date(2026, 5, 8) }]),
+      serializeIcs({ entries: [{ uid: 'i1', title: 'Imported secret', content: 'Hush', date: new Date(2026, 5, 8) }] }),
   } as unknown as import('../src/lib/storage/types').StorageBackend;
   backup.memory = createMemoryBackend(
-    serializeIcs([{ uid: 'e1', title: 'First entry', content: 'Something private', date: new Date(2026, 9, 1) }]),
+    serializeIcs({ entries: [{ uid: 'e1', title: 'First entry', content: 'Something private', date: new Date(2026, 9, 1) }] }),
     base,
   );
   backup.storage = withEncryption(backup.memory);
@@ -141,7 +141,7 @@ describe('encrypted diary flow', () => {
       'icarus-diary-backup.ics',
     ]);
     expect(backup.saved[0].contents).not.toContain('First entry');
-    expect(backup.saved[1].contents).toBe(serializeIcs(app.entries));
+    expect(backup.saved[1].contents).toBe(serializeIcs({ entries: app.entries }));
   });
 
   it('asks before writing an import, then stores it encrypted from the start', async () => {

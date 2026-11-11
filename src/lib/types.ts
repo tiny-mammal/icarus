@@ -10,6 +10,22 @@ export interface DiaryEntry {
   location?: string;
   /** DTSTART — the day the entry belongs to (date-only; time is ignored). */
   date: Date;
+  /**
+   * Properties and subcomponents of the VEVENT that Icarus doesn't use, as
+   * iCalendar text written back verbatim, so saving never drops them.
+   */
+  extra?: string;
+}
+
+/** Everything one `.ics` file holds. */
+export interface Diary {
+  entries: DiaryEntry[];
+  /**
+   * Calendar properties and components (other than entries) that Icarus
+   * doesn't use, as iCalendar text written back verbatim. Properties come
+   * first, as the format requires.
+   */
+  extra?: string;
 }
 
 /**
@@ -31,7 +47,7 @@ export interface StoredDraft {
 
 /** A typed result so callers can react to parse failures without throwing. */
 export type ParseResult =
-  | { ok: true; entries: DiaryEntry[] }
+  | ({ ok: true } & Diary)
   | { ok: false; error: string };
 
 /** Severity levels for user-facing toasts. */
