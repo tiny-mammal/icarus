@@ -1,7 +1,4 @@
-/**
- * Scroll-driven motion helpers for the site's pages (the landing page and the
- * mockups in `site/mockups/`).
- */
+/** Scroll-driven motion helpers for the landing page. */
 
 export const reducedMotion = (): boolean =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
