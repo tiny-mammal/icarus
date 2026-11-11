@@ -314,6 +314,27 @@ describe('content Icarus does not use', () => {
     expect(noStamp(serializeIcs(twice))).toBe(noStamp(first));
   });
 
+  it('drops what only matched the original start, as entries keep one day', () => {
+    const res = parseIcs(
+      [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Other app//EN',
+        'BEGIN:VEVENT', 'UID:t', 'DTSTART:20240101T090000Z', 'DTEND:20240101T100000Z',
+        'RRULE:FREQ=DAILY;UNTIL=20240110T090000Z', 'EXDATE:20240103T090000Z', 'SUMMARY:Timed',
+        'CATEGORIES:kept', 'END:VEVENT',
+        'BEGIN:VEVENT', 'UID:d', 'DTSTART;VALUE=DATE:20240105', 'DTEND;VALUE=DATE:20240106',
+        'DURATION:P1D', 'SUMMARY:All day', 'END:VEVENT',
+        'END:VCALENDAR',
+      ].join('\r\n'),
+    );
+    if (!res.ok) throw new Error(res.error);
+    // Moved to another day in the editor: nothing may still point at the old one.
+    const moved = { ...res, entries: res.entries.map((e) => ({ ...e, date: new Date(2024, 1, 1) })) };
+    const ics = serializeIcs(moved);
+    for (const gone of ['DTEND', 'DURATION', 'RRULE', 'EXDATE']) expect(ics).not.toContain(gone);
+    expect(ics).toContain('CATEGORIES:kept');
+    expect(ics.match(/DTSTART;VALUE=DATE:20240201/g)).toHaveLength(2);
+  });
+
   it('adds nothing to a diary Icarus wrote', () => {
     const res = parseIcs(serializeIcs({ entries: sample }));
     expect(res.ok && res.extra).toBeUndefined();
