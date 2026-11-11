@@ -162,6 +162,48 @@ describe('encrypted diary flow', () => {
     expect(app.tracker.days.get('2026-10-01')?.score).toEqual({ value: 7, scale: 10 });
   });
 
+  it('settles a write started while the draft is being saved, before clearing the diary', async () => {
+    const { app } = await encryptedApp();
+    // Saving the draft takes long enough for a tap on a day's score: its write
+    // must reach the vault, not find the diary already cleared.
+    const flush = app.flushDraftNow.bind(app);
+    vi.spyOn(app, 'flushDraftNow').mockImplementation(async () => {
+      const saved = await flush();
+      app.setDayScore('2026-10-02', 4);
+      return saved;
+    });
+
+    expect(await app.lock()).toBe(true);
+    expect(app.view).toBe('locked');
+    expect(await app.unlock({ password: PASSWORD })).toBe('ok');
+    // The diary was not overwritten by an empty one, and the tap was kept.
+    expect(app.entries.map((entry) => entry.title)).toEqual(['First entry']);
+    expect(app.tracker.days.get('2026-10-02')?.score).toEqual({ value: 4, scale: 10 });
+  });
+
+  it('does not write a diary that was locked while the write waited for the screen', async () => {
+    const { app } = await encryptedApp();
+    const write = vi.spyOn(backup.memory, 'writeVault');
+    app.setDayScore('2026-10-03', 6); // starts a write, which waits for the next paint
+    write.mockClear();
+    // Lock without letting that write settle first, as a careless caller could.
+    await (app as unknown as { showLockScreen(ref: unknown): Promise<void> }).showLockScreen(app.vault);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(write).not.toHaveBeenCalled();
+    write.mockRestore();
+  });
+
+  it('refuses an automatic quit while a failed write cannot be saved, and allows it once saved', async () => {
+    const { app } = await encryptedApp();
+    const write = vi.spyOn(backup.memory, 'writeVault').mockRejectedValue(new Error('storage is full'));
+
+    app.setDayScore('2026-10-01', 7);
+    expect(await app.flushBeforeQuit()).toBe(false);
+
+    write.mockRestore();
+    expect(await app.flushBeforeQuit()).toBe(true);
+  });
+
   it('exports encrypted by default and plain only on request', async () => {
     const { app } = await encryptedApp();
     await app.exportVault();

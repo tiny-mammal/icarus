@@ -166,13 +166,13 @@
 <DraftDeleteDialog />
 {#if discardAndQuit}
   <ConfirmDialog
-    title="Unsaved draft"
+    title="Unsaved changes"
     confirmLabel="Quit anyway"
     onconfirm={discardAndQuit}
     oncancel={() => (discardAndQuit = null)}
   >
-    The current draft could not be saved to the diary folder. Quitting now discards the unsaved
-    changes.
+    Some changes, the current draft or the diary itself, could not be saved to the diary folder.
+    Quitting now discards them.
   </ConfirmDialog>
 {/if}
 <EntryDeleteDialog />
