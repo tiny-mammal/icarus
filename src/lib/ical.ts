@@ -70,10 +70,25 @@ const CALENDAR_PROPERTIES = new Set([
   PASS_MARK,
   PASS_STREAK,
 ]);
-/** Entry properties Icarus reads (or regenerates, like DTSTAMP). */
-const ENTRY_PROPERTIES = new Set(['uid', 'dtstamp', 'dtstart', 'summary', 'description', 'location']);
+/**
+ * Properties that only mean something next to the original DTSTART. Icarus
+ * writes DTSTART back as a single day, so it drops them rather than keep an
+ * end, duration or recurrence that no longer matches it: a DATE DTSTART on
+ * its own is exactly that one day.
+ */
+const TIMING_PROPERTIES = ['dtend', 'duration', 'rrule', 'rdate', 'exdate', 'recurrence-id'];
+/** Entry properties Icarus reads, regenerates (DTSTAMP) or drops. */
+const ENTRY_PROPERTIES = new Set([
+  'uid',
+  'dtstamp',
+  'dtstart',
+  'summary',
+  'description',
+  'location',
+  ...TIMING_PROPERTIES,
+]);
 /** Properties of a day's record. */
-const DAY_PROPERTIES = new Set(['uid', 'dtstamp', 'dtstart', SCORE, MARK, STREAK]);
+const DAY_PROPERTIES = new Set(['uid', 'dtstamp', 'dtstart', SCORE, MARK, STREAK, ...TIMING_PROPERTIES]);
 
 /**
  * iCalendar text for the properties not in `known`, then for every
