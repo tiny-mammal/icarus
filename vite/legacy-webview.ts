@@ -34,6 +34,48 @@ const UNSUPPORTED: { pattern: RegExp; fix: string }[] = [
 ];
 
 /**
+ * The first `color-mix()` over a custom property that has no fallback, with
+ * some context, or null. Lightning CSS can only lower `color-mix()` of literal
+ * colours, and Tailwind adds fallbacks for its own utilities (the guarded copy
+ * sits in an `@supports (…color-mix…)` block), but a component's <style> gets
+ * neither: below Chromium 111 the declaration is dropped. Use a literal colour
+ * there, or compute it in script.
+ */
+export function unguardedColorMix(css: string): string | null {
+  // For each open block: whether it, or a block around it, only applies
+  // where color-mix() is supported.
+  const guarded: boolean[] = [];
+  let blockStart = 0;
+  for (let i = 0; i < css.length; i++) {
+    const c = css[i];
+    if (c === '{') {
+      const head = css.slice(blockStart, i);
+      guarded.push((guarded.at(-1) ?? false) || /^\s*@supports[^{]*color-mix/.test(head));
+      blockStart = i + 1;
+    } else if (c === '}') {
+      guarded.pop();
+      blockStart = i + 1;
+    } else if (c === ';') {
+      blockStart = i + 1;
+    } else if (css.startsWith('color-mix(', i) && !(guarded.at(-1) ?? false)) {
+      let depth = 0;
+      let end = i;
+      for (; end < css.length; end++) {
+        if (css[end] === '(') depth++;
+        else if (css[end] === ')' && --depth === 0) break;
+      }
+      const call = css.slice(i, end + 1);
+      // A color-mix() inside an @supports condition is the test, not a use.
+      if (call.includes('var(') && !/^\s*@supports/.test(css.slice(blockStart, i))) {
+        return css.slice(Math.max(0, i - 60), end + 1);
+      }
+      i = end;
+    }
+  }
+  return null;
+}
+
+/**
  * Lower the bundled CSS for older WebViews (e.g. `oklch()` colors gain hex
  * fallbacks) and fail the build on CSS those WebViews can't render.
  */
@@ -51,6 +93,12 @@ export function legacyWebView(): Plugin {
           if (!match) continue;
           const context = css.slice(Math.max(0, match.index - 60), match.index + 40);
           this.error(`${file.fileName}: ${fix}, near "${context}"`);
+        }
+        const mix = unguardedColorMix(css);
+        if (mix) {
+          this.error(
+            `${file.fileName}: color-mix() over a custom property has no fallback below Chromium 111; use a literal colour or compute it in script, near "${mix}"`,
+          );
         }
       }
     },
