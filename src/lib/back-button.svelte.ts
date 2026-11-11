@@ -39,6 +39,16 @@ export function layerOpen(): boolean {
   return layers.size > 0;
 }
 
+/**
+ * Whether a key press from `target` missed the top-most open layer: focus
+ * strayed outside it (e.g. its focused field just went away), so the layer's
+ * own Escape handling never saw the key.
+ */
+export function strayedFromTopLayer(target: EventTarget | null): boolean {
+  const top = [...layers].at(-1);
+  return !!top && !(target instanceof Node && top.contains(target));
+}
+
 /** Dismiss the top-most layer exactly as an Escape keypress would. */
 export function dismissTopLayer(): void {
   const top = [...layers].at(-1);

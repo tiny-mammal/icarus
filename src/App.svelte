@@ -28,7 +28,7 @@
   import { isPlainShortcut } from './lib/keyboard';
   import { dismissBootSplash } from './lib/boot-splash';
   import { gestureLog } from './lib/gesture-log';
-  import { dismissTopLayer, syncBackButton, layerOpen } from './lib/back-button.svelte';
+  import { dismissTopLayer, strayedFromTopLayer, syncBackButton, layerOpen } from './lib/back-button.svelte';
 
   // Development only (`?debug=gestures`): the gesture recorder, loaded on demand.
   const gestureRecorder =
@@ -69,8 +69,10 @@
       }
       if (e.key !== 'Escape') return;
       // A popover whose focus strayed outside it (its field just went away)
-      // still closes before what lies under it.
-      if (layerOpen()) dismissTopLayer();
+      // still closes before what lies under it. Only then: a layer that saw
+      // the key itself has already answered it, and dismissing it again would
+      // send this handler another Escape.
+      if (strayedFromTopLayer(e.target)) dismissTopLayer();
       else if (app.statsOpen) app.statsOpen = false;
       else if (app.settingsOpen) app.settingsOpen = false;
       else if (app.editing) app.closeEditor();
