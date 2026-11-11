@@ -12,6 +12,7 @@
   import DraftStrip from './components/DraftStrip.svelte';
   import SettingsMenu from './components/SettingsMenu.svelte';
   import StatsModal from './components/StatsModal.svelte';
+  import LegacyScoresDialog from './components/LegacyScoresDialog.svelte';
   import DraftDeleteDialog from './components/DraftDeleteDialog.svelte';
   import EntryDeleteDialog from './components/EntryDeleteDialog.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
@@ -73,6 +74,7 @@
       // the key itself has already answered it, and dismissing it again would
       // send this handler another Escape.
       if (strayedFromTopLayer(e.target)) dismissTopLayer();
+      else if (app.legacyScoresOpen) app.legacyScoresOpen = false;
       else if (app.statsOpen) app.statsOpen = false;
       else if (app.settingsOpen) app.settingsOpen = false;
       else if (app.editing) app.closeEditor();
@@ -150,6 +152,7 @@
     <DraftStrip />
     <SettingsMenu />
     <StatsModal />
+    <LegacyScoresDialog />
     {#if app.privacyDialog}<PrivacyDialog />{/if}
     {#if app.exportOpen}<ExportDialog />{/if}
     <InstallDialog />

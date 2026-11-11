@@ -63,6 +63,17 @@ export function setScore(tracker: Tracker, key: string, value: number | null): T
   });
 }
 
+/**
+ * Give many days a score at once, each on the scale it was given on, whatever
+ * the tracker's own. One copy of the days however many are set.
+ */
+export function importScores(tracker: Tracker, scores: ReadonlyMap<string, DayScore>): Tracker {
+  if (scores.size === 0) return tracker;
+  const days = new Map(tracker.days);
+  for (const [key, score] of scores) days.set(key, { ...dayRecord(tracker, key), score });
+  return { ...tracker, days };
+}
+
 // --- habits -------------------------------------------------------------------
 
 /** Habits shown on each day, in order. */

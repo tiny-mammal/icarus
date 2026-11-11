@@ -8,6 +8,7 @@
 import type {
   Diary,
   DiaryEntry,
+  DayScore,
   HabitMark,
   Tracker,
   UnmarkedDays,
@@ -202,6 +203,8 @@ class AppStore {
   /** Phones: the calendar sheet over the entry feed. */
   calendarOpen = $state(false);
   statsOpen = $state(false);
+  /** Temporary: the dialog that brings old hand-written scores in (see legacy-scores.ts). */
+  legacyScoresOpen = $state(false);
   busy = $state(false);
   toasts = $state<Toast[]>([]);
 
@@ -568,6 +571,7 @@ class AppStore {
     this.editing = false;
     this.settingsOpen = false;
     this.statsOpen = false;
+    this.legacyScoresOpen = false;
     this.exportOpen = false;
     this.encryptionSetupOpen = false;
     this.privacyDialog = null;
@@ -1561,6 +1565,11 @@ class AppStore {
     this.changeTracker(tracking.setScore(this.tracker, key, value));
   }
 
+  /** Give many days a score at once, each on the scale it was given on. */
+  importDayScores(scores: ReadonlyMap<string, DayScore>): void {
+    this.changeTracker(tracking.importScores(this.tracker, scores));
+  }
+
   setHabitMark(key: string, habitId: string, mark: HabitMark | undefined): void {
     this.changeTracker(tracking.setMark(this.tracker, key, habitId, mark));
   }
@@ -1657,6 +1666,7 @@ class AppStore {
       this.editing ||
       this.settingsOpen ||
       this.statsOpen ||
+      this.legacyScoresOpen ||
       this.exportOpen ||
       this.encryptionSetupOpen ||
       this.privacyDialog !== null ||

@@ -288,7 +288,8 @@
       {/if}
     </SettingsSection>
 
-    <SettingsSection title="App">
+    <!-- Temporary: seven taps on the heading open the old-scores import (see legacy-scores.ts). -->
+    <SettingsSection title="App" taps={{ count: 7, onreach: () => (app.legacyScoresOpen = true) }}>
       {#if updates.supported}
         {#if updates.available && updates.latest}
           <div class="update-row flex items-center gap-3 rounded-t-[11px] px-3.5 py-3">

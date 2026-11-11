@@ -40,6 +40,43 @@ export function clickOutside(node: HTMLElement, onOutside: () => void) {
   };
 }
 
+export interface MultiTapOptions {
+  /** How many taps in a row it takes. */
+  count: number;
+  onreach: () => void;
+  /** The longest pause between two taps of the run, in ms. */
+  within?: number;
+}
+
+/**
+ * Call `onreach` after `count` taps in a row on `node`, for something kept out
+ * of sight. Taps on a button or link inside it do their own thing and don't
+ * count, and a run ends once the taps pause for `within`.
+ */
+export function multiTap(node: HTMLElement, options: MultiTapOptions | undefined) {
+  let current = options;
+  let taps = 0;
+  let last = 0;
+  const onClick = (e: MouseEvent) => {
+    if (!current || (e.target as Element).closest('button, a, input, select, textarea')) return;
+    const now = Date.now();
+    taps = now - last > (current.within ?? 1500) ? 1 : taps + 1;
+    last = now;
+    if (taps < current.count) return;
+    taps = 0;
+    current.onreach();
+  };
+  node.addEventListener('click', onClick);
+  return {
+    update(next: MultiTapOptions | undefined) {
+      current = next;
+    },
+    destroy() {
+      node.removeEventListener('click', onClick);
+    },
+  };
+}
+
 export interface TrapFocusOptions {
   onClose?: () => void;
   /**
