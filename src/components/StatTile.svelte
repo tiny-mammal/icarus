@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   /** One headline figure of the statistics: a small label, the value, a line of context. */
   let {
     label,
@@ -7,6 +9,7 @@
     sub,
     small = false,
     color,
+    header,
   }: {
     label: string;
     value: string;
@@ -17,11 +20,17 @@
     small?: boolean;
     /** Tints the value, for something worth lighting up. */
     color?: string;
+    /** An optional control in place of the plain label. */
+    header?: Snippet;
   } = $props();
 </script>
 
-<div class="min-w-0 rounded-xl border border-slate bg-slate-soft px-3.5 py-3">
-  <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">{label}</p>
+<div class="h-full min-w-0 rounded-xl border border-slate bg-slate-soft px-3.5 py-3" role="group" aria-label={label}>
+  {#if header}
+    {@render header()}
+  {:else}
+    <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">{label}</p>
+  {/if}
   <p
     class="mt-1 truncate font-semibold tracking-tight tabular-nums text-text {small ? 'text-sm' : 'text-lg'}"
     style:color

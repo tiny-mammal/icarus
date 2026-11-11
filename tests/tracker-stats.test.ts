@@ -115,10 +115,35 @@ describe('computeTrackerStats — scores', () => {
     expect(run).toEqual({ passed: true, length: 1 });
   });
 
+  it('finds the worst run across the whole history, including an ongoing one', () => {
+    const t = score(EMPTY_TRACKER, { 200: 2, 199: 1, 198: 3, 100: 8, 2: 1, 0: 2 });
+    const { worst, run } = computeTrackerStats(t, '30d', NOW).score;
+    expect(worst).toEqual({ length: 3, start: key(200), end: key(198) });
+    expect(run).toEqual({ passed: false, length: 2 });
+
+    const ongoing = computeTrackerStats(score(t, { 1: 3, 3: 1 }), '30d', NOW).score;
+    expect(ongoing.worst).toEqual({ length: 4, start: key(3), end: key(0) });
+    expect(ongoing.run).toEqual({ passed: false, length: 4 });
+  });
+
+  it('applies the unmarked-days rule to failing runs and ignores future scores', () => {
+    const t = score(EMPTY_TRACKER, { 5: 2, 3: 1, 2: 3, 0: 8, [-1]: 1, [-2]: 1, [-3]: 1 });
+    expect(computeTrackerStats(t, 'all', NOW).score.worst)
+      .toEqual({ length: 3, start: key(5), end: key(2) });
+    expect(computeTrackerStats({ ...t, unmarkedDays: 'end' }, 'all', NOW).score.worst)
+      .toEqual({ length: 2, start: key(3), end: key(2) });
+  });
+
+  it('has no worst run without failing scores', () => {
+    expect(computeTrackerStats(score(EMPTY_TRACKER, { 0: 8, 1: 5 }), 'all', NOW).score.worst).toBeNull();
+    expect(computeTrackerStats(EMPTY_TRACKER, 'all', NOW).score.worst).toBeNull();
+  });
+
   it('leaves runs out when the pass streak is off', () => {
-    const { run, best } = computeTrackerStats(setPassStreak(scored, false), '30d', NOW).score;
+    const { run, best, worst } = computeTrackerStats(setPassStreak(scored, false), '30d', NOW).score;
     expect(run).toBeNull();
     expect(best).toBeNull();
+    expect(worst).toBeNull();
   });
 });
 

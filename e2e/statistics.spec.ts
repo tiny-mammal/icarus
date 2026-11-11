@@ -31,7 +31,7 @@ async function importDiary(page: Page): Promise<void> {
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Statistics' });
 const card = (page: Page, label: string) =>
-  dialog(page).getByText(label, { exact: true }).locator('..');
+  dialog(page).getByRole('group', { name: label, exact: true });
 
 async function switchPeriod(page: Page, option: string): Promise<void> {
   await dialog(page).locator('button[aria-haspopup="listbox"]').click();
@@ -175,4 +175,36 @@ test('switching to the tracking view and back keeps the period', async ({ page }
   await expect(card(page, 'Avg. score')).toContainText('5.3');
   await dialog(page).getByRole('button', { name: 'Writing' }).click();
   await expect(card(page, 'Entries')).toContainText('1');
+});
+
+test('best and worst share one tile and keep their history when the period changes', async ({ page }) => {
+  const tracker: Tracker = {
+    ...TRACKER,
+    days: new Map([...TRACKER.days,
+      [day(-61), { score: { value: 3, scale: 10 }, marks: {}, streaks: {} }],
+    ]),
+  };
+  await importPlainIcs(page, diaryIcs([{ date: day(0), title: 'Walk', body: 'hello' }], tracker));
+  await page.getByRole('button', { name: 'Statistics' }).click();
+  await dialog(page).getByRole('button', { name: 'Tracking' }).click();
+
+  const best = card(page, 'Best run');
+  await expect(best).toContainText('2 days');
+  const toggle = dialog(page).getByRole('button', { name: /Show worst run$/ });
+  await expect(toggle.locator('..').locator(':scope > *')).toHaveCount(4);
+  await toggle.click();
+
+  const worst = card(page, 'Worst run');
+  await expect(worst).toContainText('3 days');
+  await expect(dialog(page).getByRole('button', { name: /Worst run: 3 days.*Show best run$/ })).toBeVisible();
+  await switchPeriod(page, 'Last 30 days');
+  await expect(worst).toContainText('3 days');
+  await expect(worst).not.toContainText('Still going');
+
+  await dialog(page).getByRole('button', { name: /Show best run$/ }).focus();
+  await page.keyboard.press('Enter');
+  await expect(best).toContainText('2 days');
+  await expect(best).toContainText('Still going');
+  await page.keyboard.press('Space');
+  await expect(worst).toContainText('3 days');
 });

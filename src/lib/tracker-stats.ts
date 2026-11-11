@@ -15,7 +15,7 @@ import {
   passMark,
   passRun,
   passes,
-  passingRuns,
+  scoreRuns,
   scoreOn,
   trackedDays,
   type StreakRun,
@@ -66,6 +66,8 @@ export interface ScoreStats {
   run: { passed: boolean; length: number } | null;
   /** The longest run of passing days ever; null with the pass streak off. */
   best: StreakRun | null;
+  /** The longest run of failing days ever; null with the pass streak off. */
+  worst: StreakRun | null;
 }
 
 export interface TrackerStats {
@@ -88,6 +90,7 @@ const emptyScore = (tracker: Tracker): ScoreStats => ({
   timeline: EMPTY_TIMELINE,
   run: null,
   best: null,
+  worst: null,
 });
 
 /** Whether `tracker` has anything to show statistics of. */
@@ -157,7 +160,8 @@ export function computeTrackerStats(
   score.timeline = buildTimeline(totals, range.start, range.end, format, 'mean');
   if (tracker.passStreak) {
     score.run = passRun(tracker, days, todayKey, todayKey);
-    score.best = passingRuns(tracker, days, todayKey).best;
+    score.best = scoreRuns(tracker, days, todayKey, true).best;
+    score.worst = scoreRuns(tracker, days, todayKey, false).best;
   }
 
   const recentKeys = Array.from({ length: RECENT_DAYS }, (_, i) =>

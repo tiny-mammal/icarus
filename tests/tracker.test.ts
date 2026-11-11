@@ -7,7 +7,7 @@ import {
   habitStreaks,
   importScores,
   nextMark,
-  passingRuns,
+  scoreRuns,
   passMark,
   passRun,
   passes,
@@ -258,7 +258,7 @@ describe('habitStreaks', () => {
   });
 });
 
-describe('passingRuns', () => {
+describe('scoreRuns', () => {
   it('finds the longest run of days that passed', () => {
     const scores: Record<string, number> = {
       '2024-01-01': 8,
@@ -269,7 +269,7 @@ describe('passingRuns', () => {
       '2024-01-06': 6,
     };
     const t = Object.entries(scores).reduce((tracker, [key, value]) => setScore(tracker, key, value), EMPTY_TRACKER);
-    expect(passingRuns(t, trackedDays(t), TODAY)).toEqual({
+    expect(scoreRuns(t, trackedDays(t), TODAY, true)).toEqual({
       current: 2,
       best: { length: 3, start: '2024-01-01', end: '2024-01-03' },
     });

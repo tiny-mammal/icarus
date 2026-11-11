@@ -3,8 +3,8 @@
   import HabitMarkIcon from './HabitMarkIcon.svelte';
   import HabitStatsRow from './HabitStatsRow.svelte';
   import StatTile from './StatTile.svelte';
+  import RunStatTile from './RunStatTile.svelte';
   import TrendChart from './TrendChart.svelte';
-  import { keyToDate, monthYearLabel } from '../lib/date';
   import { periodLabel, type StatsPeriod } from '../lib/stats';
   import { sunColor } from '../lib/sun';
   import { computeTrackerStats } from '../lib/tracker-stats';
@@ -56,16 +56,7 @@
         sub={run ? (run.passed ? 'Passing' : 'Failing') : 'Nothing scored yet'}
         color={runIsRecord ? 'var(--color-sun)' : undefined}
       />
-      <StatTile
-        label="Best run"
-        value={score.best ? numberFmt.format(score.best.length) : '—'}
-        unit={score.best ? (score.best.length === 1 ? 'day' : 'days') : undefined}
-        sub={score.best
-          ? run?.passed && run.length >= score.best.length
-            ? 'Still going'
-            : `Until ${monthYearLabel(keyToDate(score.best.end))}`
-          : 'No passing day yet'}
-      />
+      <RunStatTile {score} />
     {/if}
   </div>
 

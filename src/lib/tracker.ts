@@ -324,12 +324,12 @@ export function passRun(
 }
 
 /**
- * The longest run of days in a row that passed, and the one under way. A day
- * that failed ends it; the habits' rule for unmarked days applies to the rest.
+ * The longest run on either side of the pass mark, and the one under way.
+ * A day on the other side ends it; unmarked days follow the habits' rule.
  */
-export function passingRuns(tracker: Tracker, days: readonly string[], todayKey: string): StreakHistory {
+export function scoreRuns(tracker: Tracker, days: readonly string[], todayKey: string, passed: boolean): StreakHistory {
   return streakHistory(tracker, days, todayKey, (record) =>
-    record.score ? (passes(tracker, record.score) ? 'count' : 'stop') : undefined,
+    record.score ? (passes(tracker, record.score) === passed ? 'count' : 'stop') : undefined,
   );
 }
 
