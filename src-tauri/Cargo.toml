@@ -29,6 +29,9 @@ serde_json = "1"
 # Locates the data directory before Linux redirects XDG (src/diary_dir.rs).
 dirs = "7"
 
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+tauri-plugin-haptics = "2.4"
+
 # The opt-in update check (src/updates.rs). Desktop only: the Android app
 # has no network access at all.
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]

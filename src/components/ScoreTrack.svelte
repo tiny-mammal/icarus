@@ -1,5 +1,6 @@
 <script lang="ts">
   import { isBestScore, sunColor } from '../lib/sun';
+  import { selectionHaptic } from '../lib/haptics';
 
   /**
    * The day's score, 1 to `scale`, as a track that fills with light up to it,
@@ -12,10 +13,12 @@
   let {
     value,
     scale,
+    haptics,
     onchange,
   }: {
     value: number | null;
     scale: number;
+    haptics: boolean;
     onchange: (value: number | null) => void;
   } = $props();
 
@@ -28,7 +31,7 @@
   // --- dragging the sun -----------------------------------------------------
   /** Pixels a press must travel before it counts as a drag rather than a tap. */
   const DRAG_SLOP = 6;
-  let press: { id: number; x: number } | null = null;
+  let press: { id: number; x: number; step: number } | null = null;
   let dragging = $state(false);
   // A drag ends in a click on whatever number it was let go over: ignore it.
   let swallowClick = false;
@@ -43,7 +46,16 @@
 
   function onpointerdown(e: PointerEvent) {
     if (e.button !== 0) return;
-    press = { id: e.pointerId, x: e.clientX };
+    press = { id: e.pointerId, x: e.clientX, step: stepAt(e.clientX) };
+  }
+
+  function previewStep(e: PointerEvent) {
+    const step = stepAt(e.clientX);
+    if (press && step !== press.step) {
+      press.step = step;
+      if (haptics && e.pointerType === 'touch') void selectionHaptic();
+    }
+    preview = step;
   }
 
   function onpointermove(e: PointerEvent) {
@@ -53,13 +65,17 @@
       dragging = true;
       group?.setPointerCapture(e.pointerId);
     }
-    preview = stepAt(e.clientX);
+    previewStep(e);
   }
 
   function onpointerup(e: PointerEvent) {
     if (!press || e.pointerId !== press.id) return;
+    if (!dragging) {
+      press = null;
+      return;
+    }
+    previewStep(e);
     press = null;
-    if (!dragging) return;
     dragging = false;
     swallowClick = true;
     setTimeout(() => (swallowClick = false));
@@ -137,6 +153,7 @@
           if (swallowClick) return;
           preview = null;
           onchange(chosen ? null : step);
+          if (haptics) void selectionHaptic();
         }}
       >
         <span

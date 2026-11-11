@@ -2,7 +2,7 @@
 //!
 //! All diarying logic lives in the TypeScript frontend; the Rust side only
 //! registers the official plugins the app relies on (filesystem, native
-//! dialogs and the system-opener used to launch
+//! dialogs, mobile haptics and the system-opener used to launch
 //! external links from diary entries in the user's default browser). The app
 //! is fully local-first: the only network request is the opt-in update check
 //! in `updates.rs`, which is off unless the user turns it on. The diary, drafts
@@ -61,6 +61,9 @@ pub fn run() {
             diary_dir::remove_diary_copies,
         ])
         .setup(|_app| {
+            #[cfg(mobile)]
+            _app.handle().plugin(tauri_plugin_haptics::init())?;
+
             #[cfg(target_os = "linux")]
             if let Some(settings) = gtk::Settings::default() {
                 use gtk::prelude::*;

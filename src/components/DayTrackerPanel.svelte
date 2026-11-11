@@ -3,6 +3,7 @@
   import { app } from '../lib/store.svelte';
   import { activeHabits, dayRecord, nextMark } from '../lib/tracker';
   import type { Habit } from '../lib/types';
+  import { selectionHaptic } from '../lib/haptics';
   import ScoreTrack from './ScoreTrack.svelte';
   import HabitMarkIcon from './HabitMarkIcon.svelte';
 
@@ -25,6 +26,11 @@
     const mark = record.marks[habit.id];
     const next = nextMark(mark);
     return `${habit.name}: ${mark ? MARK_NAMES[mark] : 'not marked'}. Mark as ${next ? MARK_NAMES[next] : 'not marked'}`;
+  }
+
+  function markHabit(habit: Habit) {
+    app.setHabitMark(dayKey, habit.id, nextMark(record.marks[habit.id]));
+    if (app.trackerHaptics) void selectionHaptic();
   }
 
   const days = (n: number) => `${n.toLocaleString()} ${n === 1 ? 'day' : 'days'}`;
@@ -107,6 +113,7 @@
     <ScoreTrack
       value={score && !oldScale ? score.value : null}
       {scale}
+      haptics={app.trackerHaptics}
       onchange={(value) => app.setDayScore(dayKey, value)}
     />
   </div>
@@ -132,7 +139,7 @@
             type="button"
             class="group flex min-w-0 flex-1 items-center gap-3 rounded-lg py-2 pl-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-faint"
             aria-label={markLabel(habit)}
-            onclick={() => app.setHabitMark(dayKey, habit.id, nextMark(mark))}
+            onclick={() => markHabit(habit)}
           >
             <HabitMarkIcon {mark} />
             <span class="truncate text-sm {mark === 'missed' ? 'text-muted' : 'text-text'}">{habit.name}</span>

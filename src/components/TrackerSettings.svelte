@@ -3,6 +3,7 @@
   import { SCORE_SCALES, passMark } from '../lib/tracker';
   import type { Habit, UnmarkedDays } from '../lib/types';
   import { tooltip } from '../lib/tooltip';
+  import { supportsHaptics } from '../lib/haptics';
   import Segmented from './Segmented.svelte';
   import Select from './Select.svelte';
   import Switch from './Switch.svelte';
@@ -14,6 +15,7 @@
    * rename in place, archive (history is kept), bring back.
    */
   const scaleOptions = SCORE_SCALES.map((value) => ({ value, label: `1–${value}` }));
+  const hapticsSupported = supportsHaptics();
   const unmarkedOptions: { value: UnmarkedDays; label: string }[] = [
     { value: 'pause', label: 'Pause' },
     { value: 'end', label: 'End' },
@@ -56,6 +58,11 @@
       label="Score scale"
     />
   </SettingsRow>
+  {#if hapticsSupported}
+    <SettingsRow label="Haptic feedback" hint="Vibrate when choosing scores or marking habits">
+      <Switch checked={app.trackerHaptics} label="Haptic feedback" onchange={(on) => app.setTrackerHaptics(on)} />
+    </SettingsRow>
+  {/if}
   <SettingsRow label="Unmarked days" hint={unmarkedHint}>
     <Segmented
       value={app.tracker.unmarkedDays}

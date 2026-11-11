@@ -5,6 +5,7 @@
   "platforms": ["android"],
   "windows": ["main"],
   "permissions": [
+    "haptics:allow-selection-feedback",
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/**" }]

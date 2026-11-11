@@ -38,6 +38,22 @@ test('scores a day, marks habits and keeps a streak set by hand', async ({ page 
   await expect(panel.getByRole('button', { name: /^Streak for Morning run: 40 days/ })).toBeVisible();
 });
 
+test('clearing a missed habit removes its status glyph immediately', async ({ page }) => {
+  await importPlainIcs(page, diaryIcs([SAMPLE_ENTRY], SAMPLE_TRACKER));
+  await openDay(page, SAMPLE_ENTRY.date);
+  await page.getByTestId('day-tracker').click();
+  const habit = page.getByRole('button', { name: /^Read 20 pages:/ });
+
+  await habit.click();
+  await expect(habit).toHaveAccessibleName(/^Read 20 pages: done/);
+  await habit.click();
+  await expect(habit).toHaveAccessibleName(/^Read 20 pages: missed/);
+  await habit.click();
+  await expect(habit).toHaveAccessibleName(/^Read 20 pages: not marked/);
+  // The empty ring must not briefly show the done tick as its colour fades.
+  await expect(habit.locator('svg')).toHaveCount(0);
+});
+
 test('leaving the streak field for another one keeps focus there', async ({ page }) => {
   await importPlainIcs(page, diaryIcs([SAMPLE_ENTRY], SAMPLE_TRACKER));
   await openDay(page, SAMPLE_ENTRY.date);
@@ -104,6 +120,91 @@ test.describe('on a phone', () => {
     await touchDrag(cdp, from, to);
     await expect(track.getByRole('radio', { name: '9 of 10' })).toHaveAttribute('aria-checked', 'true');
     await expect(page.getByRole('dialog')).toBeVisible();
+  });
+
+  test('ticks for scores and habit marks and remembers when disabled', async ({ page, context }) => {
+    const ticks: number[] = [];
+    await page.exposeFunction('recordVibration', (duration: number) => ticks.push(duration));
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'vibrate', {
+        value: (duration: number) => {
+          void (window as unknown as { recordVibration: (ms: number) => Promise<void> }).recordVibration(duration);
+          return true;
+        },
+      });
+    });
+    await importPlainIcs(page, diaryIcs([SAMPLE_ENTRY], SAMPLE_TRACKER));
+    await openDay(page, SAMPLE_ENTRY.date);
+    await page.getByTestId('day-tracker').click();
+    const track = page.getByRole('radiogroup', { name: 'Score' });
+    await page.waitForTimeout(400);
+
+    const cdp = await context.newCDPSession(page);
+    const from = await centre(track.getByRole('radio', { name: '2 of 10' }));
+    const to = await centre(track.getByRole('radio', { name: '9 of 10' }));
+    await touchDrag(cdp, from, to, 240);
+    await expect.poll(() => ticks).toEqual(Array(7).fill(10));
+    await touchDrag(cdp, to, from, 240);
+    await expect.poll(() => ticks).toHaveLength(14);
+
+    // Tapping selects or clears a score, with exactly one tick each time.
+    await page.touchscreen.tap(...to);
+    await expect(track.getByRole('radio', { name: '9 of 10' })).toHaveAttribute('aria-checked', 'true');
+    await expect.poll(() => ticks).toHaveLength(15);
+    await page.touchscreen.tap(...to);
+    await expect(track.getByRole('radio', { name: '9 of 10' })).toHaveAttribute('aria-checked', 'false');
+    await expect.poll(() => ticks).toHaveLength(16);
+
+    // Mouse dragging and arrow keys do not add ticks.
+    await page.mouse.move(...from);
+    await page.mouse.down();
+    await page.mouse.move(to[0], to[1], { steps: 8 });
+    await page.mouse.up();
+    await track.getByRole('radio', { name: '9 of 10' }).press('ArrowLeft');
+    expect(ticks).toHaveLength(16);
+
+    // Every habit state change gives one tick, including clearing the mark.
+    await page.getByRole('button', { name: /^Read 20 pages: not marked/ }).tap();
+    await page.getByRole('button', { name: /^Read 20 pages: done/ }).tap();
+    await page.getByRole('button', { name: /^Read 20 pages: missed/ }).tap();
+    await expect.poll(() => ticks).toHaveLength(19);
+
+    await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    const settings = page.getByRole('dialog', { name: 'Settings' });
+    const toggle = settings.getByRole('switch', { name: 'Haptic feedback' });
+    await expect(toggle).toBeChecked();
+    await toggle.click();
+    await expect(toggle).not.toBeChecked();
+    await settings.getByRole('button', { name: 'Close', exact: true }).click();
+
+    await page.getByTestId('day-tracker').click();
+    await track.getByRole('radio', { name: '9 of 10' }).tap();
+    await expect(track.getByRole('radio', { name: '9 of 10' })).toHaveAttribute('aria-checked', 'true');
+    await track.getByRole('radio', { name: '9 of 10' }).tap();
+    await expect(track.getByRole('radio', { name: '9 of 10' })).toHaveAttribute('aria-checked', 'false');
+    await page.getByRole('button', { name: /^Read 20 pages: not marked/ }).tap();
+    await expect(page.getByRole('button', { name: /^Read 20 pages: done/ })).toBeVisible();
+    expect(ticks).toHaveLength(19);
+
+    await expect(page.getByRole('progressbar', { name: 'Working' })).toHaveCount(0);
+    await page.reload();
+    await openDay(page, SAMPLE_ENTRY.date);
+    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await expect(toggle).not.toBeChecked();
+    await settings.getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByTestId('day-tracker').click();
+    await page.waitForTimeout(400);
+    await touchDrag(
+      cdp,
+      await centre(track.getByRole('radio', { name: '2 of 10' })),
+      await centre(track.getByRole('radio', { name: '9 of 10' })),
+      240,
+    );
+    await expect(track.getByRole('radio', { name: '9 of 10' })).toHaveAttribute('aria-checked', 'true');
+    await page.getByRole('button', { name: /^Read 20 pages: done/ }).tap();
+    await expect(page.getByRole('button', { name: /^Read 20 pages: missed/ })).toBeVisible();
+    expect(ticks).toHaveLength(19);
   });
 });
 

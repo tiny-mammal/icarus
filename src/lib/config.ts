@@ -107,6 +107,15 @@ export async function setSavedCountHidesWhileTyping(enabled: boolean): Promise<v
   await storage.setItem(STORE, 'countHidesWhileTyping', enabled);
 }
 
+/** Whether scores and habits give a short haptic tick. On by default. */
+export async function getSavedTrackerHaptics(): Promise<boolean> {
+  return (await storage.getItem<boolean>(STORE, 'trackerHaptics')) !== false;
+}
+
+export async function setSavedTrackerHaptics(enabled: boolean): Promise<void> {
+  await storage.setItem(STORE, 'trackerHaptics', enabled);
+}
+
 /** Whether the desktop app checks icarus.4oli.com for new versions. Opt-in, off by default. */
 export async function getSavedUpdateCheck(): Promise<boolean> {
   return (await storage.getItem<boolean>(STORE, 'checkForUpdates')) === true;

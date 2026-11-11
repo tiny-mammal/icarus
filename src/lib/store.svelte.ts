@@ -66,6 +66,8 @@ import {
   type SearchOrder,
   getSavedCountHidesWhileTyping,
   setSavedCountHidesWhileTyping,
+  getSavedTrackerHaptics,
+  setSavedTrackerHaptics,
   type AutoLockMinutes,
   type LengthCount,
   type WeekStart,
@@ -225,6 +227,9 @@ class AppStore {
   /** The length count fades out while typing and returns on a pause. User preference. */
   countHidesWhileTyping = $state(true);
 
+  /** A short haptic tick for scores and habits. User preference. */
+  trackerHaptics = $state(true);
+
   /**
    * Wide screens: the day pane fills the window, text centred. Lasts while
    * the pane stays open (across days, reading and writing) and resets when
@@ -298,6 +303,7 @@ class AppStore {
     void this.loadSearchOrder();
     void this.loadSpellcheck();
     void this.loadCountPreferences();
+    void this.loadTrackerHaptics();
     void this.loadSpellWords();
     void this.loadLockPreferences();
     try {
@@ -536,6 +542,7 @@ class AppStore {
     this.spellcheck = true;
     this.lengthCount = 'both';
     this.countHidesWhileTyping = true;
+    this.trackerHaptics = true;
     this.spellWords = [];
     setUserWords([]);
     await Promise.all([
@@ -545,6 +552,7 @@ class AppStore {
       this.loadSearchOrder(),
       this.loadSpellcheck(),
       this.loadCountPreferences(),
+      this.loadTrackerHaptics(),
       this.loadSpellWords(),
       this.loadLockPreferences(),
       updates.load(),
@@ -1198,6 +1206,19 @@ class AppStore {
   async setCountHidesWhileTyping(enabled: boolean): Promise<void> {
     this.countHidesWhileTyping = enabled;
     await this.savePreference('setCountHidesWhileTyping', setSavedCountHidesWhileTyping(enabled));
+  }
+
+  async loadTrackerHaptics(): Promise<void> {
+    try {
+      this.trackerHaptics = await getSavedTrackerHaptics();
+    } catch (err) {
+      devError('loadTrackerHaptics: could not read the tracker haptics preference', err);
+    }
+  }
+
+  async setTrackerHaptics(enabled: boolean): Promise<void> {
+    this.trackerHaptics = enabled;
+    await this.savePreference('setTrackerHaptics', setSavedTrackerHaptics(enabled));
   }
 
   /** Restore the personal spell-check dictionary on boot. */
