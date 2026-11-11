@@ -7,7 +7,10 @@
 export interface WriteQueue<T> {
   /** Write now, or in the follow-up write if one is running. */
   run(): Promise<T>;
-  /** Settles once every write asked for so far has finished, failed or not. */
+  /**
+   * Settles once every write asked for has finished, failed or not, including
+   * those asked for while it waited.
+   */
   idle(): Promise<void>;
 }
 
@@ -37,8 +40,11 @@ export function createWriteQueue<T>(write: () => Promise<T>): WriteQueue<T> {
       return next;
     },
     async idle() {
-      // The follow-up only starts once the running write is done.
-      await (queued ?? running)?.catch(() => undefined);
+      // The follow-up only starts once the running write is done, and a change
+      // made while waiting queues another: go on until nothing is left.
+      for (let pending = queued ?? running; pending; pending = queued ?? running) {
+        await pending.catch(() => undefined);
+      }
     },
   };
 }

@@ -75,6 +75,26 @@ describe('idle', () => {
     expect(w.seen).toHaveLength(2);
   });
 
+  it('also waits for a write asked for while it was waiting', async () => {
+    const w = controlledWrites();
+    const queue = createWriteQueue(w.write);
+    void queue.run();
+    let settled = false;
+    const idle = queue.idle().then(() => (settled = true));
+
+    // A change made while the first write runs, then another during its follow-up.
+    w.set(1);
+    void queue.run();
+    await w.release();
+    w.set(2);
+    void queue.run();
+    await w.release();
+    expect(settled).toBe(false);
+    await w.release();
+    await idle;
+    expect(w.seen).toEqual([0, 1, 2]);
+  });
+
   it('settles straight away with nothing to write', async () => {
     await expect(createWriteQueue(async () => 1).idle()).resolves.toBeUndefined();
   });
