@@ -161,6 +161,12 @@ describe('passRun', () => {
     expect(passes(t, { value: 2, scale: 5 })).toBe(false);
   });
 
+  it('keeps a moved pass mark within the choices of the new scale', () => {
+    expect(passMark(setScoreScale(setPassMark(EMPTY_TRACKER, 2), 5))).toBe(2);
+    expect(passMark(setScoreScale(setPassMark(EMPTY_TRACKER, 10), 5))).toBe(5);
+    expect(setScoreScale(setPassMark(EMPTY_TRACKER, 6), 5).passMark).toBeUndefined();
+  });
+
   it('defaults the pass mark to half the scale', () => {
     expect(passMark(EMPTY_TRACKER)).toBe(5);
     expect(passMark(setScoreScale(EMPTY_TRACKER, 5))).toBe(3);
