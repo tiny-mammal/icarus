@@ -207,11 +207,15 @@ export function planLegacyScores(entries: readonly DiaryEntry[], tracker: Tracke
     if (scores.length > 1) reasons.add('differs');
 
     const only = scores.length === 1 ? scores[0] : null;
-    if (reasons.size === 0 && only !== null) {
-      // Sure of the day: leave it be when the diary says the same already.
-      if (existing && Math.round(scoreOn(existing, LEGACY_SCALE)) === only) plan.unchanged++;
-      else if (existing) reasons.add('existing');
-      else plan.ready.set(key, { value: only, scale: LEGACY_SCALE });
+    const certain = reasons.size === 0 && only !== null;
+    if (existing) {
+      // Sure of the day and the diary says the same already: nothing to do.
+      // Any other day that has a score is shown with it, doubtful or not, so
+      // settling it is never an unnoticed overwrite.
+      if (certain && Math.round(scoreOn(existing, LEGACY_SCALE)) === only) plan.unchanged++;
+      else reasons.add('existing');
+    } else if (certain) {
+      plan.ready.set(key, { value: only, scale: LEGACY_SCALE });
     }
     if (reasons.size > 0) {
       plan.conflicts.push({

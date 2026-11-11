@@ -201,6 +201,19 @@ describe('planLegacyScores', () => {
     expect(conflict).toMatchObject({ reasons: ['existing'], suggestion: 6, existing: { value: 8, scale: 10 } });
   });
 
+  it('says a doubtful day already has a score, so settling it is not an unnoticed overwrite', () => {
+    const tracker = setScore(EMPTY_TRACKER, '2025-03-01', 8);
+    const plan = planLegacyScores(
+      [entry('2025-03-01', '(3) 2DAC'), entry('2025-03-02', '(6 2DAC'), entry('2025-03-03', '(6) 2DAC\n(7) 3DAC')],
+      setScore(setScore(tracker, '2025-03-02', 6), '2025-03-03', 9),
+    );
+    expect(plan.conflicts.map((c) => [c.key, c.reasons, c.existing?.value])).toEqual([
+      ['2025-03-01', ['letter', 'existing'], 8],
+      ['2025-03-02', ['unsure', 'existing'], 6], // the same score, but the mark is doubtful
+      ['2025-03-03', ['differs', 'existing'], 9],
+    ]);
+  });
+
   it('compares with a score given on another scale by its height', () => {
     // 5 of 5 is the top, a 10 of 10.
     const fiveScale = { ...EMPTY_TRACKER, scoreScale: 5 };
