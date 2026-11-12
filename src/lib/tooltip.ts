@@ -8,12 +8,16 @@
  * tooltips: above the finger, and the press then does not activate the control.
  */
 
+import { selectionHaptic } from './haptics';
+
 export interface TooltipContent {
   label: string;
   /** Keyboard shortcut, one chip per key. */
   keys?: string[];
   /** Only show while the element's own text is cut off (e.g. an ellipsis). */
   truncatedOnly?: boolean;
+  /** Give tactile feedback when a touch long press opens the hint. */
+  haptic?: boolean;
 }
 
 export type TooltipOptions = string | TooltipContent | null | undefined;
@@ -183,7 +187,10 @@ export function tooltip(node: HTMLElement, options: TooltipOptions) {
     if (e.pointerType === 'mouse' || !e.isPrimary) return;
     held = false;
     press = { id: e.pointerId, x: e.clientX, y: e.clientY };
-    schedule(LONG_PRESS, true, () => (held = true));
+    schedule(LONG_PRESS, true, () => {
+      held = true;
+      if (e.pointerType === 'touch' && content?.haptic) void selectionHaptic();
+    });
   };
   const onMove = (e: PointerEvent) => {
     if (press?.id !== e.pointerId) return;

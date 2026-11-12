@@ -5,6 +5,7 @@ import {
   addHabit,
   dayRecord,
   habitStreaks,
+  habitStreakStart,
   importScores,
   nextMark,
   scoreRuns,
@@ -217,6 +218,14 @@ describe('habitStreaks', () => {
       current: 42,
       best: { length: 42, start: '2024-01-05', end: '2024-01-07' },
     });
+  });
+
+  it('finds the active start and estimates a manually entered streak', () => {
+    const marks = marked({ '2024-01-06': 'done', '2024-01-07': 'done' });
+    const manual = setStreak(marks, '2024-01-05', 'gym', 5);
+    expect(habitStreakStart(manual, trackedDays(manual), 'gym', TODAY, 7)).toEqual({ day: '2024-01-01', estimated: true });
+    expect(habitStreakStart(marks, trackedDays(marks), 'gym', TODAY, 2)).toEqual({ day: '2024-01-06', estimated: false });
+    expect(habitStreakStart(marks, trackedDays(marks), 'gym', TODAY, 0)).toBeNull();
   });
 
   it('ignores days after today', () => {

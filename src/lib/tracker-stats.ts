@@ -12,6 +12,7 @@ import { diaryDates, periodRange, type StatsPeriod } from './stats';
 import { EMPTY_TIMELINE, buildTimeline, type DayTotal, type Timeline } from './timeline';
 import {
   habitStreaks,
+  habitStreakStart,
   passMark,
   passRun,
   passes,
@@ -29,6 +30,7 @@ export interface HabitStats {
   habit: Habit;
   /** The streak as it stands today. */
   current: number;
+  currentStart: { day: string; estimated: boolean } | null;
   /** The longest streak the habit ever had. */
   best: StreakRun | null;
   /** Days marked done and missed within the period. */
@@ -175,6 +177,7 @@ export function computeTrackerStats(
       return {
         habit,
         current,
+        currentStart: habitStreakStart(tracker, days, habit.id, todayKey, current),
         best,
         done,
         missed,

@@ -3,6 +3,7 @@
   import HabitMarkIcon from './HabitMarkIcon.svelte';
   import { compactDayLabel, keyToDate, rangeLabel } from '../lib/date';
   import { RECENT_DAYS, type HabitStats } from '../lib/tracker-stats';
+  import { tooltip } from '../lib/tooltip';
 
   /**
    * How one habit is going: its streak now and at its best (both over the
@@ -24,7 +25,7 @@
     habit.archived
       ? 'Archived'
       : stats.since
-        ? `Since ${compactDayLabel(keyToDate(stats.since), app.dateFormat)}`
+        ? `Tracked since ${compactDayLabel(keyToDate(stats.since), app.dateFormat)}`
         : 'Not marked yet',
   );
   const recentDone = $derived(stats.recent.filter((mark) => mark === 'done').length);
@@ -45,7 +46,11 @@
       <p
         class="text-lg font-semibold tabular-nums tracking-tight {record ? 'text-sun' : 'text-text'}"
       >
-        {stats.current}
+        {#if stats.currentStart}
+          <button type="button" class="cursor-help rounded-sm underline decoration-dotted underline-offset-4" use:tooltip={{ label: `${stats.currentStart.estimated ? 'Estimated streak start' : 'Streak started'}: ${compactDayLabel(keyToDate(stats.currentStart.day), app.dateFormat)}`, haptic: app.trackerHaptics }}>{stats.current}</button>
+        {:else}
+          {stats.current}
+        {/if}
         <span class="text-xs font-normal text-muted">{stats.current === 1 ? 'day' : 'days'}</span>
       </p>
       <p class="text-[0.7rem] whitespace-nowrap text-muted">

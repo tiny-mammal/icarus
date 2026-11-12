@@ -150,4 +150,21 @@ describe('tooltip action', () => {
     vi.advanceTimersByTime(LONG_PRESS);
     expect(isOpen()).toBe(false);
   });
+
+  it('vibrates only when an opted-in touch hint opens', () => {
+    vi.useFakeTimers();
+    const vibrate = vi.fn();
+    vi.stubGlobal('navigator', { vibrate, maxTouchPoints: 1 });
+    try {
+      const el = button();
+      tooltip(el, { label: 'Streak start', haptic: true });
+      press('pointerdown', el);
+      vi.advanceTimersByTime(LONG_PRESS - 1);
+      expect(vibrate).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(vibrate).toHaveBeenCalledWith(10);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

@@ -278,6 +278,25 @@ export function habitStreaks(
   return streakHistory(tracker, days, todayKey, habitStep(habitId));
 }
 
+/** The first day of the active streak, estimated when it includes a manual value. */
+export function habitStreakStart(tracker: Tracker, days: readonly string[], habitId: string, todayKey: string, current: number): { day: string; estimated: boolean } | null {
+  if (current <= 0) return null;
+  let remaining = current;
+  for (let i = days.length - 1; i >= 0; i--) {
+    const day = days[i];
+    if (day > todayKey) continue;
+    const record = tracker.days.get(day)!;
+    const manual = record.streaks[habitId];
+    if (manual !== undefined) {
+      if (manual <= 0) return null;
+      return { day: dateKey(addDays(keyToDate(day), 1 - manual)), estimated: true };
+    }
+    if (record.marks[habitId] === 'missed') return null;
+    if (record.marks[habitId] === 'done' && --remaining === 0) return { day, estimated: false };
+  }
+  return null;
+}
+
 // --- passing and failing ------------------------------------------------------
 
 /** The lowest score that passes, on the current scale: half of it unless set. */
