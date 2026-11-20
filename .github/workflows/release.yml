@@ -108,6 +108,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf rpm
+      - run: npm config set "//npm.pkg.github.com/:_authToken=$PROMO_FUNNEL_TOKEN"
+        shell: bash
+        env:
+          PROMO_FUNNEL_TOKEN: ${{ secrets.PROMO_FUNNEL_TOKEN }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm tauri build --ci --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
       - run: node scripts/release-assets.ts collect "src-tauri/target/${{ matrix.target }}/release/bundle" ${{ matrix.platform }} release-assets
@@ -159,6 +163,10 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$ANDROID_NDK"
           echo "NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK" >> "$GITHUB_ENV"
+      - run: npm config set "//npm.pkg.github.com/:_authToken=$PROMO_FUNNEL_TOKEN"
+        shell: bash
+        env:
+          PROMO_FUNNEL_TOKEN: ${{ secrets.PROMO_FUNNEL_TOKEN }}
       - run: pnpm install --frozen-lockfile
 
       # Releases must be signed with the project key: Android only installs an
@@ -272,6 +280,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
+      - run: npm config set "//npm.pkg.github.com/:_authToken=$PROMO_FUNNEL_TOKEN"
+        shell: bash
+        env:
+          PROMO_FUNNEL_TOKEN: ${{ secrets.PROMO_FUNNEL_TOKEN }}
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:

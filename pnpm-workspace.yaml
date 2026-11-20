@@ -6,3 +6,6 @@ packages:
 allowBuilds:
   esbuild: true
   workerd: true
+
+minimumReleaseAgeExclude:
+  - '@martinezharo/promo-funnel@1.0.2'
