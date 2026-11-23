@@ -117,7 +117,7 @@ export default {
     windowsInstaller: 'Télécharger l’installeur',
     windowsMsi: 'Paquet MSI',
     windowsFirstLaunch:
-      'L’installeur n’est pas encore signé, donc Windows peut afficher le message <q>Windows a protégé votre PC</q>. Choisissez <span class="text-text">Informations complémentaires</span>, puis <span class="text-text">Exécuter quand même</span>.',
+      'L’installeur n’est pas encore signé, donc Windows peut afficher le message <q>Windows a protégé votre ordinateur</q>. Choisissez <span class="text-text">Informations complémentaires</span>, puis <span class="text-text">Exécuter quand même</span>.',
     macRequirements: 'macOS 11 ou plus récent, Apple silicon et Intel',
     macDownload: 'Télécharger l’image disque',
     macSteps: [

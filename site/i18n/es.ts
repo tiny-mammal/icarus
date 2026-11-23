@@ -128,7 +128,7 @@ export default {
     linuxRequirements: 'x86 de 64 bits',
     linuxDownload: 'Descargar AppImage',
     linuxFirstLaunch:
-      'Hazlo ejecutable desde las propiedades del archivo, o ejecuta <code class="rounded bg-slate px-1 py-0.5 font-mono text-xs text-text">chmod +x Icarus-Diary-*.AppImage</code>. Los paquetes <span class="text-text">.deb</span> y <span class="text-text">.rpm</span> se instalan con tu gestor de paquetes.',
+      'Haz ejecutable el AppImage desde las propiedades del archivo, o ejecuta <code class="rounded bg-slate px-1 py-0.5 font-mono text-xs text-text">chmod +x Icarus-Diary-*.AppImage</code>. Los paquetes <span class="text-text">.deb</span> y <span class="text-text">.rpm</span> se instalan con tu gestor de paquetes.',
     androidRequirements: 'Android 7 o posterior',
     androidDownload: 'Descargar APK',
     androidSteps: [
@@ -189,7 +189,7 @@ export default {
       windows: 'Ejecuta el nuevo instalador. Sustituye esta versión y tu diario se queda donde estaba.',
       macos: 'Abre la imagen de disco y arrastra Icarus a Aplicaciones, reemplazando la anterior. Tu diario se queda donde estaba.',
       linux:
-        'Instala el nuevo paquete encima del anterior, o cambia el AppImage nuevo y borra el archivo antiguo. Tu diario se queda donde estaba.',
+        'Instala el nuevo paquete encima del anterior, o sustituye el AppImage por el nuevo y borra el archivo antiguo. Tu diario se queda donde estaba.',
     },
   },
 } satisfies SiteMessages;
