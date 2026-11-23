@@ -14,6 +14,7 @@
   import { cubicOut } from 'svelte/easing';
   import { fade, scale } from 'svelte/transition';
   import { clickOutside } from '../lib/actions';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   /**
    * A themed dropdown: a compact trigger showing the current choice, and a
@@ -194,7 +195,7 @@
     onclick={() => (open ? (open = false) : openList())}
     aria-haspopup="listbox"
     aria-expanded={open}
-    aria-label="{label}: {shown}"
+    aria-label={fmt(t.nav.selectValue, { label, value: shown })}
   >
     {@render leading?.()}
     <span class="truncate tabular-nums">{shown}</span>

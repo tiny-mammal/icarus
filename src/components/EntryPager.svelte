@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tooltip } from '../lib/tooltip';
   import type { DiaryEntry } from '../lib/types';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   // Compact pager for stepping through the entries of a single day. Kept
   // deliberately smaller and quieter than the day stepper above it.
@@ -16,8 +17,8 @@
 <div class="flex items-center justify-center gap-3">
   <button
     class="grid h-6 w-6 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
-    aria-label="Previous entry"
-    use:tooltip={{ label: 'Previous entry', keys: ['←'] }}
+    aria-label={t.nav.previousEntry}
+    use:tooltip={{ label: t.nav.previousEntry, keys: ['←'] }}
     disabled={page === 0}
     onclick={() => go(-1)}
   >
@@ -28,7 +29,7 @@
     {#each entries as e, i (e.uid)}
       <button
         class="h-1.5 rounded-full transition-all {i === page ? 'w-4 bg-text' : 'w-1.5 bg-faint hover:bg-muted'}"
-        aria-label={`Go to entry ${i + 1}`}
+        aria-label={fmt(t.nav.goToEntry, { number: i + 1 })}
         aria-current={i === page}
         onclick={() => (page = i)}
       ></button>
@@ -39,8 +40,8 @@
 
   <button
     class="grid h-6 w-6 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
-    aria-label="Next entry"
-    use:tooltip={{ label: 'Next entry', keys: ['→'] }}
+    aria-label={t.nav.nextEntry}
+    use:tooltip={{ label: t.nav.nextEntry, keys: ['→'] }}
     disabled={page === count - 1}
     onclick={() => go(1)}
   >

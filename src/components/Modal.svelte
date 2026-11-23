@@ -11,6 +11,7 @@
   import { trapFocus } from '../lib/actions';
   import { dragToDismiss } from '../lib/gestures';
   import { viewport } from '../lib/viewport.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   /**
    * Shared modal shell. On wide screens it is a centred card over a blurred
@@ -145,8 +146,8 @@
             {#if !locked && !backLabel}
               <button
                 class="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text"
-                aria-label="Close"
-                use:tooltip={{ label: 'Close', keys: ['Esc'] }}
+                aria-label={t.common.close}
+                use:tooltip={{ label: t.common.close, keys: ['Esc'] }}
                 onclick={close}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>

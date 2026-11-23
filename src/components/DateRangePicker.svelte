@@ -3,6 +3,7 @@
   import { app } from '../lib/store.svelte';
   import { compactDayLabel, dateKey, daysBetween, startOfMonth } from '../lib/date';
   import MiniCalendar from './MiniCalendar.svelte';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   /**
    * Pick an inclusive range of days. The From and To fields show which end the
@@ -72,12 +73,11 @@
     const to = dateKey(end);
     return app.dayKeys.filter((key) => key >= from && key <= to).length;
   });
-  const numberFmt = new Intl.NumberFormat();
 </script>
 
 <div class="flex flex-col">
-  <div class="mb-3 grid grid-cols-2 gap-1.5" role="group" aria-label="Range ends">
-    {#each [{ which: 'start', label: 'From', day: start }, { which: 'end', label: 'To', day: end }] as field (field.which)}
+  <div class="mb-3 grid grid-cols-2 gap-1.5" role="group" aria-label={t.nav.rangeEnds}>
+    {#each [{ which: 'start', label: t.nav.rangeFrom, day: start }, { which: 'end', label: t.nav.rangeTo, day: end }] as field (field.which)}
       {@const on = active === field.which}
       <button
         type="button"
@@ -88,7 +88,7 @@
       >
         <span class="text-[0.65rem] font-medium {on ? 'text-text' : 'text-muted'}">{field.label}</span>
         <span class="mt-0.5 w-full truncate text-xs tabular-nums {field.day ? 'text-text' : 'text-muted'}">
-          {field.day ? compactDayLabel(field.day, app.dateFormat) : 'Pick a day'}
+          {field.day ? compactDayLabel(field.day, app.dateFormat) : t.nav.pickDay}
         </span>
       </button>
     {/each}
@@ -106,12 +106,12 @@
   <div class="mt-3 flex items-center justify-between gap-3 border-t border-slate pt-3">
     <p class="min-w-0 text-[0.7rem] leading-tight text-muted" aria-live="polite">
       {#if days > 0}
-        <span class="text-text tabular-nums">{numberFmt.format(days)} {days === 1 ? 'day' : 'days'}</span><br />
+        <span class="text-text tabular-nums">{fmt(t.common.days, { count: days })}</span><br />
         {writtenDays === 0
-          ? 'Nothing written'
-          : `${numberFmt.format(writtenDays)} with entries`}
+          ? t.nav.rangeNothingWritten
+          : fmt(t.nav.rangeDaysWithEntries, { count: writtenDays })}
       {:else}
-        Pick the {active === 'start' ? 'first' : 'last'} day
+        {active === 'start' ? t.nav.pickFirstDay : t.nav.pickLastDay}
       {/if}
     </p>
     <div class="flex shrink-0 items-center gap-1">
@@ -120,7 +120,7 @@
         class="rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text sm:py-1.5"
         onclick={oncancel}
       >
-        Cancel
+        {t.common.cancel}
       </button>
       <button
         type="button"
@@ -128,7 +128,7 @@
         disabled={!start || !end}
         onclick={() => start && end && onapply({ start, end })}
       >
-        Apply
+        {t.nav.apply}
       </button>
     </div>
   </div>

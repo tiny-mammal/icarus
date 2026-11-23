@@ -3,13 +3,15 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { preloadFonts } from '../vite/preload-fonts';
 import { repoAssets } from '../vite/repo-assets';
+import { localizedSite } from './i18n/plugin';
 
 /**
  * Build for the public site at icarus.4oli.com.
  *
  * Output goes to `dist-web/`. `pnpm build:web` then builds the diary app into
  * `dist-web/app/`, so the landing page and the web app ship as one static
- * deployment (see `wrangler.jsonc`).
+ * deployment (see `wrangler.jsonc`). Every page is also rendered in each
+ * other language under `/<locale>/` (see `i18n/plugin.ts`).
  */
 const root = fileURLToPath(new URL('.', import.meta.url));
 
@@ -25,6 +27,7 @@ export default defineConfig({
       'icon-512.png': 'src-tauri/icons/icon.png',
     }),
     preloadFonts(),
+    localizedSite(),
   ],
   server: { port: 1440, strictPort: true },
   build: {

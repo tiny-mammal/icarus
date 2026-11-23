@@ -1,12 +1,13 @@
 /**
- * Offline English spell checking backed by nspell + a bundled Hunspell
- * dictionary. Native spell check looks and behaves differently on every
- * platform (and Linux needs system dictionaries installed), so the editor
- * runs its own checker and paints the underline itself — the same everywhere.
+ * Offline spell checking backed by Hunspell (compiled to WebAssembly by
+ * `hunspell-asm`) and bundled dictionaries for every app language. Native
+ * spell check looks and behaves differently on every platform (and Linux needs
+ * system dictionaries installed), so the editor runs its own checker and
+ * paints the underline itself — the same everywhere.
  *
- * The dictionary (`src/assets/spellcheck/en.aff|dic`, from `dictionary-en`,
- * see the LICENSE next to them) is a ~550 KB asset that is only fetched the
- * first time checking is needed, so it stays out of the boot path. Until it
+ * The dictionaries (`src/assets/spellcheck/<lang>.aff|dic`, see the README
+ * next to them) weigh 0.5–1.3 MB each, so only the one in use is fetched, the
+ * first time checking is needed; they stay out of the boot path. Until it
  * loads, every word counts as correct and nothing is underlined.
  *
  * This module owns the engine and the pure word/position helpers; the TipTap
@@ -14,7 +15,8 @@
  * `spellcheck-extension.ts`.
  */
 import type { Node as PMNode } from '@tiptap/pm/model';
-import type { NSpell } from 'nspell';
+import type { Hunspell, HunspellFactory } from 'hunspell-asm';
+import { DEFAULT_LOCALE, type Locale } from './i18n/locales';
 
 /** Letters plus internal apostrophes/hyphens make up a checkable word. */
 const WORD_RE = /\p{L}[\p{L}'’-]*/gu;
@@ -23,58 +25,114 @@ const MIN_LENGTH = 2;
 /** How many suggestions the menu offers. */
 const MAX_SUGGESTIONS = 6;
 
-let speller: NSpell | null = null;
-let loading: Promise<NSpell> | null = null;
+const AFFIXES = import.meta.glob<string>('../assets/spellcheck/*.aff', { query: '?raw', import: 'default' });
+const WORDS = import.meta.glob<string>('../assets/spellcheck/*.dic', { query: '?raw', import: 'default' });
+
+interface Speller {
+  locale: Locale;
+  hunspell: Hunspell;
+  /** The mounted dictionary files, freed with the speller. */
+  files: string[];
+  /** Personal words taught to this dictionary (see `syncSpeller`). */
+  learned: Set<string>;
+}
+
+let factory: Promise<HunspellFactory> | null = null;
+/**
+ * The dictionaries in use, in order of preference: a word is correct when any
+ * of them knows it, and suggestions come from the first ones first.
+ */
+let spellers: Speller[] = [];
+/** The languages asked for last, and the load answering them. */
+let wanted: { key: string; load: Promise<void> } | null = null;
+/** Dictionaries loaded or loading, by language, so a switch back is instant. */
+const loads = new Map<Locale, Promise<Speller>>();
 
 /** Personal dictionary, restored from settings (Add to dictionary). */
 const userWords = new Set<string>();
-/**
- * The personal words taught to the engine. A word the dictionary already knows
- * is never taught, so forgetting it later cannot erase the stock entry.
- */
-const learned = new Set<string>();
 /** Words ignored for this session only (Ignore in the menu). */
 const ignoredWords = new Set<string>();
-/** Verdict cache, cleared whenever the dictionary or ignore list changes. */
+/** Verdict cache, cleared whenever the dictionaries or ignore list change. */
 const verdicts = new Map<string, boolean>();
 
-function loadSpeller(): Promise<NSpell> {
-  loading ??= (async () => {
-    const [nspell, aff, dic] = await Promise.all([
-      import('nspell'),
-      import('../assets/spellcheck/en.aff?raw'),
-      import('../assets/spellcheck/en.dic?raw'),
-    ]);
-    const instance = nspell.default(aff.default, dic.default);
-    speller = instance;
-    syncSpeller();
-    return instance;
-  })().catch((err) => {
+async function createSpeller(locale: Locale): Promise<Speller> {
+  const [hunspellAsm, aff, dic] = await Promise.all([
+    (factory ??= import('hunspell-asm')
+      .then((m) => m.loadModule())
+      .catch((err) => {
+        // Let a later attempt retry, as with a dictionary that failed to load.
+        factory = null;
+        throw err;
+      })),
+    AFFIXES[`../assets/spellcheck/${locale}.aff`](),
+    WORDS[`../assets/spellcheck/${locale}.dic`](),
+  ]);
+  const encoder = new TextEncoder();
+  const files = [
+    hunspellAsm.mountBuffer(encoder.encode(aff), `${locale}.aff`),
+    hunspellAsm.mountBuffer(encoder.encode(dic), `${locale}.dic`),
+  ];
+  return { locale, hunspell: hunspellAsm.create(files[0], files[1]), files, learned: new Set() };
+}
+
+function loadSpeller(locale: Locale): Promise<Speller> {
+  let load = loads.get(locale);
+  if (!load) {
+    load = createSpeller(locale);
     // Let a later attempt retry instead of caching the failure forever.
-    loading = null;
-    throw err;
-  });
-  return loading;
-}
-
-/** Load the dictionary now (idempotent). Resolves once checking can happen. */
-export function ensureSpellchecker(): Promise<NSpell> {
-  return loadSpeller();
-}
-
-/** Bring the engine in line with the personal dictionary and drop stale verdicts. */
-function syncSpeller(): void {
-  verdicts.clear();
-  if (!speller) return;
-  for (const word of learned) {
-    if (userWords.has(word)) continue;
-    speller.remove(word);
-    learned.delete(word);
+    load.catch(() => loads.delete(locale));
+    loads.set(locale, load);
   }
-  for (const word of userWords) {
-    if (learned.has(word) || speller.correct(word)) continue;
-    speller.add(word);
-    learned.add(word);
+  return load;
+}
+
+function disposeSpeller(old: Speller): void {
+  loads.delete(old.locale);
+  old.hunspell.dispose();
+  void factory?.then((hunspellAsm) => old.files.forEach((file) => hunspellAsm.unmount(file)));
+}
+
+/**
+ * Check spelling in `locales` (most preferred first) from now on, loading
+ * their dictionaries and freeing the ones no longer used. Resolves once
+ * checking in all of them can happen.
+ */
+export function ensureSpellchecker(locales: readonly Locale[] = [DEFAULT_LOCALE]): Promise<void> {
+  const key = locales.join(',');
+  if (wanted?.key === key) return wanted.load;
+  const load = Promise.all(locales.map(loadSpeller)).then(
+    (next) => {
+      // A later call asked for other languages meanwhile.
+      if (wanted?.key !== key) return;
+      for (const old of spellers) if (!next.includes(old)) disposeSpeller(old);
+      spellers = next;
+      syncSpellers();
+    },
+    (err) => {
+      if (wanted?.key === key) wanted = null;
+      throw err;
+    },
+  );
+  wanted = { key, load };
+  return load;
+}
+
+/** Bring every dictionary in line with the personal one and drop stale verdicts. */
+function syncSpellers(): void {
+  verdicts.clear();
+  for (const { hunspell, learned } of spellers) {
+    for (const word of learned) {
+      if (userWords.has(word)) continue;
+      hunspell.removeWord(word);
+      learned.delete(word);
+    }
+    // A word a dictionary already knows is never taught, so forgetting it
+    // later cannot erase the stock entry.
+    for (const word of userWords) {
+      if (learned.has(word) || hunspell.spell(word)) continue;
+      hunspell.addWord(word);
+      learned.add(word);
+    }
   }
 }
 
@@ -86,20 +144,20 @@ function sortedUserWords(): string[] {
 export function setUserWords(words: string[]): void {
   userWords.clear();
   for (const word of words) userWords.add(normalize(word));
-  syncSpeller();
+  syncSpellers();
 }
 
 /** Add one word to the personal dictionary; returns the updated word list. */
 export function addUserWord(word: string): string[] {
   userWords.add(normalize(word));
-  syncSpeller();
+  syncSpellers();
   return sortedUserWords();
 }
 
 /** Remove one word from the personal dictionary; returns the updated word list. */
 export function removeUserWord(word: string): string[] {
   userWords.delete(normalize(word));
-  syncSpeller();
+  syncSpellers();
   return sortedUserWords();
 }
 
@@ -119,14 +177,22 @@ export function ignoreWord(word: string): void {
   verdicts.clear();
 }
 
-/** Case-matched suggestions for a misspelled word (best effort). */
+/** Case-matched suggestions for a misspelled word (best effort), first dictionary first. */
 export function suggest(raw: string): string[] {
-  if (!speller) return [];
   const word = normalize(raw);
-  return speller
-    .suggest(word)
-    .slice(0, MAX_SUGGESTIONS)
-    .map((s) => matchCase(word, s));
+  const all = [...new Set(spellers.flatMap(({ hunspell }) => hunspell.suggest(word)))];
+  return rankSuggestions(word, all).map((s) => matchCase(word, s));
+}
+
+/**
+ * Hunspell also proposes splitting the word ("occured" → "occur ed"), which
+ * is rarely meant when a one-word fix exists: keep splits only as a last
+ * resort ("alot" → "a lot"). Exported for tests.
+ */
+export function rankSuggestions(word: string, suggestions: string[]): string[] {
+  const isSplit = (s: string) => /[ -]/.test(s) && s.replace(/[ -]/g, '') === word.replace(/-/g, '');
+  const whole = suggestions.filter((s) => !isSplit(s));
+  return (whole.length ? whole : suggestions).slice(0, MAX_SUGGESTIONS);
 }
 
 /**
@@ -135,7 +201,7 @@ export function suggest(raw: string): string[] {
  * mistake.
  */
 export function isCorrect(raw: string): boolean {
-  if (!speller) return true;
+  if (!spellers.length) return true;
   const word = normalize(raw);
   if (word.length < MIN_LENGTH) return true;
   if (ignoredWords.has(word.toLowerCase())) return true;
@@ -149,28 +215,27 @@ export function isCorrect(raw: string): boolean {
 }
 
 function checkWord(word: string): boolean {
-  // The dictionary is English-only, so non-ASCII text (accents, other
-  // scripts) would only produce false positives.
-  if (/[^\p{ASCII}]/u.test(word)) return true;
-  if (speller!.correct(word)) return true;
-  // Compound terms ("well-being") are fine when every part is a word.
-  return (
-    word.includes('-') &&
-    word.split('-').every((part) => part === '' || speller!.correct(part))
-  );
+  // The English dictionary has no accented words to speak of, so non-ASCII
+  // text checked only in English (names, borrowed words) would only produce
+  // false positives.
+  if (spellers.every((s) => s.locale === 'en') && /[^\p{ASCII}]/u.test(word)) return true;
+  return spellers.some(({ hunspell }) => {
+    if (hunspell.spell(word)) return true;
+    // Compound terms ("well-being") are fine when every part is a word.
+    return word.includes('-') && word.split('-').every((part) => part === '' || hunspell.spell(part));
+  });
 }
 
 /**
- * Words we deliberately never flag: too short, all-caps acronyms, camelCase
- * product names, and non-ASCII text. Exported for tests.
+ * Words we deliberately never flag: too short, all-caps acronyms and
+ * camelCase product names. Exported for tests.
  */
 export function shouldCheck(word: string): boolean {
   const core = normalize(word);
   if (core.length < MIN_LENGTH) return false;
   if (core === core.toUpperCase()) return false;
-  if (/[^\p{ASCII}]/u.test(core)) return false;
   // An inner capital (iPhone, eBook) marks a name the dictionary won't know.
-  return !/[A-Z]/.test(core.slice(1));
+  return !/\p{Lu}/u.test(core.slice(1));
 }
 
 /** Give a suggestion the capitalisation of the word it replaces. */

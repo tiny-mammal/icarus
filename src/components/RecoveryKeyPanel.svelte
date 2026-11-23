@@ -1,5 +1,6 @@
 <script lang="ts">
   import { downloadText } from '../lib/download';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   /**
    * Shows a freshly generated recovery key once, with copy/download helpers,
@@ -36,12 +37,12 @@
 
   function download() {
     const text = [
-      'Icarus Diary recovery key',
+      t.privacy.recoveryKeyFileTitle,
       '',
       recoveryKey,
       '',
-      'Keep this somewhere safe and separate from your diary.',
-      'Anyone with this key can open your diary.',
+      t.privacy.recoveryKeyFileKeepSafe,
+      t.privacy.recoveryKeyFileWarning,
       '',
     ].join('\n');
     downloadText(text, 'icarus-recovery-key.txt', 'text/plain');
@@ -52,7 +53,7 @@
   <div class="rounded-lg border border-faint bg-ink px-4 py-3">
     <p
       class="grid select-text grid-cols-4 gap-x-3 gap-y-1.5 text-center font-mono text-[0.95rem] tracking-widest text-text"
-      aria-label="Recovery key {recoveryKey}"
+      aria-label={fmt(t.privacy.recoveryKeyLabel, { key: recoveryKey })}
       data-testid="recovery-key"
       data-key={recoveryKey}
     >
@@ -65,19 +66,19 @@
       class="rounded-lg border border-slate px-3 py-2 text-sm text-text transition-colors hover:bg-slate"
       onclick={copy}
     >
-      {copied ? 'Copied' : 'Copy'}
+      {copied ? t.privacy.copied : t.privacy.copy}
     </button>
     <button
       type="button"
       class="rounded-lg border border-slate px-3 py-2 text-sm text-text transition-colors hover:bg-slate"
       onclick={download}
     >
-      Download .txt
+      {t.privacy.downloadTxt}
     </button>
   </div>
   <div>
     <label for={inputId} class="mb-1.5 block text-xs font-medium text-muted">
-      To confirm you saved it, type its last four characters
+      {t.privacy.recoveryKeyConfirm}
     </label>
     <input
       id={inputId}

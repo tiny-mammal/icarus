@@ -16,6 +16,7 @@
   import { previewText } from '../lib/text';
   import type { DiaryEntry } from '../lib/types';
   import { viewport } from '../lib/viewport.svelte';
+  import { fmt, t } from '../lib/i18n/index.svelte';
   import ScrollTopButton from './ScrollTopButton.svelte';
 
   /**
@@ -104,11 +105,11 @@
   }
 
   function entryTitle(e: DiaryEntry): string {
-    return e.title.trim() || 'Untitled';
+    return e.title.trim() || t.common.untitled;
   }
 </script>
 
-<section class="relative h-full" aria-label="Entries">
+<section class="relative h-full" aria-label={t.nav.feed}>
   <div
     bind:this={scroller}
     class="h-full overflow-y-auto overscroll-contain"
@@ -116,8 +117,8 @@
   >
     {#if rows.length === 0}
       <div class="flex h-full flex-col items-center justify-center gap-1 px-8 text-center">
-        <p class="text-sm font-medium text-text">No entries yet</p>
-        <p class="text-sm text-muted">Tap + to write today's, or pick a day from the calendar.</p>
+        <p class="text-sm font-medium text-text">{t.nav.noEntriesYet}</p>
+        <p class="text-sm text-muted">{t.nav.noEntriesYetHint}</p>
       </div>
     {:else}
       <ol class="relative" style="height: {total}px">
@@ -154,7 +155,10 @@
                 </div>
                 <button
                   class="block h-full min-w-0 flex-1 rounded-xl px-3 py-2.5 text-left transition-colors active:bg-slate"
-                  aria-label="{longDayLabel(day, app.dateFormat)}: {entryTitle(row.entry)}"
+                  aria-label={fmt(t.nav.feedEntry, {
+                    day: longDayLabel(day, app.dateFormat),
+                    title: entryTitle(row.entry),
+                  })}
                   onclick={() => app.jumpToEntry(row.entry)}
                 >
                   <span class="block truncate text-sm font-medium leading-5 text-text">{entryTitle(row.entry)}</span>
@@ -181,7 +185,7 @@
     <button
       class="group pointer-events-auto ml-2 flex h-full items-end px-2 pb-1 text-sm font-semibold tracking-tight text-text"
       aria-haspopup="dialog"
-      aria-label="{pinnedLabel}, open calendar"
+      aria-label={fmt(t.nav.openCalendar, { month: pinnedLabel })}
       onclick={() => app.openCalendar(pinnedMonth)}
     >
       <!-- The chip resizes to the new label while the old one rolls out. -->

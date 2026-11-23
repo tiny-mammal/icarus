@@ -1,3 +1,8 @@
+import { dateTimeFormat } from './i18n/format';
+import { formatLocale } from './i18n/current';
+
+const dateFormat = (options: Intl.DateTimeFormatOptions) => dateTimeFormat(formatLocale(), options);
+
 /**
  * Date helpers. Diary entries are day-granular, so we key everything by a
  * local `YYYY-MM-DD` string and deliberately avoid UTC conversions (which would
@@ -67,31 +72,28 @@ export function calendarKeyTarget(day: Date, key: string, weekStart: WeekStart):
   }
 }
 
-// All visible month/day names come from `Intl` so they follow the system locale
-// instead of being hardcoded in English. Formatters are created once and reused.
-const fmtMonthYear = new Intl.DateTimeFormat(undefined, {
-  month: 'long',
-  year: 'numeric',
-});
-const fmtMonthShort = new Intl.DateTimeFormat(undefined, { month: 'short' });
-const fmtMonthYearShort = new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' });
-const fmtWeekdayShort = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+// All visible month/day names come from `Intl` in the app language (see
+// `dateFormat`, which caches each formatter), never hardcoded in English.
+const fmtMonthYear = () => dateFormat({ month: 'long', year: 'numeric' });
+const fmtMonthShort = () => dateFormat({ month: 'short' });
+const fmtMonthYearShort = () => dateFormat({ month: 'short', year: 'numeric' });
+const fmtWeekdayShort = () => dateFormat({ weekday: 'short' });
 
 // 1 Jan 2023 was a Sunday — a convenient anchor for naming weekdays by index.
 const WEEKDAY_ANCHOR = new Date(2023, 0, 1);
 
 /** Localised "<Month> <year>" label, e.g. "June 2026" / "junio de 2026". */
 export function monthLabel(d: Date): string {
-  return fmtMonthYear.format(d);
+  return fmtMonthYear().format(d);
 }
 
 /** Short localised "<Mon> <year>" label, e.g. "Jun 2026". */
 export function monthYearLabel(d: Date): string {
-  return fmtMonthYearShort.format(d);
+  return fmtMonthYearShort().format(d);
 }
 
 /**
- * How day labels are written. `auto` follows the system locale; the others
+ * How day labels are written. `auto` follows the app language; the others
  * force a field order while keeping month and weekday names localised.
  */
 export type DateFormat = 'auto' | 'dmy' | 'mdy' | 'iso';
@@ -112,15 +114,8 @@ const DAY_LABEL_OPTIONS: Record<DayLabelStyle, Intl.DateTimeFormatOptions> = {
 };
 
 // Building a formatter is far costlier than using one (lists of hundreds of
-// days notice it on slow phones), so each is built once and reused.
-const dayFormatters = new Map<string, Intl.DateTimeFormat>();
-
-function dayFormatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
-  const key = JSON.stringify(options);
-  let formatter = dayFormatters.get(key);
-  if (!formatter) dayFormatters.set(key, (formatter = new Intl.DateTimeFormat(undefined, options)));
-  return formatter;
-}
+// days notice it on slow phones), so `dateFormat` builds each once.
+const dayFormatter = dateFormat;
 
 /** Format a day in the requested style and user-chosen field order. */
 function formatDay(d: Date, style: DayLabelStyle, format: DateFormat, withYear = true): string {
@@ -179,13 +174,13 @@ export function rangeLabel(start: Date, end: Date, format: DateFormat = 'auto'):
 
 /** Localised short weekday name for a specific day, e.g. "Mon". */
 export function weekdayShortLabel(d: Date): string {
-  return fmtWeekdayShort.format(d);
+  return fmtWeekdayShort().format(d);
 }
 
 /** Localised short month names (Jan…Dec), for the header month/year picker. */
 export function monthShortLabels(): string[] {
   return Array.from({ length: 12 }, (_, m) =>
-    fmtMonthShort.format(new Date(2023, m, 1)),
+    fmtMonthShort().format(new Date(2023, m, 1)),
   );
 }
 
@@ -195,7 +190,7 @@ export function monthShortLabels(): string[] {
  */
 export function weekdayLabels(weekStart: WeekStart = 1): string[] {
   return Array.from({ length: 7 }, (_, i) =>
-    fmtWeekdayShort.format(
+    fmtWeekdayShort().format(
       new Date(2023, 0, WEEKDAY_ANCHOR.getDate() + ((weekStart + i) % 7)),
     ),
   );
@@ -241,10 +236,13 @@ export function adjacentKey(
   return sortedKeys[i] ?? null;
 }
 
-const relativeTime = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+const relativeTimes = new Map<string, Intl.RelativeTimeFormat>();
 
 /** How long ago `date` was, in words: "today", "yesterday", "3 weeks ago". */
 export function timeAgo(date: Date, now: Date = new Date()): string {
+  const locale = formatLocale();
+  let relativeTime = relativeTimes.get(locale);
+  if (!relativeTime) relativeTimes.set(locale, (relativeTime = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })));
   const days = daysBetween(date, now);
   if (days < 7) return relativeTime.format(-Math.max(0, days), 'day');
   if (days < 30) return relativeTime.format(-Math.floor(days / 7), 'week');

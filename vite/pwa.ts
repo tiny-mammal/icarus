@@ -42,7 +42,9 @@ const PUBLIC_FILES = ['favicon.svg'];
  * The service worker. Pages come from the network first, so an update shows up
  * on the next visit, with the cached copy as the fallback when the network
  * fails or the server answers with an error. Everything else is a hashed build
- * file and comes from the cache first. It never touches other origins (the app
+ * file and comes from the cache first. Files left out of the install (the
+ * spell-check dictionaries of languages not in use, megabytes each) are
+ * cached the first time they load. It never touches other origins (the app
  * makes no such requests anyway).
  *
  * A new version waits until every tab of the old one has closed before it
@@ -80,7 +82,19 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-  event.respondWith(caches.match(request).then((hit) => hit || fetch(request)));
+  event.respondWith(
+    caches.match(request).then(
+      (hit) =>
+        hit ||
+        fetch(request).then((response) => {
+          if (response.ok && response.type === 'basic') {
+            const copy = response.clone();
+            event.waitUntil(caches.open(CACHE).then((cache) => cache.put(request, copy)));
+          }
+          return response;
+        }),
+    ),
+  );
 });
 `;
 }
@@ -117,7 +131,12 @@ export function pwa(): Plugin[] {
         order: 'post',
         handler(_options, bundle) {
           this.emitFile({ type: 'asset', fileName: 'manifest.webmanifest', source: manifest });
-          const built = Object.keys(bundle).filter((file) => !file.endsWith('.map'));
+          // Dictionaries load on demand, one language at a time.
+          const onDemand = (file: string) => {
+            const chunk = bundle[file];
+            return chunk.type === 'chunk' && !!chunk.facadeModuleId?.includes('/assets/spellcheck/');
+          };
+          const built = Object.keys(bundle).filter((file) => !file.endsWith('.map') && !onDemand(file));
           const files = [
             './',
             'manifest.webmanifest',

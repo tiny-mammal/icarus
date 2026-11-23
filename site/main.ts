@@ -6,6 +6,7 @@
  */
 import { PLATFORM_NAMES, detectPlatform, isAppleMobile } from '../src/lib/user-agent';
 import { startPromoTracking } from './promo';
+import { fmt, strings } from './strings';
 
 startPromoTracking();
 
@@ -13,9 +14,9 @@ const platform = detectPlatform();
 
 if (platform) {
   for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-download]')) {
-    link.href = `/download#${platform}`;
+    link.href = `${link.pathname}#${platform}`;
     const label = link.querySelector('[data-download-label]');
-    if (label) label.textContent = `Download for ${PLATFORM_NAMES[platform]}`;
+    if (label) label.textContent = fmt(strings.downloadFor, { platform: PLATFORM_NAMES[platform] });
   }
 }
 
@@ -28,5 +29,18 @@ if (isAppleMobile()) {
     download.before(webApp);
   }
   const note = document.querySelector('[data-platform-note]');
-  if (note) note.textContent = 'On iPhone and iPad, open the web app and add it to your Home Screen to use it like any other app.';
+  if (note) note.textContent = strings.iosNote;
+}
+
+// The language menu is a <details>: close it on a click elsewhere or Escape.
+const languageMenu = document.querySelector<HTMLDetailsElement>('[data-lang-menu]');
+if (languageMenu) {
+  document.addEventListener('click', (event) => {
+    if (languageMenu.open && !languageMenu.contains(event.target as Node)) languageMenu.open = false;
+  });
+  languageMenu.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !languageMenu.open) return;
+    languageMenu.open = false;
+    languageMenu.querySelector('summary')?.focus();
+  });
 }

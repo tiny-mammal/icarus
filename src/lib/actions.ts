@@ -168,15 +168,15 @@ export function trapFocus(
 
 /**
  * Toggle native spell-checking on an editable element — or on a container whose
- * editable descendants inherit it. The dictionary language is pinned to
- * English; the platform webview supplies the dictionaries locally.
+ * editable descendants inherit it — in the given language. The platform
+ * webview supplies the dictionaries locally.
  */
-export function spellCheck(node: HTMLElement, enabled: boolean) {
-  function apply(on: boolean) {
-    node.spellcheck = on;
-    node.lang = 'en';
+export function spellCheck(node: HTMLElement, options: { enabled: boolean; lang: string }) {
+  function apply({ enabled, lang }: { enabled: boolean; lang: string }) {
+    node.spellcheck = enabled;
+    node.lang = lang;
   }
-  apply(enabled);
+  apply(options);
 
   return {
     update: apply,

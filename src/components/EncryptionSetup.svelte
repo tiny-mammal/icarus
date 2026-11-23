@@ -5,6 +5,7 @@
   import NewPasswordFields from './NewPasswordFields.svelte';
   import RecoveryKeyPanel from './RecoveryKeyPanel.svelte';
   import { app } from '../lib/store.svelte';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   /**
    * Password protection setup, in three contexts:
@@ -28,13 +29,22 @@
   let recoverySaved = $state(false);
   let working = $state(false);
 
-  const titles: Record<Step, string> = {
-    choice: source === 'import' ? 'Protect the imported diary?' : 'Protect your new diary?',
-    password: onboarding ? 'Choose a password' : 'Protect with a password',
-    recovery: 'Save your recovery key',
-    done: 'Your diary is encrypted',
-  };
-  const plainAction = source === 'import' ? 'Import without password' : 'Create without password';
+  const device = app.storageKind === 'device';
+
+  const titles: Record<Step, string> = $derived({
+    choice: source === 'import' ? t.privacy.protectImportedTitle : t.privacy.protectNewTitle,
+    password: onboarding ? t.privacy.chooseAPassword : t.privacy.protectWithPassword,
+    recovery: t.privacy.saveRecoveryKey,
+    done: t.privacy.diaryEncrypted,
+  });
+  const plainAction = $derived(source === 'import' ? t.privacy.importWithoutPassword : t.privacy.createWithoutPassword);
+  const encryptAction = $derived(
+    source === 'new'
+      ? t.privacy.createEncryptedDiary
+      : source === 'import'
+        ? t.privacy.importEncrypted
+        : t.privacy.encryptDiary,
+  );
 
   function close() {
     if (step === 'done') {
@@ -111,17 +121,21 @@
 
 <Modal
   title={titles[step]}
-  subtitle={step === 'password' ? 'Step 1 of 2' : step === 'recovery' ? 'Step 2 of 2' : undefined}
+  subtitle={step === 'password'
+    ? fmt(t.privacy.stepOf, { step: 1, total: 2 })
+    : step === 'recovery'
+      ? fmt(t.privacy.stepOf, { step: 2, total: 2 })
+      : undefined}
   onclose={close}
   locked={working}
   width={step === 'choice' ? 'sm:max-w-md' : 'sm:max-w-sm'}
 >
   {#if step === 'choice'}
     <p class="mb-4 text-sm leading-relaxed text-muted">
-      Choose how the diary is stored {app.appPlaceIn}. You can change this later in Settings.
+      {device ? t.privacy.choiceIntroDevice : t.privacy.choiceIntroBrowser}
     </p>
 
-    <div class="space-y-2" role="radiogroup" aria-label="Diary protection">
+    <div class="space-y-2" role="radiogroup" aria-label={t.privacy.protectionLabel}>
       <label
         class="block cursor-pointer rounded-xl border px-4 py-3.5 transition-colors
           has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-muted
@@ -142,18 +156,16 @@
           </span>
           <span class="min-w-0 flex-1">
             <span class="flex flex-wrap items-center gap-2">
-              <span class="text-sm font-medium text-text">Encrypt with a password</span>
+              <span class="text-sm font-medium text-text">{t.privacy.encryptOption}</span>
               {#if app.encryptionSupported}
-                <span class="rounded-full border border-emerald-400/30 px-2 py-px text-[0.68rem] font-medium text-emerald-300">Recommended</span>
+                <span class="rounded-full border border-emerald-400/30 px-2 py-px text-[0.68rem] font-medium text-emerald-300">{t.privacy.recommended}</span>
               {/if}
             </span>
             <span class="mt-1 block text-[0.8rem] leading-relaxed text-muted">
               {#if app.encryptionSupported}
-                Entries, drafts and your dictionary can't be read without the password. The diary
-                locks itself when you step away.
+                {t.privacy.encryptOptionHint}
               {:else}
-                Needs a secure connection. Open Icarus over HTTPS (or on localhost), or use the
-                desktop app.
+                {t.privacy.needsSecureConnection}
               {/if}
             </span>
           </span>
@@ -161,7 +173,7 @@
         </span>
         {#if choice === 'encrypt' && app.encryptionSupported}
           <span class="ml-11 mt-2.5 block" transition:slide={{ duration: 160 }}>
-            {@render caution('No password reset. Lose the password and recovery key, lose the diary.')}
+            {@render caution(t.privacy.noPasswordReset)}
           </span>
         {/if}
       </label>
@@ -177,10 +189,9 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>
           </span>
           <span class="min-w-0 flex-1">
-            <span class="block text-sm font-medium text-text">Don't encrypt</span>
+            <span class="block text-sm font-medium text-text">{t.privacy.plainOption}</span>
             <span class="mt-1 block text-[0.8rem] leading-relaxed text-muted">
-              Opens without a password.
-              Anyone with access to {app.appPlace} can read it.
+              {device ? t.privacy.plainOptionHintDevice : t.privacy.plainOptionHintBrowser}
             </span>
           </span>
           {@render radioDot(choice === 'plain')}
@@ -189,12 +200,12 @@
     </div>
 
     <div class="mt-5 flex items-center justify-end gap-2">
-      <button class={secondary} onclick={close} disabled={working}>Cancel</button>
+      <button class={secondary} onclick={close} disabled={working}>{t.common.cancel}</button>
       <button class={primary} onclick={confirmChoice} disabled={working}>
         {#if choice === 'encrypt'}
-          Continue
+          {t.common.continue}
         {:else}
-          {#if working}<BusyLabel>Saving</BusyLabel>{:else}{plainAction}{/if}
+          {#if working}<BusyLabel>{t.privacy.saving}</BusyLabel>{:else}{plainAction}{/if}
         {/if}
       </button>
     </div>
@@ -202,13 +213,13 @@
     <form onsubmit={choosePassword}>
       {#if !onboarding}
         <p class="mb-4 text-sm leading-relaxed text-muted">
-          Encrypts your entries, drafts and dictionary.
+          {t.privacy.protectWithPasswordIntro}
         </p>
       {/if}
-      <NewPasswordFields bind:password bind:valid={passwordValid} label="Password" autofocus />
+      <NewPasswordFields bind:password bind:valid={passwordValid} label={t.privacy.password} autofocus />
       {#if !onboarding}
         <div class="mt-4">
-          {@render caution('No password reset. Lose the password and recovery key, lose the diary.')}
+          {@render caution(t.privacy.noPasswordReset)}
         </div>
       {/if}
       <div class="mt-5 flex justify-end gap-2">
@@ -218,49 +229,44 @@
           onclick={() => (onboarding ? (step = 'choice') : close())}
           disabled={working}
         >
-          {onboarding ? 'Back' : 'Cancel'}
+          {onboarding ? t.common.back : t.common.cancel}
         </button>
         <button type="submit" class={primary} disabled={!passwordValid || working}>
-          {#if working}<BusyLabel>Preparing</BusyLabel>{:else}Continue{/if}
+          {#if working}<BusyLabel>{t.privacy.preparing}</BusyLabel>{:else}{t.common.continue}{/if}
         </button>
       </div>
     </form>
   {:else if step === 'recovery'}
     <p class="mb-4 text-sm leading-relaxed text-muted">
-      The only way in if you forget the password. Keep it apart from the diary, for example in a
-      password manager. It won't be shown again.
+      {t.privacy.recoveryKeyIntro}
     </p>
     <RecoveryKeyPanel {recoveryKey} bind:confirmed={recoverySaved} />
     <div class="mt-5 flex justify-end gap-2">
-      <button class={secondary} onclick={close} disabled={working}>Cancel</button>
+      <button class={secondary} onclick={close} disabled={working}>{t.common.cancel}</button>
       <button class={primary} onclick={encrypt} disabled={!recoverySaved || working}>
         {#if working}
-          <BusyLabel>Encrypting</BusyLabel>
+          <BusyLabel>{t.privacy.encrypting}</BusyLabel>
         {:else}
-          {source === 'new' ? 'Create encrypted diary' : source === 'import' ? 'Import encrypted' : 'Encrypt diary'}
+          {encryptAction}
         {/if}
       </button>
     </div>
   {:else}
     <div class="space-y-3 text-sm leading-relaxed text-muted">
       <p>
-        {#if source === 'settings'}
-          Drafts and your dictionary are encrypted too.
-        {:else}
-          Entries, drafts and your dictionary are stored encrypted.
-        {/if}
+        {source === 'settings' ? t.privacy.doneFromSettings : t.privacy.doneNewOrImported}
         {app.autoLockMinutes
-          ? `It locks after ${app.autoLockMinutes} minutes of inactivity.`
-          : 'Automatic locking is off.'}
+          ? fmt(t.privacy.autoLockAfter, { count: app.autoLockMinutes })
+          : t.privacy.autoLockOff}
       </p>
       {#if source === 'import'}
-        {@render caution('The .ics you imported is unchanged and still readable. Delete it if you no longer need it.')}
+        {@render caution(t.privacy.importedFileUnchanged)}
       {:else if source === 'settings'}
-        {@render caution('Backups you exported earlier are still readable.')}
+        {@render caution(t.privacy.earlierBackupsReadable)}
       {/if}
     </div>
     <div class="mt-5 flex justify-end">
-      <button class={primary} onclick={close}>{onboarding ? 'Open diary' : 'Done'}</button>
+      <button class={primary} onclick={close}>{onboarding ? t.privacy.openDiary : t.common.done}</button>
     </div>
   {/if}
 </Modal>

@@ -2,6 +2,7 @@
   import { fade } from 'svelte/transition';
   import { tooltip } from '../lib/tooltip';
   import { app } from '../lib/store.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   /**
    * A small "back to top" button for a long scroller. It floats at the bottom
@@ -32,8 +33,8 @@
   <button
     class="absolute left-1/2 z-float grid h-11 w-11 [transform:translateX(-50%)] place-items-center rounded-full border border-slate bg-surface text-text shadow-xl shadow-black/50 transition-colors hover:bg-slate-soft active:bg-slate
       {app.parkedDraft ? 'bottom-[calc(5.5rem+env(safe-area-inset-bottom))]' : 'bottom-[calc(1.625rem+env(safe-area-inset-bottom))]'}"
-    aria-label="Back to top"
-    use:tooltip={'Back to top'}
+    aria-label={t.nav.backToTop}
+    use:tooltip={t.nav.backToTop}
     onclick={toTop}
     transition:fade={{ duration: 150 }}
   >

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 </script>
 
 <!--
@@ -10,7 +11,7 @@
   moving on the compositor even while the main thread is busy.
 -->
 {#if app.busy}
-  <div class="bar z-progress" role="progressbar" aria-label="Working" aria-busy="true">
+  <div class="bar z-progress" role="progressbar" aria-label={t.nav.working} aria-busy="true">
     <div class="runner"></div>
   </div>
 {/if}

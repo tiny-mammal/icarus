@@ -1,10 +1,11 @@
 <script lang="ts">
   import { tooltip } from '../lib/tooltip';
   import { app } from '../lib/store.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   // Wide screens only: let the day pane fill the window (or slide back to the
   // side). Phones always show the pane full screen, so it's hidden there.
-  const label = $derived(app.paneExpanded ? 'Exit full screen' : 'Full screen');
+  const label = $derived(app.paneExpanded ? t.nav.exitFullScreen : t.nav.fullScreen);
 </script>
 
 <button

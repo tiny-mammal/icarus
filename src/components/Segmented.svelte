@@ -18,7 +18,7 @@
   {#each options as option (option.value)}
     <button
       type="button"
-      class="rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors
+      class="rounded-md px-2.5 py-1 text-xs font-medium first-letter:uppercase transition-colors
         {option.value === value ? 'bg-slate text-text shadow-sm shadow-black/20' : 'text-muted hover:text-text'}"
       aria-pressed={option.value === value}
       onclick={() => onchange(option.value)}

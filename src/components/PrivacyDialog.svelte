@@ -5,6 +5,7 @@
   import PasswordField from './PasswordField.svelte';
   import RecoveryKeyPanel from './RecoveryKeyPanel.svelte';
   import { app, type SecretResult } from '../lib/store.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   /**
    * Password-gated management of an encrypted diary: change the password,
@@ -22,11 +23,11 @@
   let error = $state('');
   let working = $state(false);
 
-  const titles = {
-    password: 'Change password',
-    recovery: 'New recovery key',
-    disable: 'Remove encryption',
-  } as const;
+  const titles = $derived({
+    password: t.privacy.changePassword,
+    recovery: t.privacy.newRecoveryKey,
+    disable: t.privacy.removeEncryption,
+  });
 
   function close() {
     app.discardPendingKeys();
@@ -34,7 +35,7 @@
   }
 
   function report(result: SecretResult): boolean {
-    if (result === 'wrong-secret') error = 'That password is not correct.';
+    if (result === 'wrong-secret') error = t.privacy.passwordIncorrect;
     return result === 'ok';
   }
 
@@ -55,14 +56,14 @@
       if (kind === 'password') {
         if (!nextValid) return;
         if (report(await app.changePassword(current, next))) {
-          app.toast('success', 'Password changed.');
+          app.toast('success', t.privacy.passwordChanged);
           close();
         }
       } else if (kind === 'recovery') {
         if (recoveryKey) {
           if (!recoverySaved) return;
           if (await app.confirmRecoveryKey()) {
-            app.toast('success', 'Recovery key replaced. The old one no longer works.');
+            app.toast('success', t.privacy.recoveryKeyReplaced);
             close();
           }
           return;
@@ -71,7 +72,7 @@
         if (report(prepared.result)) recoveryKey = prepared.recoveryKey ?? '';
       } else if (kind === 'disable') {
         if (report(await app.disableEncryption(current))) {
-          app.toast('success', 'Encryption removed.');
+          app.toast('success', t.privacy.encryptionRemoved);
           close();
         }
       }
@@ -85,11 +86,13 @@
   });
 
   const submitLabel = $derived.by(() => {
-    if (kind === 'password') return working ? 'Changing' : 'Change password';
-    if (kind === 'recovery') return recoveryKey ? 'Replace recovery key' : working ? 'Generating' : 'Continue';
-    return working ? 'Decrypting' : 'Remove encryption';
+    if (kind === 'password') return working ? t.privacy.changing : t.privacy.changePassword;
+    if (kind === 'recovery') {
+      return recoveryKey ? t.privacy.replaceRecoveryKey : working ? t.privacy.generating : t.common.continue;
+    }
+    return working ? t.privacy.decrypting : t.privacy.removeEncryption;
   });
-  // 'Replace recovery key' is a resting label even while `working` is set.
+  // "Replace recovery key" is a resting label even while `working` is set.
   const submitBusy = $derived(working && !(kind === 'recovery' && recoveryKey));
 </script>
 
@@ -98,21 +101,22 @@
     <form class="space-y-4" onsubmit={submit}>
       {#if kind === 'recovery' && recoveryKey}
         <p class="text-sm leading-relaxed text-muted">
-          Save this new key somewhere safe. Once you confirm, the previous recovery key stops working.
+          {t.privacy.newRecoveryKeyIntro}
         </p>
         <RecoveryKeyPanel {recoveryKey} bind:confirmed={recoverySaved} />
       {:else}
         {#if kind === 'disable'}
           <p class="rounded-lg border border-amber-300/30 bg-amber-300/5 px-3 py-2.5 text-sm leading-relaxed text-amber-200/90">
-            The diary, drafts and dictionary will be stored unencrypted. Anyone with access to
-            {app.appPlace} will be able to read them.
+            {app.storageKind === 'device'
+              ? t.privacy.removeEncryptionWarningDevice
+              : t.privacy.removeEncryptionWarningBrowser}
           </p>
         {:else if kind === 'recovery'}
           <p class="text-sm leading-relaxed text-muted">
-            Generate a new recovery key if the current one may have been seen by someone else.
+            {t.privacy.generateRecoveryKeyHint}
           </p>
         {/if}
-        <PasswordField label="Current password" bind:value={current} autofocus invalid={!!error} />
+        <PasswordField label={t.privacy.currentPassword} bind:value={current} autofocus invalid={!!error} />
         {#if error}
           <p class="text-sm text-red-400" role="alert">{error}</p>
         {/if}
@@ -128,7 +132,7 @@
           onclick={close}
           disabled={working}
         >
-          Cancel
+          {t.common.cancel}
         </button>
         <button
           type="submit"

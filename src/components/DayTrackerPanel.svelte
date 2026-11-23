@@ -2,8 +2,9 @@
   import { tick } from 'svelte';
   import { app } from '../lib/store.svelte';
   import { activeHabits, dayRecord, nextMark } from '../lib/tracker';
-  import type { Habit } from '../lib/types';
+  import type { Habit, HabitMark } from '../lib/types';
   import { selectionHaptic } from '../lib/haptics';
+  import { fmt, t } from '../lib/i18n/index.svelte';
   import ScoreTrack from './ScoreTrack.svelte';
   import HabitMarkIcon from './HabitMarkIcon.svelte';
 
@@ -21,11 +22,14 @@
   // A score given before the scale changed is kept, but can't sit on these bars.
   const oldScale = $derived(score !== undefined && score.scale !== scale);
 
-  const MARK_NAMES = { done: 'done', missed: 'missed' } as const;
+  function markName(mark: HabitMark | undefined): string {
+    if (mark === 'done') return t.tracker.markDone;
+    if (mark === 'missed') return t.tracker.markMissed;
+    return t.tracker.markNone;
+  }
   function markLabel(habit: Habit): string {
     const mark = record.marks[habit.id];
-    const next = nextMark(mark);
-    return `${habit.name}: ${mark ? MARK_NAMES[mark] : 'not marked'}. Mark as ${next ? MARK_NAMES[next] : 'not marked'}`;
+    return fmt(t.tracker.markLabel, { habit: habit.name, state: markName(mark), next: markName(nextMark(mark)) });
   }
 
   function markHabit(habit: Habit) {
@@ -33,7 +37,7 @@
     if (app.trackerHaptics) void selectionHaptic();
   }
 
-  const days = (n: number) => `${n.toLocaleString()} ${n === 1 ? 'day' : 'days'}`;
+  const days = (count: number) => fmt(t.common.days, { count });
 
   // --- setting a streak by hand -------------------------------------------
   let editingStreak = $state<string | null>(null);
@@ -98,14 +102,16 @@
 
 <section aria-labelledby="tracker-score">
   <div class="flex items-baseline justify-between gap-3">
-    <h3 id="tracker-score" class="text-xs font-medium text-muted">Score</h3>
+    <h3 id="tracker-score" class="text-xs font-medium text-muted">{t.tracker.score}</h3>
     <p class="text-xs tabular-nums text-muted">
       {#if score && !oldScale}
-        <span class="font-medium text-text">{score.value}</span> of {scale}
+        <span class="font-medium text-text">
+          {fmt(t.tracker.scoreOf, { value: score.value, scale })}
+        </span>
       {:else if score}
-        {score.value} of {score.scale} on the old scale
+        {fmt(t.tracker.scoreOldScale, { value: score.value, scale: score.scale })}
       {:else}
-        Not scored
+        {t.tracker.notScored}
       {/if}
     </p>
   </div>
@@ -121,10 +127,10 @@
 
 <section class="mt-5" aria-labelledby="tracker-habits">
   <div class="flex items-baseline justify-between gap-3">
-    <h3 id="tracker-habits" class="text-xs font-medium text-muted">Habits</h3>
+    <h3 id="tracker-habits" class="text-xs font-medium text-muted">{t.tracker.habits}</h3>
     {#if habits.length}
       <button type="button" class="text-xs text-muted transition-colors hover:text-text" onclick={onmanage}>
-        Edit habits
+        {t.tracker.editHabits}
       </button>
     {/if}
   </div>
@@ -151,7 +157,7 @@
               class="mr-1 w-16 rounded-md border border-faint bg-ink px-2 py-1 text-right text-xs tabular-nums text-text focus:border-muted focus:outline-none"
               inputmode="numeric"
               pattern="[0-9]*"
-              aria-label="Streak for {habit.name} on this day"
+              aria-label={fmt(t.tracker.streakInputLabel, { habit: habit.name })}
               onkeydown={onStreakKey}
               onblur={(e) => commitStreak(e.relatedTarget === null)}
             />
@@ -160,8 +166,11 @@
               type="button"
               class="shrink-0 rounded-md px-2 py-1.5 text-xs tabular-nums transition-colors hover:bg-slate hover:text-text
                 {mark === 'done' ? 'text-text' : 'text-muted'}"
-              aria-label="Streak for {habit.name}: {days(app.streakOn(habit.id, dayKey))}{setByHand ? ', set by hand' : ''}. Change it"
-              title={setByHand ? 'Set by hand on this day' : 'Set the streak by hand'}
+              aria-label={fmt(setByHand ? t.tracker.streakLabelByHand : t.tracker.streakLabel, {
+                habit: habit.name,
+                days: days(app.streakOn(habit.id, dayKey)),
+              })}
+              title={setByHand ? t.tracker.streakTitleByHand : t.tracker.streakTitleCounted}
               data-streak={habit.id}
               onclick={() => editStreak(habit)}
             >
@@ -175,19 +184,19 @@
     </ul>
     {#if editingStreak}
       <p class="mt-1 text-[0.7rem] leading-snug text-muted">
-        The days after count on from this number. Leave it empty to count from the marks again.
+        {t.tracker.streakHint}
       </p>
     {/if}
   {:else}
-    <p class="mt-1.5 text-sm leading-snug text-muted">Track something every day and see how long you keep it up.</p>
+    <p class="mt-1.5 text-sm leading-snug text-muted">{t.tracker.habitsEmpty}</p>
   {/if}
 
   <form class="mt-2 flex items-center gap-2" onsubmit={add}>
     <input
       bind:value={newHabit}
       class="min-w-0 flex-1 rounded-lg border border-slate bg-ink/60 px-3 py-1.5 text-sm text-text placeholder:text-muted focus:border-faint focus:outline-none"
-      placeholder="Add a habit"
-      aria-label="New habit"
+      placeholder={t.tracker.addHabitPlaceholder}
+      aria-label={t.tracker.newHabit}
       maxlength="60"
     />
     {#if newHabit.trim()}
@@ -195,7 +204,7 @@
         type="submit"
         class="shrink-0 rounded-lg bg-text px-3 py-1.5 text-xs font-semibold text-ink transition-transform active:[transform:scale(0.97)]"
       >
-        Add
+        {t.common.add}
       </button>
     {/if}
   </form>

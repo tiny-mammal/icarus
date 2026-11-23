@@ -98,9 +98,16 @@ export class WrongSecretError extends Error {
   }
 }
 
-/** The encrypted data is malformed or failed authentication. */
+/**
+ * The encrypted data is malformed or failed authentication. The message is for
+ * logs; the UI words it from `newerVersion`.
+ */
 export class CorruptVaultError extends Error {
-  constructor(message = 'The encrypted diary is damaged or was modified') {
+  constructor(
+    message = 'The encrypted diary is damaged or was modified',
+    /** The file is well-formed but written by a later version of Icarus. */
+    readonly newerVersion = false,
+  ) {
     super(message);
     this.name = 'CorruptVaultError';
   }
@@ -317,7 +324,7 @@ export function parseEncryptedVault(text: string): EncryptedVaultFile {
   }
   if (value?.format !== VAULT_FORMAT) throw new CorruptVaultError();
   if (value.version !== VERSION) {
-    throw new CorruptVaultError('This diary was encrypted by a newer version of Icarus');
+    throw new CorruptVaultError('This diary was encrypted by a newer version of Icarus', true);
   }
   if (!isKeyring(value.keyring) || !isSealed(value.payload)) throw new CorruptVaultError();
   return value as EncryptedVaultFile;

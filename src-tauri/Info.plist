@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Merged into the macOS bundle's Info.plist by Tauri. Listing the app's
+  languages makes WKWebView report the user's language in
+  navigator.languages (otherwise it says English), which is how the app picks
+  its language on first launch (src/lib/i18n). Keep in sync with LOCALES in
+  src/lib/i18n/locales.ts.
+-->
+<plist version="1.0">
+  <dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+      <string>en</string>
+      <string>es</string>
+      <string>it</string>
+      <string>fr</string>
+      <string>de</string>
+    </array>
+  </dict>
+</plist>

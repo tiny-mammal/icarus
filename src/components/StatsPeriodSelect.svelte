@@ -1,8 +1,9 @@
 <script lang="ts">
   import { app } from '../lib/store.svelte';
   import { dateKey } from '../lib/date';
+  import { t } from '../lib/i18n/index.svelte';
   import {
-    STATS_PRESETS,
+    statsPresets,
     isCustomRange,
     periodLabel,
     diaryDates,
@@ -23,10 +24,10 @@
   const current = $derived(isCustomRange(period) ? CUSTOM : period);
   const label = $derived(periodLabel(period, app.dateFormat));
   const options = $derived([
-    ...STATS_PRESETS,
+    ...statsPresets(),
     {
       value: CUSTOM,
-      label: 'Custom range…',
+      label: t.stats.periods.custom,
       hint: current === CUSTOM ? label : undefined,
       separated: true,
     } as const,
@@ -37,10 +38,10 @@
   value={current}
   {options}
   onchange={(value) => (period = value as StatsPreset)}
-  label="Statistics period"
+  label={t.stats.periodLabel}
   display={label}
   panelValue={CUSTOM}
-  panelLabel="Custom range"
+  panelLabel={t.stats.periods.customPanel}
   triggerClass="max-w-[11.5rem] sm:max-w-none"
   listClass="w-48"
   panelClass="w-[min(19.5rem,calc(100vw-4.5rem))] p-3"

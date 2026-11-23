@@ -14,6 +14,7 @@
     weekdayLabels,
   } from '../lib/date';
   import MonthYearGrid from './MonthYearGrid.svelte';
+  import { i18n, t } from '../lib/i18n/index.svelte';
 
   /**
    * A compact month for picking days, shared by the entry date picker (one
@@ -43,6 +44,7 @@
   } = $props();
 
   const today = new Date();
+  const listFormat = $derived(new Intl.ListFormat(i18n.formatLocale, { type: 'unit', style: 'long' }));
   const todayKey = dateKey(today);
   const weekdays = $derived(weekdayLabels(app.weekStart));
   const grid = $derived(monthGrid(month, app.weekStart));
@@ -105,11 +107,11 @@
 
   function dayLabel(day: Date, r: ReturnType<typeof role>, written: boolean): string {
     const parts = [longDayLabel(day, app.dateFormat)];
-    if (written) parts.push('has entries');
-    if (r === 'start') parts.push('range start');
-    else if (r === 'end') parts.push('range end');
-    else if (r === 'single') parts.push('selected');
-    return parts.join(', ');
+    if (written) parts.push(t.nav.dayHasEntries);
+    if (r === 'start') parts.push(t.nav.dayRangeStart);
+    else if (r === 'end') parts.push(t.nav.dayRangeEnd);
+    else if (r === 'single') parts.push(t.nav.daySelected);
+    return listFormat.format(parts);
   }
 </script>
 
@@ -118,8 +120,8 @@
     <button
       type="button"
       class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:invisible"
-      aria-label="Previous month"
-      use:tooltip={'Previous month'}
+      aria-label={t.nav.previousMonth}
+      use:tooltip={t.nav.previousMonth}
       disabled={choosingMonth}
       onclick={() => (month = addMonths(month, -1))}
     >
@@ -139,8 +141,8 @@
     <button
       type="button"
       class="grid h-8 w-8 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:invisible"
-      aria-label="Next month"
-      use:tooltip={'Next month'}
+      aria-label={t.nav.nextMonth}
+      use:tooltip={t.nav.nextMonth}
       disabled={choosingMonth}
       onclick={() => (month = addMonths(month, 1))}
     >

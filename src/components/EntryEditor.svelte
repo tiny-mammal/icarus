@@ -20,6 +20,7 @@
   import { loadRichEditor } from '../lib/editor-loader';
   import { indexAfterVisible } from '../lib/caret';
   import { formatLength } from '../lib/text-count';
+  import { i18n, t } from '../lib/i18n/index.svelte';
   import DraftsMenu from './DraftsMenu.svelte';
   import DatePicker from './DatePicker.svelte';
   import DayTracker from './DayTracker.svelte';
@@ -62,8 +63,8 @@
   // Entries written for another day shouldn't be invited as "today's" chapter.
   const bodyPlaceholder = $derived(
     app.draftDateKey === dateKey(new Date())
-      ? "Write today's chapter… Markdown is welcome."
-      : 'Write this day’s chapter… Markdown is welcome.',
+      ? t.editor.bodyPlaceholderToday
+      : t.editor.bodyPlaceholderOtherDay,
   );
 
   const countLabel = $derived(formatLength(app.draftContent, app.lengthCount));
@@ -137,7 +138,7 @@
   class="flex min-h-0 flex-1 flex-col"
   onkeydown={onKeydown}
   role="form"
-  aria-label={app.editingUid ? 'Edit entry' : 'New entry'}
+  aria-label={app.editingUid ? t.editor.editEntry : t.editor.newEntry}
 >
   <!-- Positioned: on phones the drafts list spans this bar. -->
   <header
@@ -154,16 +155,16 @@
       {/if}
       <!-- Only once there is history, so a fresh entry keeps a quiet header. -->
       {#if canUndo || canRedo}
-        {@render historyButton('Undo', ['⌘/Ctrl', 'Z'], canUndo, () => body?.undo(), 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11')}
-        {@render historyButton('Redo', ['⌘/Ctrl', '⇧', 'Z'], canRedo, () => body?.redo(), 'm15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13')}
+        {@render historyButton(t.common.undo, ['⌘/Ctrl', 'Z'], canUndo, () => body?.undo(), 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11')}
+        {@render historyButton(t.editor.redo, ['⌘/Ctrl', '⇧', 'Z'], canRedo, () => body?.redo(), 'm15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13')}
       {/if}
       <PaneSizeToggle />
       <!-- Minimize when leaving keeps work waiting in the strip; else just close. -->
       <button
         class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
-        aria-label={app.editorHasChanges ? 'Minimize' : 'Close'}
+        aria-label={app.editorHasChanges ? t.editor.minimize : t.common.close}
         use:tooltip={{
-          label: app.editorHasChanges ? 'Minimize — keep writing later from the strip' : 'Close',
+          label: app.editorHasChanges ? t.editor.minimizeHint : t.common.close,
           keys: ['Esc'],
         }}
         onclick={() => app.closeEditor()}
@@ -186,16 +187,16 @@
     <input
       bind:this={titleEl}
       class="w-full bg-transparent text-xl font-semibold tracking-tight text-text placeholder:text-muted focus:outline-none"
-      placeholder="Title"
+      placeholder={t.editor.titlePlaceholder}
       bind:value={app.draftTitle}
-      use:spellCheck={app.spellcheck}
+      use:spellCheck={{ enabled: app.spellcheck, lang: app.spellLocales[0] ?? i18n.locale }}
     />
     <input
       bind:this={locationEl}
       class="mt-1 w-full bg-transparent text-sm text-muted placeholder:text-muted/70 focus:outline-none"
-      placeholder="Add a location or subtitle"
+      placeholder={t.editor.locationPlaceholder}
       bind:value={app.draftLocation}
-      use:spellCheck={app.spellcheck}
+      use:spellCheck={{ enabled: app.spellcheck, lang: app.spellLocales[0] ?? i18n.locale }}
     />
 
     {#if RichEditor}
@@ -226,7 +227,7 @@
     -->
     <p class="group min-w-0 truncate text-xs text-muted tabular-nums" data-testid="entry-status">
       {#if app.draftSaved}
-        <span class="text-text/70">✓ <span class="max-[359px]:hidden">Draft saved</span><span class="min-[360px]:hidden">Saved</span></span>
+        <span class="text-text/70">✓ <span class="max-[359px]:hidden">{t.editor.draftSaved}</span><span class="min-[360px]:hidden">{t.editor.draftSavedShort}</span></span>
       {/if}{#if countLabel}<span
           class="transition-opacity group-hover:opacity-100 group-hover:duration-150 {typing
             ? 'opacity-0 duration-150'
@@ -238,11 +239,11 @@
 
     <button
       class="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-text px-4 py-2 max-[359px]:px-3 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
-      aria-label="Save entry"
+      aria-label={t.editor.saveEntry}
       onclick={commit}
       disabled={saving}
     >
-      <span><BusyLabel busy={saving}>{saving ? 'Saving' : 'Save'}</BusyLabel></span>
+      <span><BusyLabel busy={saving}>{saving ? t.editor.saving : t.editor.save}</BusyLabel></span>
       <span class="hidden items-center gap-1 text-ink/60 sm:flex">
         <kbd class="font-mono text-xs">⌘/Ctrl</kbd>
         <kbd class="font-mono text-xs">↵</kbd>

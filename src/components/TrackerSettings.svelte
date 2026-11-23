@@ -4,6 +4,7 @@
   import type { Habit, UnmarkedDays } from '../lib/types';
   import { tooltip } from '../lib/tooltip';
   import { supportsHaptics } from '../lib/haptics';
+  import { fmt, t } from '../lib/i18n/index.svelte';
   import Segmented from './Segmented.svelte';
   import Select from './Select.svelte';
   import Switch from './Switch.svelte';
@@ -16,18 +17,19 @@
    */
   const scaleOptions = SCORE_SCALES.map((value) => ({ value, label: `1–${value}` }));
   const hapticsSupported = supportsHaptics();
-  const unmarkedOptions: { value: UnmarkedDays; label: string }[] = [
-    { value: 'pause', label: 'Pause' },
-    { value: 'end', label: 'End' },
-  ];
+  const unmarkedOptions = $derived<{ value: UnmarkedDays; label: string }[]>([
+    { value: 'pause', label: t.settings.unmarkedPause },
+    { value: 'end', label: t.settings.unmarkedEnd },
+  ]);
   const unmarkedHint = $derived(
-    app.tracker.unmarkedDays === 'pause'
-      ? 'A day left unmarked keeps the streak as it was. Only a missed day ends it'
-      : 'A day left unmarked ends the streak. Today counts once it is over'
+    app.tracker.unmarkedDays === 'pause' ? t.settings.unmarkedPauseHint : t.settings.unmarkedEndHint,
   );
 
   const passMarkOptions = $derived(
-    Array.from({ length: app.tracker.scoreScale - 1 }, (_, i) => ({ value: i + 2, label: `${i + 2} or more` })),
+    Array.from({ length: app.tracker.scoreScale - 1 }, (_, i) => ({
+      value: i + 2,
+      label: fmt(t.settings.passMarkOption, { score: i + 2 }),
+    })),
   );
 
   const active = $derived(app.tracker.habits.filter((h) => !h.archived));
@@ -49,39 +51,39 @@
     'grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text';
 </script>
 
-<SettingsSection title="Score and habits">
-  <SettingsRow label="Score scale" hint="Scores already given keep their own scale">
+<SettingsSection title={t.settings.scoreAndHabits}>
+  <SettingsRow label={t.settings.scoreScale} hint={t.settings.scoreScaleHint}>
     <Segmented
       value={app.tracker.scoreScale}
       options={scaleOptions}
       onchange={(scale) => app.setScoreScale(scale)}
-      label="Score scale"
+      label={t.settings.scoreScale}
     />
   </SettingsRow>
   {#if hapticsSupported}
-    <SettingsRow label="Haptic feedback" hint="Vibrate when choosing scores or marking habits">
-      <Switch checked={app.trackerHaptics} label="Haptic feedback" onchange={(on) => app.setTrackerHaptics(on)} />
+    <SettingsRow label={t.settings.haptics} hint={t.settings.hapticsHint}>
+      <Switch checked={app.trackerHaptics} label={t.settings.haptics} onchange={(on) => app.setTrackerHaptics(on)} />
     </SettingsRow>
   {/if}
-  <SettingsRow label="Unmarked days" hint={unmarkedHint}>
+  <SettingsRow label={t.settings.unmarkedDays} hint={unmarkedHint}>
     <Segmented
       value={app.tracker.unmarkedDays}
       options={unmarkedOptions}
       onchange={(rule) => app.setUnmarkedDays(rule)}
-      label="Unmarked days"
+      label={t.settings.unmarkedDays}
     />
   </SettingsRow>
-  <SettingsRow label="Pass streak" hint="Days in a row that passed (▲) or failed (▼), beside the day's score">
-    <Switch checked={app.tracker.passStreak} label="Pass streak" onchange={(on) => app.setPassStreak(on)} />
+  <SettingsRow label={t.settings.passStreak} hint={t.settings.passStreakHint}>
+    <Switch checked={app.tracker.passStreak} label={t.settings.passStreak} onchange={(on) => app.setPassStreak(on)} />
   </SettingsRow>
   <!-- Only matters while the streak is shown. -->
   {#if app.tracker.passStreak}
-    <SettingsRow label="Pass mark" hint="The lowest score that passes. Days without a score follow the unmarked days rule">
+    <SettingsRow label={t.settings.passMark} hint={t.settings.passMarkHint}>
       <Select
         value={passMark(app.tracker)}
         options={passMarkOptions}
         onchange={(mark) => app.setPassMark(mark)}
-        label="Pass mark"
+        label={t.settings.passMark}
         listClass="min-w-28"
       />
     </SettingsRow>
@@ -92,7 +94,7 @@
       <input
         class="min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1.5 py-1.5 -ml-1.5 text-sm text-text hover:border-slate focus:border-faint focus:bg-ink/60 focus:outline-none"
         value={habit.name}
-        aria-label="Habit name"
+        aria-label={t.settings.habitName}
         maxlength="60"
         onchange={(e) => rename(habit, e.currentTarget)}
         onkeydown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
@@ -100,8 +102,8 @@
       <button
         type="button"
         class={iconButton}
-        aria-label="Archive {habit.name}"
-        use:tooltip={'Archive. Its history is kept'}
+        aria-label={fmt(t.settings.archiveHabit, { name: habit.name })}
+        use:tooltip={t.settings.archiveTooltip}
         onclick={() => app.setHabitArchived(habit.id, true)}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M10 12h4"/></svg>
@@ -113,8 +115,8 @@
     <input
       bind:value={newHabit}
       class="min-w-0 flex-1 rounded-md border border-slate bg-ink/60 px-2.5 py-1.5 text-sm text-text placeholder:text-muted focus:border-faint focus:outline-none"
-      placeholder={active.length ? 'Add another habit' : 'Add a habit to track every day'}
-      aria-label="New habit"
+      placeholder={active.length ? t.settings.addHabitAnother : t.settings.addHabitFirst}
+      aria-label={t.settings.newHabit}
       maxlength="60"
     />
     <button
@@ -122,20 +124,20 @@
       class="shrink-0 rounded-lg border border-slate px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text disabled:opacity-50"
       disabled={!newHabit.trim()}
     >
-      Add
+      {t.common.add}
     </button>
   </form>
 
   {#each archived as habit (habit.id)}
     <div class="flex items-center gap-2 py-1.5 pr-2 pl-3.5">
       <span class="min-w-0 flex-1 truncate text-sm text-muted">{habit.name}</span>
-      <span class="text-[0.7rem] text-muted">Archived</span>
+      <span class="text-[0.7rem] text-muted">{t.settings.archived}</span>
       <button
         type="button"
         class="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text"
         onclick={() => app.setHabitArchived(habit.id, false)}
       >
-        Restore
+        {t.common.restore}
       </button>
     </div>
   {/each}

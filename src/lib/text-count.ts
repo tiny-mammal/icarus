@@ -1,3 +1,5 @@
+import { fmt, t } from './i18n/index.svelte';
+
 /**
  * Length of an entry as the reader sees it: Markdown syntax (`**`, `# `, link
  * targets, list markers…) doesn't count, emoji and accented letters count once
@@ -75,16 +77,13 @@ export function parseLengthCount(value: unknown): LengthCount {
   return LENGTH_COUNTS.includes(value as LengthCount) ? (value as LengthCount) : 'both';
 }
 
-const plural = (n: number, one: string, many: string) =>
-  `${n.toLocaleString()} ${n === 1 ? one : many}`;
-
 /** Counts written out as the preference shows them, e.g. "12 words · 64 chars" ('' when off). */
 export function lengthLabel(count: { words: number; chars: number }, shown: LengthCount): string {
-  const words = plural(count.words, 'word', 'words');
-  const chars = plural(count.chars, 'char', 'chars');
+  const words = fmt(t.common.words, { count: count.words });
+  const chars = fmt(t.editor.chars, { count: count.chars });
   if (shown === 'words') return words;
   if (shown === 'chars') return chars;
-  if (shown === 'both') return `${words} · ${chars}`;
+  if (shown === 'both') return fmt(t.editor.lengthBoth, { words, chars });
   return '';
 }
 

@@ -22,6 +22,7 @@ import {
   shortDayLabel,
   type DateFormat,
 } from './date';
+import { dateFormat, fmt, t } from './i18n/index.svelte';
 
 /** How many days one bar of the chart covers. */
 export type BinUnit = 'day' | 'week' | 'month';
@@ -90,8 +91,6 @@ export const EMPTY_TIMELINE: Timeline = {
   ticks: [],
 };
 
-const fmtDayMonth = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
-
 export function binUnitFor(spanDays: number): BinUnit {
   if (spanDays <= DAILY_BINS_MAX_DAYS) return 'day';
   if (spanDays <= WEEKLY_BINS_MAX_DAYS) return 'week';
@@ -118,7 +117,7 @@ function startsBin(day: Date, unit: BinUnit): boolean {
 
 function binLabel(start: Date, unit: BinUnit, format: DateFormat): string {
   if (unit === 'day') return longDayLabel(start, format);
-  if (unit === 'week') return `Week of ${shortDayLabel(start, format)}`;
+  if (unit === 'week') return fmt(t.nav.weekOf, { day: shortDayLabel(start, format) });
   return monthLabel(start);
 }
 
@@ -154,6 +153,7 @@ export function buildTimeline(
   const window = averageDaysFor(span);
   const tickMode = span <= SHORT_RANGE_DAYS ? 'day' : span <= MONTH_TICKS_MAX_DAYS ? 'month' : 'year';
   const monthNames = monthShortLabels();
+  const dayMonth = dateFormat({ day: 'numeric', month: 'short' });
 
   let firstWritten: Date | null = null;
   for (const key of days.keys()) {
@@ -230,7 +230,7 @@ export function buildTimeline(
   const ticks =
     tickMode === 'day'
       ? thin(
-          bins.map((bin, index) => ({ index, label: fmtDayMonth.format(keyToDate(bin.key)) })),
+          bins.map((bin, index) => ({ index, label: dayMonth.format(keyToDate(bin.key)) })),
           MAX_TICKS,
         )
       : thin(boundaries, MAX_TICKS);

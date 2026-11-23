@@ -8,6 +8,7 @@
     placeTooltip,
     type ChartPoint,
   } from '../lib/chart';
+  import { fmt, t } from '../lib/i18n/index.svelte';
   import type { BinUnit, Timeline, TimelineBin } from '../lib/timeline';
 
   /**
@@ -42,7 +43,13 @@
     tooltip: Snippet<[TimelineBin]>;
   } = $props();
 
-  const BAR_NOUN: Record<BinUnit, string> = { day: 'Daily', week: 'Weekly', month: 'Monthly' };
+  // What the bars are called in the legend: weekly and monthly bars are amounts per day.
+  const barName = (unit: BinUnit): string => {
+    const { chart } = t.stats;
+    if (unit === 'day') return chart.barsDaily;
+    if (unit === 'week') return rate ? chart.barsWeeklyPerDay : chart.barsWeekly;
+    return rate ? chart.barsMonthlyPerDay : chart.barsMonthly;
+  };
 
   // --- chart geometry -----------------------------------------------------
   const CHART_HEIGHT = 190;
@@ -277,11 +284,11 @@
   <div class="mt-2 flex items-center justify-end gap-4 text-[0.65rem] text-muted">
     <span class="flex items-center gap-1.5">
       <span class="inline-block h-2.5 w-1.5 rounded-[1px] bg-text/30"></span>
-      {BAR_NOUN[timeline.unit]}{rate && timeline.unit !== 'day' ? ' (per day)' : ''}
+      {barName(timeline.unit)}
     </span>
     <span class="flex items-center gap-1.5">
       <span class="inline-block h-[2px] w-3 rounded-full bg-text"></span>
-      {timeline.averageDays}-day average
+      {fmt(t.stats.movingAverage, { count: timeline.averageDays })}
     </span>
     {#if reference}
       <span class="flex items-center gap-1.5">

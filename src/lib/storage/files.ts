@@ -12,6 +12,7 @@ import { exists, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { join } from '@tauri-apps/api/path';
 import { BackupExistsError } from './errors';
+import { t } from '../i18n/index.svelte';
 import {
   ENCRYPTED_EXTENSION,
   PLAIN_EXTENSION,
@@ -135,7 +136,7 @@ export async function pickDiaryFileText(filterByExtension: boolean): Promise<str
     directory: false,
     fileAccessMode: 'scoped',
     filters: filterByExtension ? [DIARY_FILTER] : undefined,
-    title: 'Import diary',
+    title: t.app.importDialogTitle,
   });
   return typeof selected === 'string' ? readTextFile(selected) : null;
 }
@@ -154,7 +155,7 @@ export async function saveBackupFile(
   const path = await save({
     defaultPath: defaultName,
     filters: [defaultName.endsWith(`.${ENCRYPTED_EXTENSION}`) ? ENCRYPTED_FILTER : ICS_FILTER],
-    title: 'Export diary',
+    title: t.app.exportDialogTitle,
   });
   if (!path) return false;
   if (checkExisting && (await exists(path))) throw new BackupExistsError();

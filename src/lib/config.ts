@@ -8,6 +8,7 @@ import { parseDateFormat, type DateFormat, type WeekStart } from './date';
 import { SPELL_WORDS_ITEM } from './storage/types';
 import { parseLengthCount, type LengthCount } from './text-count';
 import { parseSearchOrder, type SearchOrder } from './search';
+import { isLocale, type Locale } from './i18n/locales';
 
 export type { DateFormat, WeekStart, LengthCount, SearchOrder };
 
@@ -34,6 +35,28 @@ export async function getSavedSpellcheck(): Promise<boolean> {
 
 export async function setSavedSpellcheck(enabled: boolean): Promise<void> {
   await storage.setItem(STORE, 'spellcheck', enabled);
+}
+
+/** The chosen app language, or `null` to follow the system. */
+export async function getSavedLanguage(): Promise<Locale | null> {
+  const value = await storage.getItem<string>(STORE, 'language');
+  return isLocale(value) ? value : null;
+}
+
+export async function setSavedLanguage(language: Locale | null): Promise<void> {
+  await storage.setItem(STORE, 'language', language);
+}
+
+/** The spell-check languages, or `null` to follow the app language. */
+export async function getSavedSpellLanguages(): Promise<Locale[] | null> {
+  const value = await storage.getItem<unknown>(STORE, 'spellLanguages');
+  if (!Array.isArray(value)) return null;
+  const languages = value.filter(isLocale);
+  return languages.length ? languages : null;
+}
+
+export async function setSavedSpellLanguages(languages: Locale[] | null): Promise<void> {
+  await storage.setItem(STORE, 'spellLanguages', languages);
 }
 
 /** The user's personal spell-check dictionary (words they added manually). */

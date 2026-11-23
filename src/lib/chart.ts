@@ -2,6 +2,7 @@
  * Geometry helpers for the statistics chart. Plain functions with no DOM or
  * Svelte dependency, so the curve maths can be unit-tested on its own.
  */
+import { formatNumber } from './i18n/index.svelte';
 
 export interface ChartPoint {
   x: number;
@@ -111,14 +112,9 @@ export function niceCeil(value: number): number {
   return 10 * magnitude;
 }
 
-const compact = new Intl.NumberFormat(undefined, {
-  notation: 'compact',
-  maximumFractionDigits: 1,
-});
-
 /** Compact axis label, e.g. 1_234 → "1.2K"; plain below a thousand. */
 export function compactNumber(value: number): string {
-  return value < 1000 ? String(value) : compact.format(value);
+  return formatNumber(value, value < 1000 ? undefined : { notation: 'compact', maximumFractionDigits: 1 });
 }
 
 export interface TooltipBox {

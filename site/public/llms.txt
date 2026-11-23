@@ -2,7 +2,7 @@
 
 > Icarus is a free, open-source diary app (GNU GPL v3). Entries can be encrypted with a password, are stored only on the user's device in a standard iCalendar (.ics) file, and can be browsed and searched across many years without delay.
 
-Icarus runs as a desktop app for Windows, macOS and Linux, as an Android app (APK download, not on Google Play), and as a web app in the browser. There is no account, server-side storage, sync service or tracking: the desktop app saves the diary in a folder the user chooses, the Android app keeps it in its private storage, and the web app keeps it in the browser's IndexedDB.
+Icarus runs as a desktop app for Windows, macOS and Linux, as an Android app (APK download, not on Google Play), and as a web app in the browser. The app and this site are available in English, Spanish, Italian, French and German, and the editor has an offline spell checker for each. There is no account, server-side storage, sync service or tracking: the desktop app saves the diary in a folder the user chooses, the Android app keeps it in its private storage, and the web app keeps it in the browser's IndexedDB.
 
 ## Product
 
@@ -10,6 +10,7 @@ Icarus runs as a desktop app for Windows, macOS and Linux, as an Android app (AP
 - [Icarus home page](https://icarus.4oli.com/): Product page with download and web app links.
 - [Download Icarus](https://icarus.4oli.com/download): Builds for Windows, macOS, Linux and Android, with first-launch steps and SHA-256 checksums.
 - [Icarus web app](https://icarus.4oli.com/app/): The diary in the browser. Data stays in that browser.
+- Other languages: [Español](https://icarus.4oli.com/es/), [Italiano](https://icarus.4oli.com/it/), [Français](https://icarus.4oli.com/fr/), [Deutsch](https://icarus.4oli.com/de/).
 
 ## Source
 

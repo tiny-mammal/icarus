@@ -2,6 +2,7 @@
   import { flip } from 'svelte/animate';
   import { fly } from 'svelte/transition';
   import { app } from '../lib/store.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   const dotColor: Record<string, string> = {
     info: 'bg-muted',
@@ -30,7 +31,7 @@
 <div
   class="pointer-events-none fixed inset-x-0 top-[calc(4.5rem+env(safe-area-inset-top))] z-toast flex flex-col items-center gap-2 px-4"
   role="region"
-  aria-label="Notifications"
+  aria-label={t.app.notifications}
 >
   {#each app.toasts as toast (toast.id)}
     <div

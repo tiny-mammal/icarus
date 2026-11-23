@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tooltip } from '../lib/tooltip';
+  import { t } from '../lib/i18n/index.svelte';
   import type { HTMLInputAttributes } from 'svelte/elements';
 
   /** A labelled password input with a show/hide toggle. */
@@ -20,6 +21,7 @@
   } = $props();
 
   let visible = $state(false);
+  const toggleLabel = $derived(visible ? t.privacy.hidePassword : t.privacy.showPassword);
   let input = $state<HTMLInputElement | null>(null);
   const id = `password-${Math.random().toString(36).slice(2)}`;
 
@@ -49,8 +51,8 @@
     <button
       type="button"
       class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text"
-      aria-label={visible ? 'Hide password' : 'Show password'}
-      use:tooltip={visible ? 'Hide password' : 'Show password'}
+      aria-label={toggleLabel}
+      use:tooltip={toggleLabel}
       aria-pressed={visible}
       onclick={() => (visible = !visible)}
     >
