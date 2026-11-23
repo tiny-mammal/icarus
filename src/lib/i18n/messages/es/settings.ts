@@ -33,10 +33,10 @@ export default {
   hideCountHint: 'Vuelve al hacer una pausa',
 
   search: 'Búsqueda',
-  resultsStartWith: 'Los resultados empiezan por',
+  resultsStartWith: 'Mostrar primero',
   resultsStartHint: 'La lista de resultados puede cambiarlo solo para una búsqueda',
-  newest: 'Más recientes',
-  oldest: 'Más antiguas',
+  newest: 'Recientes',
+  oldest: 'Antiguas',
 
   languageAndDates: 'Idioma y fechas',
   language: 'Idioma',

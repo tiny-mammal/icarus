@@ -11,6 +11,7 @@ Runs on desktop (Windows, macOS, Linux), Android, and in the browser at
 - A score for each day and daily habits with streaks, kept in the same `.ics`.
 - Your diary stays on your device, and imports from and exports to `.ics`.
 - Optional password protection with a recovery key.
+- In English, Spanish, Italian, French and German, with an offline spell checker for each ([docs/i18n.md](docs/i18n.md)).
 
 See [docs/privacy.md](docs/privacy.md) for where data lives and what
 encryption does and doesn't protect.

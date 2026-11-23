@@ -47,7 +47,7 @@ async function useLanguage(page: Page): Promise<void> {
 
 async function openSettingsAt(page: Page, row: string): Promise<void> {
   await page.getByRole('button', { name: m.nav.settings, exact: true }).click();
-  const trigger = page.getByRole('button', { name: new RegExp(`^${row}: `) });
+  const trigger = page.getByRole('button', { name: new RegExp(`^${row}\\s?:`) });
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
   await page.getByRole('listbox', { name: row }).waitFor();

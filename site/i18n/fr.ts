@@ -10,7 +10,7 @@ export default {
     home: 'Accueil d’Icarus',
     primary: 'Principale',
     download: 'Télécharger',
-    webApp: 'Application web',
+    webApp: 'Appli web',
     language: 'Langue',
   },
 

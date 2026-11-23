@@ -39,6 +39,9 @@ export default defineConfig({
       { find: /^emscripten-wasm-loader$/, replacement: 'emscripten-wasm-loader/dist/cjs/index.js' },
     ],
   },
+  // Loaded on demand (spell check); pre-bundle it so the dev server doesn't
+  // discover it mid-session and reload the page.
+  optimizeDeps: { include: ['hunspell-asm/dist/cjs/index.js'] },
   define: { __ICARUS_BUILT_AT__: JSON.stringify(builtAt()) },
 
   // Tauri expects a fixed port and owns the terminal output, so don't let Vite
