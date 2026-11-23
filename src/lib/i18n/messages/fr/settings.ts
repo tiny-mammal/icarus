@@ -16,7 +16,8 @@ export default {
 
   writing: 'Rédaction',
   spellcheck: 'Correcteur orthographique',
-  spellcheckHint: 'Souligner les mots mal orthographiés pendant la rédaction',
+  spellcheckIntro: 'Souligne les mots mal orthographiés pendant que vous écrivez. Activez toutes les langues dans lesquelles vous écrivez : un mot est accepté si l’une d’elles le connaît.',
+  spellcheckLanguages: 'Langues du correcteur',
   spellcheckOff: 'Désactivé',
   personalDictionary: 'Dictionnaire personnel',
   dictionaryCount: plural({ one: '{count} mot ajouté', other: '{count} mots ajoutés' }),
@@ -38,8 +39,10 @@ export default {
   newest: 'Récentes',
   oldest: 'Anciennes',
 
-  languageAndDates: 'Langue et dates',
+  dates: 'Dates',
   language: 'Langue',
+  appLanguage: 'Langue de l’application',
+  appLanguageHint: 'Les dates et les nombres la suivent aussi',
   /** The choice that follows the system language; `{language}` is that language. */
   languageSystem: 'Système',
   languageSystemHint: 'Actuellement : {language}',

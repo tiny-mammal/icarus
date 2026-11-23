@@ -53,8 +53,8 @@ import {
   setSavedSpellcheck,
   getSavedLanguage,
   setSavedLanguage,
-  getSavedSpellLanguage,
-  setSavedSpellLanguage,
+  getSavedSpellLanguages,
+  setSavedSpellLanguages,
   getSavedSpellWords,
   setSavedSpellWords,
   getSavedAutoLock,
@@ -79,7 +79,7 @@ import { resetSearch, warmSearch } from './search';
 import { addMonths, adjacentKey, dateKey, keyToDate, startOfMonth } from './date';
 import { addUserWord, removeUserWord, setUserWords } from './spellcheck';
 import { addressLocale, fmt, i18n, systemLocale, t } from './i18n/index.svelte';
-import type { Locale } from './i18n/locales';
+import { LOCALES, type Locale } from './i18n/locales';
 import { updates } from './updates.svelte';
 import { randomId } from './random';
 import { devError } from './log';
@@ -146,6 +146,12 @@ function groupByDay(entries: DiaryEntry[]): Map<string, DiaryEntry[]> {
     else map.set(key, [e]);
   }
   return map;
+}
+
+/** Spell-check languages with the app language first, then in menu order. */
+function orderSpellLanguages(languages: readonly Locale[], appLocale: Locale): Locale[] {
+  const rank = (locale: Locale) => (locale === appLocale ? -1 : LOCALES.indexOf(locale));
+  return [...new Set(languages)].sort((a, b) => rank(a) - rank(b));
 }
 
 let toastSeq = 0;
@@ -230,9 +236,11 @@ class AppStore {
   spellcheck = $state(true);
 
   /** The spell-check language; `null` follows the app language. User preference. */
-  spellLanguage = $state<Locale | null>(null);
+  spellLanguages = $state<Locale[] | null>(null);
   /** The dictionary spell check uses. */
-  spellLocale = $derived<Locale>(this.spellLanguage ?? i18n.locale);
+  spellLocales = $derived<Locale[]>(
+    this.spellcheck ? orderSpellLanguages(this.spellLanguages ?? [i18n.locale], i18n.locale) : [],
+  );
 
   /** What the editor's length count shows. User preference. */
   lengthCount = $state<LengthCount>('both');
@@ -1203,16 +1211,26 @@ class AppStore {
   /** Restore the saved spell-check preferences on boot (on, in the app language). */
   async loadSpellcheck(): Promise<void> {
     try {
-      [this.spellcheck, this.spellLanguage] = await Promise.all([getSavedSpellcheck(), getSavedSpellLanguage()]);
+      [this.spellcheck, this.spellLanguages] = await Promise.all([getSavedSpellcheck(), getSavedSpellLanguages()]);
     } catch (err) {
       devError('loadSpellcheck: could not read the spell-check preference', err);
     }
   }
 
-  /** Check spelling in `language` (`null` follows the app language) and persist it. */
-  async setSpellLanguage(language: Locale | null): Promise<void> {
-    this.spellLanguage = language;
-    await this.savePreference('setSpellLanguage', setSavedSpellLanguage(language));
+  /**
+   * Check spelling in `language` too, or stop checking it. Turning the last
+   * one off turns spell check off; choosing just the app language follows it
+   * again when the app language changes.
+   */
+  async setSpellLanguage(language: Locale, on: boolean): Promise<void> {
+    const next = on
+      ? [...new Set([...this.spellLocales, language])]
+      : this.spellLocales.filter((other) => other !== language);
+    if (!next.length) return this.setSpellcheck(false);
+    const languages = next.length === 1 && next[0] === i18n.locale ? null : next;
+    this.spellLanguages = languages;
+    if (!this.spellcheck) void this.setSpellcheck(true);
+    await this.savePreference('setSpellLanguages', setSavedSpellLanguages(languages));
   }
 
   /** Turn native spell-check highlighting on/off and persist it. */

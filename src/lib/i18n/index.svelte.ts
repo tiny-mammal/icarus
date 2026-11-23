@@ -76,13 +76,30 @@ export function dateFormat(options: Intl.DateTimeFormatOptions): Intl.DateTimeFo
   return dateTimeFormat(i18n.formatLocale, options);
 }
 
-/** A language's name in the current language, capitalised: "Alemán". */
-export function languageName(locale: Locale): string {
+function capitalize(text: string): string {
+  return text.charAt(0).toLocaleUpperCase(i18n.locale) + text.slice(1);
+}
+
+function displayName(locale: Locale): string {
   try {
-    const name = new Intl.DisplayNames([i18n.locale], { type: 'language' }).of(locale) ?? locale;
-    return name.charAt(0).toLocaleUpperCase(i18n.locale) + name.slice(1);
+    return new Intl.DisplayNames([i18n.locale], { type: 'language' }).of(locale) ?? locale;
   } catch {
     return locale;
+  }
+}
+
+/** A language's name in the current language, capitalised: "Alemán". */
+export function languageName(locale: Locale): string {
+  return capitalize(displayName(locale));
+}
+
+/** Several languages named in a sentence, in the current language: "Español e inglés". */
+export function languageList(locales: readonly Locale[]): string {
+  const names = locales.map(displayName);
+  try {
+    return capitalize(new Intl.ListFormat(i18n.locale, { type: 'conjunction' }).format(names));
+  } catch {
+    return capitalize(names.join(', '));
   }
 }
 

@@ -33,23 +33,26 @@ interface Speller {
   hunspell: Hunspell;
   /** The mounted dictionary files, freed with the speller. */
   files: string[];
+  /** Personal words taught to this dictionary (see `syncSpeller`). */
+  learned: Set<string>;
 }
 
 let factory: Promise<HunspellFactory> | null = null;
-let speller: Speller | null = null;
-/** The language asked for last, and the load answering it. */
-let wanted: { locale: Locale; load: Promise<void> } | null = null;
+/**
+ * The dictionaries in use, in order of preference: a word is correct when any
+ * of them knows it, and suggestions come from the first ones first.
+ */
+let spellers: Speller[] = [];
+/** The languages asked for last, and the load answering them. */
+let wanted: { key: string; load: Promise<void> } | null = null;
+/** Dictionaries loaded or loading, by language, so a switch back is instant. */
+const loads = new Map<Locale, Promise<Speller>>();
 
 /** Personal dictionary, restored from settings (Add to dictionary). */
 const userWords = new Set<string>();
-/**
- * The personal words taught to the engine. A word the dictionary already knows
- * is never taught, so forgetting it later cannot erase the stock entry.
- */
-const learned = new Set<string>();
 /** Words ignored for this session only (Ignore in the menu). */
 const ignoredWords = new Set<string>();
-/** Verdict cache, cleared whenever the dictionary or ignore list changes. */
+/** Verdict cache, cleared whenever the dictionaries or ignore list change. */
 const verdicts = new Map<string, boolean>();
 
 async function createSpeller(locale: Locale): Promise<Speller> {
@@ -63,52 +66,67 @@ async function createSpeller(locale: Locale): Promise<Speller> {
     hunspellAsm.mountBuffer(encoder.encode(aff), `${locale}.aff`),
     hunspellAsm.mountBuffer(encoder.encode(dic), `${locale}.dic`),
   ];
-  return { locale, hunspell: hunspellAsm.create(files[0], files[1]), files };
+  return { locale, hunspell: hunspellAsm.create(files[0], files[1]), files, learned: new Set() };
+}
+
+function loadSpeller(locale: Locale): Promise<Speller> {
+  let load = loads.get(locale);
+  if (!load) {
+    load = createSpeller(locale);
+    // Let a later attempt retry instead of caching the failure forever.
+    load.catch(() => loads.delete(locale));
+    loads.set(locale, load);
+  }
+  return load;
 }
 
 function disposeSpeller(old: Speller): void {
+  loads.delete(old.locale);
   old.hunspell.dispose();
   void factory?.then((hunspellAsm) => old.files.forEach((file) => hunspellAsm.unmount(file)));
 }
 
 /**
- * Load the dictionary for `locale` now (idempotent), replacing the one in
- * use. Resolves once checking in that language can happen.
+ * Check spelling in `locales` (most preferred first) from now on, loading
+ * their dictionaries and freeing the ones no longer used. Resolves once
+ * checking in all of them can happen.
  */
-export function ensureSpellchecker(locale: Locale = DEFAULT_LOCALE): Promise<void> {
-  if (wanted?.locale === locale) return wanted.load;
-  const load = createSpeller(locale).then(
+export function ensureSpellchecker(locales: readonly Locale[] = [DEFAULT_LOCALE]): Promise<void> {
+  const key = locales.join(',');
+  if (wanted?.key === key) return wanted.load;
+  const load = Promise.all(locales.map(loadSpeller)).then(
     (next) => {
-      // A later call asked for another language meanwhile.
-      if (wanted?.locale !== locale) return disposeSpeller(next);
-      if (speller) disposeSpeller(speller);
-      speller = next;
-      learned.clear();
-      syncSpeller();
+      // A later call asked for other languages meanwhile.
+      if (wanted?.key !== key) return;
+      for (const old of spellers) if (!next.includes(old)) disposeSpeller(old);
+      spellers = next;
+      syncSpellers();
     },
     (err) => {
-      // Let a later attempt retry instead of caching the failure forever.
-      if (wanted?.locale === locale) wanted = null;
+      if (wanted?.key === key) wanted = null;
       throw err;
     },
   );
-  wanted = { locale, load };
+  wanted = { key, load };
   return load;
 }
 
-/** Bring the engine in line with the personal dictionary and drop stale verdicts. */
-function syncSpeller(): void {
+/** Bring every dictionary in line with the personal one and drop stale verdicts. */
+function syncSpellers(): void {
   verdicts.clear();
-  if (!speller) return;
-  for (const word of learned) {
-    if (userWords.has(word)) continue;
-    speller.hunspell.removeWord(word);
-    learned.delete(word);
-  }
-  for (const word of userWords) {
-    if (learned.has(word) || speller.hunspell.spell(word)) continue;
-    speller.hunspell.addWord(word);
-    learned.add(word);
+  for (const { hunspell, learned } of spellers) {
+    for (const word of learned) {
+      if (userWords.has(word)) continue;
+      hunspell.removeWord(word);
+      learned.delete(word);
+    }
+    // A word a dictionary already knows is never taught, so forgetting it
+    // later cannot erase the stock entry.
+    for (const word of userWords) {
+      if (learned.has(word) || hunspell.spell(word)) continue;
+      hunspell.addWord(word);
+      learned.add(word);
+    }
   }
 }
 
@@ -120,20 +138,20 @@ function sortedUserWords(): string[] {
 export function setUserWords(words: string[]): void {
   userWords.clear();
   for (const word of words) userWords.add(normalize(word));
-  syncSpeller();
+  syncSpellers();
 }
 
 /** Add one word to the personal dictionary; returns the updated word list. */
 export function addUserWord(word: string): string[] {
   userWords.add(normalize(word));
-  syncSpeller();
+  syncSpellers();
   return sortedUserWords();
 }
 
 /** Remove one word from the personal dictionary; returns the updated word list. */
 export function removeUserWord(word: string): string[] {
   userWords.delete(normalize(word));
-  syncSpeller();
+  syncSpellers();
   return sortedUserWords();
 }
 
@@ -153,11 +171,11 @@ export function ignoreWord(word: string): void {
   verdicts.clear();
 }
 
-/** Case-matched suggestions for a misspelled word (best effort). */
+/** Case-matched suggestions for a misspelled word (best effort), first dictionary first. */
 export function suggest(raw: string): string[] {
-  if (!speller) return [];
   const word = normalize(raw);
-  return rankSuggestions(word, speller.hunspell.suggest(word)).map((s) => matchCase(word, s));
+  const all = [...new Set(spellers.flatMap(({ hunspell }) => hunspell.suggest(word)))];
+  return rankSuggestions(word, all).map((s) => matchCase(word, s));
 }
 
 /**
@@ -177,7 +195,7 @@ export function rankSuggestions(word: string, suggestions: string[]): string[] {
  * mistake.
  */
 export function isCorrect(raw: string): boolean {
-  if (!speller) return true;
+  if (!spellers.length) return true;
   const word = normalize(raw);
   if (word.length < MIN_LENGTH) return true;
   if (ignoredWords.has(word.toLowerCase())) return true;
@@ -191,13 +209,15 @@ export function isCorrect(raw: string): boolean {
 }
 
 function checkWord(word: string): boolean {
-  const { hunspell, locale } = speller!;
   // The English dictionary has no accented words to speak of, so non-ASCII
-  // text in English (names, borrowed words) would only produce false positives.
-  if (locale === 'en' && /[^\p{ASCII}]/u.test(word)) return true;
-  if (hunspell.spell(word)) return true;
-  // Compound terms ("well-being") are fine when every part is a word.
-  return word.includes('-') && word.split('-').every((part) => part === '' || hunspell.spell(part));
+  // text checked only in English (names, borrowed words) would only produce
+  // false positives.
+  if (spellers.every((s) => s.locale === 'en') && /[^\p{ASCII}]/u.test(word)) return true;
+  return spellers.some(({ hunspell }) => {
+    if (hunspell.spell(word)) return true;
+    // Compound terms ("well-being") are fine when every part is a word.
+    return word.includes('-') && word.split('-').every((part) => part === '' || hunspell.spell(part));
+  });
 }
 
 /**

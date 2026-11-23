@@ -16,7 +16,8 @@ export default {
 
   writing: 'Schreiben',
   spellcheck: 'Rechtschreibprüfung',
-  spellcheckHint: 'Falsch geschriebene Wörter beim Schreiben unterstreichen',
+  spellcheckIntro: 'Unterstreicht falsch geschriebene Wörter beim Schreiben. Schalte alle Sprachen ein, in denen du schreibst: Ein Wort gilt als richtig, wenn eine davon es kennt.',
+  spellcheckLanguages: 'Sprachen der Rechtschreibprüfung',
   spellcheckOff: 'Aus',
   personalDictionary: 'Persönliches Wörterbuch',
   dictionaryCount: plural({ one: '{count} Wort hinzugefügt', other: '{count} Wörter hinzugefügt' }),
@@ -38,8 +39,10 @@ export default {
   newest: 'Neueste',
   oldest: 'Älteste',
 
-  languageAndDates: 'Sprache und Datum',
+  dates: 'Datum',
   language: 'Sprache',
+  appLanguage: 'App-Sprache',
+  appLanguageHint: 'Datum und Zahlen richten sich auch danach',
   /** The choice that follows the system language; `{language}` is that language. */
   languageSystem: 'System',
   languageSystemHint: 'Aktuell {language}',

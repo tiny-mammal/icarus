@@ -16,7 +16,8 @@ export default {
 
   writing: 'Escritura',
   spellcheck: 'Corrector ortográfico',
-  spellcheckHint: 'Subraya las palabras mal escritas mientras escribes',
+  spellcheckIntro: 'Subraya las palabras mal escritas mientras escribes. Activa todos los idiomas en los que escribes: una palabra es correcta si alguno de ellos la conoce.',
+  spellcheckLanguages: 'Idiomas del corrector',
   spellcheckOff: 'Desactivado',
   personalDictionary: 'Diccionario personal',
   dictionaryCount: plural({ one: '{count} palabra añadida', other: '{count} palabras añadidas' }),
@@ -38,8 +39,10 @@ export default {
   newest: 'Recientes',
   oldest: 'Antiguas',
 
-  languageAndDates: 'Idioma y fechas',
+  dates: 'Fechas',
   language: 'Idioma',
+  appLanguage: 'Idioma de la app',
+  appLanguageHint: 'Las fechas y los números también lo siguen',
   /** The choice that follows the system language; `{language}` is that language. */
   languageSystem: 'Sistema',
   languageSystemHint: 'Ahora, {language}',

@@ -47,14 +47,16 @@ export async function setSavedLanguage(language: Locale | null): Promise<void> {
   await storage.setItem(STORE, 'language', language);
 }
 
-/** The spell-check language, or `null` to follow the app language. */
-export async function getSavedSpellLanguage(): Promise<Locale | null> {
-  const value = await storage.getItem<string>(STORE, 'spellLanguage');
-  return isLocale(value) ? value : null;
+/** The spell-check languages, or `null` to follow the app language. */
+export async function getSavedSpellLanguages(): Promise<Locale[] | null> {
+  const value = await storage.getItem<unknown>(STORE, 'spellLanguages');
+  if (!Array.isArray(value)) return null;
+  const languages = value.filter(isLocale);
+  return languages.length ? languages : null;
 }
 
-export async function setSavedSpellLanguage(language: Locale | null): Promise<void> {
-  await storage.setItem(STORE, 'spellLanguage', language);
+export async function setSavedSpellLanguages(languages: Locale[] | null): Promise<void> {
+  await storage.setItem(STORE, 'spellLanguages', languages);
 }
 
 /** The user's personal spell-check dictionary (words they added manually). */

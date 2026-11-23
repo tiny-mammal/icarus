@@ -106,7 +106,7 @@ describe('matchCase', () => {
 });
 
 describe('bundled dictionaries', () => {
-  afterAll(() => ensureSpellchecker('en'));
+  afterAll(() => ensureSpellchecker(['en']));
 
   it.each([
     ['en', ['diary', 'journal', "o'clock"], 'diery', 'diary'],
@@ -115,16 +115,33 @@ describe('bundled dictionaries', () => {
     ['fr', ['demain', "aujourd'hui", "l'homme"], 'ete', 'été'],
     ['de', ['Morgen', 'Straße', 'gehen'], 'Strase', 'Straße'],
   ] as const)('checks %s', async (locale, words, misspelled, suggestion) => {
-    await ensureSpellchecker(locale);
+    await ensureSpellchecker([locale]);
     for (const word of words) expect(isCorrect(word), word).toBe(true);
     expect(isCorrect(misspelled)).toBe(false);
     expect(suggest(misspelled)).toContain(suggestion);
   });
 
+  it('accepts a word any of the chosen languages knows', async () => {
+    await ensureSpellchecker(['es', 'en']);
+    expect(isCorrect('mañana')).toBe(true);
+    expect(isCorrect('tomorrow')).toBe(true);
+    expect(isCorrect('cancion')).toBe(false);
+    expect(suggest('cancion')[0]).toBe('canción');
+  });
+
+  it('teaches personal words to every dictionary in use', async () => {
+    await ensureSpellchecker(['es', 'en']);
+    setUserWords(['Zorblax']);
+    expect(isCorrect('Zorblax')).toBe(true);
+    await ensureSpellchecker(['de']);
+    expect(isCorrect('Zorblax')).toBe(true);
+    setUserWords([]);
+  });
+
   it('leaves accented words alone in English only', async () => {
-    await ensureSpellchecker('en');
+    await ensureSpellchecker(['en']);
     expect(isCorrect('Zoë')).toBe(true);
-    await ensureSpellchecker('es');
+    await ensureSpellchecker(['es']);
     expect(isCorrect('Zoë')).toBe(false);
   });
 });
@@ -149,7 +166,7 @@ describe('spellingWindow', () => {
 
 describe('personal dictionary', () => {
   beforeAll(async () => {
-    await ensureSpellchecker('en');
+    await ensureSpellchecker(['en']);
   });
   afterEach(() => setUserWords([]));
 

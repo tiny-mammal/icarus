@@ -16,7 +16,8 @@ export default {
 
   writing: 'Scrittura',
   spellcheck: 'Controllo ortografico',
-  spellcheckHint: 'Sottolinea le parole scritte male mentre scrivi',
+  spellcheckIntro: 'Sottolinea le parole scritte male mentre scrivi. Attiva tutte le lingue in cui scrivi: una parola va bene se almeno una di esse la conosce.',
+  spellcheckLanguages: 'Lingue del controllo ortografico',
   spellcheckOff: 'Spento',
   personalDictionary: 'Dizionario personale',
   dictionaryCount: plural({ one: '{count} parola aggiunta', other: '{count} parole aggiunte' }),
@@ -38,8 +39,10 @@ export default {
   newest: 'Più recenti',
   oldest: 'Meno recenti',
 
-  languageAndDates: 'Lingua e date',
+  dates: 'Date',
   language: 'Lingua',
+  appLanguage: 'Lingua dell’app',
+  appLanguageHint: 'Anche date e numeri la seguono',
   /** The choice that follows the system language; `{language}` is that language. */
   languageSystem: 'Sistema',
   languageSystemHint: 'In uso: {language}',

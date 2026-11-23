@@ -20,7 +20,7 @@
   import { loadRichEditor } from '../lib/editor-loader';
   import { indexAfterVisible } from '../lib/caret';
   import { formatLength } from '../lib/text-count';
-  import { t } from '../lib/i18n/index.svelte';
+  import { i18n, t } from '../lib/i18n/index.svelte';
   import DraftsMenu from './DraftsMenu.svelte';
   import DatePicker from './DatePicker.svelte';
   import DayTracker from './DayTracker.svelte';
@@ -189,14 +189,14 @@
       class="w-full bg-transparent text-xl font-semibold tracking-tight text-text placeholder:text-muted focus:outline-none"
       placeholder={t.editor.titlePlaceholder}
       bind:value={app.draftTitle}
-      use:spellCheck={{ enabled: app.spellcheck, lang: app.spellLocale }}
+      use:spellCheck={{ enabled: app.spellcheck, lang: app.spellLocales[0] ?? i18n.locale }}
     />
     <input
       bind:this={locationEl}
       class="mt-1 w-full bg-transparent text-sm text-muted placeholder:text-muted/70 focus:outline-none"
       placeholder={t.editor.locationPlaceholder}
       bind:value={app.draftLocation}
-      use:spellCheck={{ enabled: app.spellcheck, lang: app.spellLocale }}
+      use:spellCheck={{ enabled: app.spellcheck, lang: app.spellLocales[0] ?? i18n.locale }}
     />
 
     {#if RichEditor}

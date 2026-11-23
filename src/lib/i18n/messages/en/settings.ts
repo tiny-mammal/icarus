@@ -16,7 +16,8 @@ export default {
 
   writing: 'Writing',
   spellcheck: 'Spell check',
-  spellcheckHint: 'Underline misspelled words as you write',
+  spellcheckIntro: 'Underline misspelled words as you write. Turn on every language you write in: a word is fine when any of them knows it.',
+  spellcheckLanguages: 'Spell-check languages',
   spellcheckOff: 'Off',
   personalDictionary: 'Personal dictionary',
   dictionaryCount: plural({ one: '{count} word added', other: '{count} words added' }),
@@ -38,8 +39,10 @@ export default {
   newest: 'Newest',
   oldest: 'Oldest',
 
-  languageAndDates: 'Language and dates',
+  dates: 'Dates',
   language: 'Language',
+  appLanguage: 'App language',
+  appLanguageHint: 'Dates and numbers follow it too',
   /** The choice that follows the system language; `{language}` is that language. */
   languageSystem: 'System',
   languageSystemHint: 'Now {language}',

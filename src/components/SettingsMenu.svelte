@@ -8,7 +8,7 @@
    */
   import { app } from '../lib/store.svelte';
   import { DATE_FORMATS, longDayLabel, timeAgo, type DateFormat } from '../lib/date';
-  import { dateFormat, fmt, i18n, languageName, systemLocale, t } from '../lib/i18n/index.svelte';
+  import { dateFormat, fmt, i18n, languageList, languageName, systemLocale, t } from '../lib/i18n/index.svelte';
   import { LOCALES, LOCALE_NAMES, type Locale } from '../lib/i18n/locales';
   import { SOURCE_REPO, openExternal } from '../lib/external';
   import { AUTO_LOCK_CHOICES, type AutoLockMinutes } from '../lib/config';
@@ -25,12 +25,14 @@
   import SettingsSection from './SettingsSection.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import DictionaryDialog from './DictionaryDialog.svelte';
+  import SpellcheckDialog from './SpellcheckDialog.svelte';
   import TrackerSettings from './TrackerSettings.svelte';
 
   // Local confirmation step for the destructive vault action.
   let confirmForget = $state(false);
   // The personal dictionary opens over Settings, so closing it returns here.
   let dictionaryOpen = $state(false);
+  let spellcheckOpen = $state(false);
   const dictionaryHint = $derived(
     app.spellWords.length
       ? fmt(t.settings.dictionaryCount, { count: app.spellWords.length })
@@ -53,18 +55,7 @@
     })),
   ]);
 
-  // Spell check is off or on in one language: one choice covers both.
-  const spellOptions = $derived<SelectOption<Locale | 'off'>[]>([
-    ...LOCALES.map((locale) => ({ value: locale, label: LOCALE_NAMES[locale] })),
-    { value: 'off', label: t.settings.spellcheckOff, separated: true },
-  ]);
-
-  function setSpellcheck(choice: Locale | 'off') {
-    if (choice === 'off') return void app.setSpellcheck(false);
-    if (!app.spellcheck) void app.setSpellcheck(true);
-    // Following the app language stays the default until another is chosen.
-    if (choice !== app.spellLocale || app.spellLanguage) void app.setSpellLanguage(choice);
-  }
+  const spellcheckHint = $derived(app.spellLocales.length ? languageList(app.spellLocales) : t.settings.spellcheckOff);
 
   // Localised long names for the two week-start choices (Sun = index 0).
   const weekStartOptions = $derived([
@@ -186,6 +177,18 @@
 
 {#if app.settingsOpen}
   <Modal title={t.settings.title} onclose={() => (app.settingsOpen = false)} width="sm:max-w-md" z="z-sheet">
+    <SettingsSection title={t.settings.language}>
+      <SettingsRow label={t.settings.appLanguage} hint={t.settings.appLanguageHint}>
+        <Select
+          value={app.language ?? 'system'}
+          options={languageOptions}
+          onchange={(choice) => app.setLanguage(choice === 'system' ? null : choice)}
+          label={t.settings.appLanguage}
+          listClass="min-w-44"
+        />
+      </SettingsRow>
+    </SettingsSection>
+
     <SettingsSection title={t.settings.diary}>
       <SettingsRow
         label={device ? t.common.place.device : t.common.place.browser}
@@ -203,14 +206,7 @@
     </SettingsSection>
 
     <SettingsSection title={t.settings.writing}>
-      <SettingsRow label={t.settings.spellcheck} hint={t.settings.spellcheckHint}>
-        <Select
-          value={app.spellcheck ? app.spellLocale : 'off'}
-          options={spellOptions}
-          onchange={setSpellcheck}
-          label={t.settings.spellcheck}
-        />
-      </SettingsRow>
+      <SettingsRow label={t.settings.spellcheck} hint={spellcheckHint} onclick={() => (spellcheckOpen = true)} />
       <SettingsRow label={t.settings.personalDictionary} hint={dictionaryHint} onclick={() => (dictionaryOpen = true)} />
       <SettingsRow label={t.settings.lengthCount} hint={countPreview}>
         <Select
@@ -246,16 +242,7 @@
       </SettingsRow>
     </SettingsSection>
 
-    <SettingsSection title={t.settings.languageAndDates}>
-      <SettingsRow label={t.settings.language}>
-        <Select
-          value={app.language ?? 'system'}
-          options={languageOptions}
-          onchange={(choice) => app.setLanguage(choice === 'system' ? null : choice)}
-          label={t.settings.language}
-          listClass="min-w-44"
-        />
-      </SettingsRow>
+    <SettingsSection title={t.settings.dates}>
       <SettingsRow label={t.settings.weekStartsOn}>
         <Segmented
           value={app.weekStart}
@@ -421,6 +408,10 @@
       </SettingsSection>
     {/if}
   </Modal>
+
+  {#if spellcheckOpen}
+    <SpellcheckDialog onclose={() => (spellcheckOpen = false)} />
+  {/if}
 
   {#if dictionaryOpen}
     <DictionaryDialog onclose={() => (dictionaryOpen = false)} />

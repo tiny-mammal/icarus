@@ -17,6 +17,7 @@
   import ListKeymap from '@tiptap/extension-list-keymap';
   import { Markdown } from 'tiptap-markdown';
   import { app } from '../lib/store.svelte';
+  import { i18n } from '../lib/i18n/index.svelte';
   import { ensureSpellchecker, ignoreWord, matchCase, suggest } from '../lib/spellcheck';
   import {
     Spellcheck,
@@ -120,7 +121,7 @@
           class: 'markdown min-h-full focus:outline-none',
           // Native checking stays off: ours is the only underline.
           spellcheck: 'false',
-          lang: app.spellLocale,
+          lang: app.spellLocales[0] ?? i18n.locale,
         },
       },
       onUpdate: ({ editor }) => {
@@ -167,14 +168,14 @@
   // or added/removed in Settings). Nothing is underlined before it loads.
   $effect(() => {
     const enabled = app.spellcheck;
-    const locale = app.spellLocale;
+    const locales = app.spellLocales;
     void app.spellWords;
     const current = editor;
     if (!current) return;
 
     let cancelled = false;
     if (enabled) {
-      void ensureSpellchecker(locale).then(() => {
+      void ensureSpellchecker(locales).then(() => {
         if (!cancelled && editor) refreshSpellcheck(editor);
       });
     } else {

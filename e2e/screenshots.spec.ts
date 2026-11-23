@@ -39,7 +39,7 @@ const MISSPELLED: Record<typeof LOCALE, { text: string; typo: string }> = {
 async function useLanguage(page: Page): Promise<void> {
   if (LOCALE === 'en') return;
   await page.getByRole('button', { name: 'Settings' }).click();
-  await page.getByRole('button', { name: /^Language: / }).click();
+  await page.getByRole('button', { name: /^App language: / }).click();
   await page.getByRole('option', { name: new RegExp(`^${LOCALE_NAMES[LOCALE]}`) }).click();
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: m.nav.settings, exact: true }).waitFor();
@@ -96,8 +96,14 @@ const SCENES: Record<string, (page: Page) => Promise<void>> = {
 /** Scenes in `SCREENSHOTS_LOCALE`, named `<scene>-<locale>-<device>.png`. */
 const LOCALIZED_SCENES: Record<string, (page: Page) => Promise<void>> = {
   home: async () => {},
-  language: (page) => openSettingsAt(page, m.settings.language),
-  spellcheck: (page) => openSettingsAt(page, m.settings.spellcheck),
+  language: (page) => openSettingsAt(page, m.settings.appLanguage),
+  // Spell check in two languages: the app's and English (German for English).
+  spellcheck: async (page) => {
+    await page.getByRole('button', { name: m.nav.settings, exact: true }).click();
+    await page.getByRole('button', { name: new RegExp(`^${m.settings.spellcheck}`) }).click();
+    const dialog = page.getByRole('dialog', { name: m.settings.spellcheck });
+    await dialog.getByRole('switch', { name: LOCALE_NAMES[LOCALE === 'en' ? 'de' : 'en'] }).click();
+  },
   spelling: async (page) => {
     const { text, typo } = MISSPELLED[LOCALE];
     await page.getByRole('button', { name: new RegExp(`^${m.editor.newEntry}$`) }).first().click();
