@@ -2,86 +2,86 @@ import { plural } from '../../format';
 
 /** The day's score and habits, and the temporary import of old scores. */
 export default {
-  scoreAndHabits: 'Score and habits',
+  scoreAndHabits: 'Puntuación y hábitos',
   /** The tooltip on the day's summary; `{run}` is like “Passed 3 days in a row”. */
-  scoreAndHabitsWithRun: 'Score and habits · {run}',
+  scoreAndHabitsWithRun: 'Puntuación y hábitos · {run}',
   /** The summary as a screen reader reads it; `{summary}` is the parts below, joined. */
-  summaryLabel: '{summary}. Score and habits',
-  scoreTheDay: 'Score the day',
+  summaryLabel: '{summary}. Puntuación y hábitos',
+  scoreTheDay: 'Puntúa el día',
 
   /** `{value}` is the score given, out of `{scale}` (the highest score). */
-  scoreOf: '{value} of {scale}',
-  scoreSummary: 'Score {value} of {scale}',
-  scoreOldScale: '{value} of {scale} on the old scale',
-  notScored: 'Not scored',
+  scoreOf: '{value} de {scale}',
+  scoreSummary: 'Puntuación {value} de {scale}',
+  scoreOldScale: '{value} de {scale} en la escala antigua',
+  notScored: 'Sin puntuar',
   /** `{count}` days of a run in a row. */
-  runPassed: plural({ one: 'Passed {count} day in a row', other: 'Passed {count} days in a row' }),
-  runFailed: plural({ one: 'Failed {count} day in a row', other: 'Failed {count} days in a row' }),
+  runPassed: plural({ one: 'Cumplido {count} día seguido', other: 'Cumplidos {count} días seguidos' }),
+  runFailed: plural({ one: 'No cumplido {count} día seguido', other: 'No cumplidos {count} días seguidos' }),
   /** `{done}` of the `{count}` active habits are marked done. */
-  habitsDone: plural({ one: '{done} of {count} habit done', other: '{done} of {count} habits done' }),
+  habitsDone: plural({ one: '{done} de {count} hábito hecho', other: '{done} de {count} hábitos hechos' }),
 
-  score: 'Score',
+  score: 'Puntuación',
   /** The score's choices as a screen reader reads them: `{step}` of `{scale}`. */
-  scoreStep: '{step} of {scale}',
+  scoreStep: '{step} de {scale}',
 
-  habits: 'Habits',
-  editHabits: 'Edit habits',
-  habitsEmpty: 'Track something every day and see how long you keep it up.',
-  addHabitPlaceholder: 'Add a habit',
-  newHabit: 'New habit',
+  habits: 'Hábitos',
+  editHabits: 'Editar hábitos',
+  habitsEmpty: 'Haz un seguimiento diario de algo y mira cuánto tiempo lo mantienes.',
+  addHabitPlaceholder: 'Añade un hábito',
+  newHabit: 'Nuevo hábito',
 
   /** The mark a habit has on a day, and the one a tap moves it to. */
-  markDone: 'done',
-  markMissed: 'missed',
-  markNone: 'not marked',
+  markDone: 'hecho',
+  markMissed: 'no hecho',
+  markNone: 'sin marcar',
   /** `{state}` and `{next}` are the words above: the mark now and the one a tap sets. */
-  markLabel: '{habit}: {state}. Mark as {next}',
+  markLabel: '{habit}: {state}. Marcar como {next}',
 
   /** `{days}` is like “5 days”. */
-  streakLabel: 'Streak for {habit}: {days}. Change it',
-  streakLabelByHand: 'Streak for {habit}: {days}, set by hand. Change it',
+  streakLabel: 'Racha de {habit}: {days}. Cambiar',
+  streakLabelByHand: 'Racha de {habit}: {days}, fijada a mano. Cambiar',
   /** The tooltip on a habit's streak: whether it was typed in for the day or counted. */
-  streakTitleByHand: 'Set by hand on this day',
-  streakTitleCounted: 'Set the streak by hand',
-  streakInputLabel: 'Streak for {habit} on this day',
-  streakHint: 'The days after count on from this number. Leave it empty to count from the marks again.',
+  streakTitleByHand: 'Fijada a mano este día',
+  streakTitleCounted: 'Fijar la racha a mano',
+  streakInputLabel: 'Racha de {habit} este día',
+  streakHint: 'Los días siguientes continúan a partir de este número. Déjalo vacío para volver a contar desde las marcas.',
 
   /** The dialog that brings scores written by hand in old entries into the tracker. */
   legacy: {
-    title: 'Import old scores',
-    marks: 'Marks',
+    title: 'Importar puntuaciones antiguas',
+    marks: 'Marcas',
     /** The days the marks were looked for in. */
-    marksSub: plural({ one: 'in {count} day', other: 'in {count} days' }),
-    ready: 'Ready',
-    readySub: 'Certain, new',
-    toReview: 'To review',
-    toReviewSub: 'Need a look',
+    marksSub: plural({ one: 'en {count} día', other: 'en {count} días' }),
+    ready: 'Listas',
+    readySub: 'Seguras, nuevas',
+    toReview: 'Por revisar',
+    toReviewSub: 'Necesitan revisión',
     /** `2DAC` is how the old marks wrote a run: keep it as it is. */
-    note: 'Only the score is read; run lengths like 2DAC are ignored. Entries are not changed.',
-    importScores: plural({ one: 'Import {count} score', other: 'Import {count} scores' }),
-    imported: plural({ one: 'Imported {count} score', other: 'Imported {count} scores' }),
+    note: 'Solo se lee la puntuación; las rachas como 2DAC se ignoran. Las entradas no se modifican.',
+    importScores: plural({ one: 'Importar {count} puntuación', other: 'Importar {count} puntuaciones' }),
+    imported: plural({ one: 'Importada {count} puntuación', other: 'Importadas {count} puntuaciones' }),
 
-    dayToReview: 'Day to review',
+    dayToReview: 'Día por revisar',
     /** Which day is on show: `{current}` of `{total}` still to review. */
-    progress: '{current} of {total}',
-    reasonMissing: 'A mark has no score beside it.',
+    progress: '{current} de {total}',
+    reasonMissing: 'Una marca no tiene ninguna puntuación al lado.',
     /** `{scale}` is the highest score the old marks used. */
-    reasonRange:'A score is outside 1 to {scale}.',
-    reasonLetter: 'The letter and the score disagree on whether the day passed.',
-    reasonDiffers: 'The day has more than one score.',
-    reasonUnsure: 'A mark looks mistyped.',
-    reasonExisting: 'The diary already scores this day {value} out of {scale}.',
+    reasonRange: 'Una puntuación está fuera del rango de 1 a {scale}.',
+    reasonLetter: 'La letra y la puntuación no coinciden sobre si el día se cumplió.',
+    reasonDiffers: 'El día tiene más de una puntuación.',
+    reasonUnsure: 'Una marca parece mal escrita.',
+    reasonExisting: 'El diario ya puntúa este día con {value} sobre {scale}.',
 
-    scoreForDay: 'Score for this day',
+    scoreForDay: 'Puntuación de este día',
     /** `{score}` is the one written in the entry. */
-    scoreForDaySuggested: 'Score for this day · ringed is the one written ({score})',
-    scoreValue: 'Score {value}',
+    scoreForDaySuggested: 'Puntuación de este día · marcada con un círculo la escrita ({score})',
+    scoreValue: 'Puntuación {value}',
     /** Keyboard shortcuts: the digits pick a score, S skips. */
-    shortcuts: 'Press 1–9, 0 for 10, or S to skip.',
-    skip: 'Skip this day',
+    shortcuts: 'Pulsa 1–9, 0 para 10, o S para saltar.',
+    skip: 'Saltar este día',
 
-    noMarks: 'No marks found in your entries.',
-    importThenSettle: 'Import the ready scores, then settle the rest.',
-    nothingLeft: 'Nothing left to review.',
+    noMarks: 'No se han encontrado marcas en tus entradas.',
+    importThenSettle: 'Importa primero las puntuaciones listas y después revisa el resto.',
+    nothingLeft: 'No queda nada por revisar.',
   },
 };

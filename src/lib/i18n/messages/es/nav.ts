@@ -3,107 +3,107 @@ import { plural } from '../../format';
 /** Navigation and shared controls: top bar, calendars, day pane, feed, search, pickers and dialogs. */
 export default {
   /* Top bar */
-  search: 'Search',
-  searchEntries: 'Search entries',
-  searchPlaceholder: 'Search entries…',
-  clearSearch: 'Clear search',
-  closeSearch: 'Close search',
-  statistics: 'Statistics',
-  lockDiary: 'Lock diary',
-  settings: 'Settings',
-  settingsUpdateAvailable: 'Settings, update available',
-  settingsUpdateAvailableHint: 'Settings · update available',
+  search: 'Buscar',
+  searchEntries: 'Buscar entradas',
+  searchPlaceholder: 'Buscar entradas…',
+  clearSearch: 'Borrar búsqueda',
+  closeSearch: 'Cerrar búsqueda',
+  statistics: 'Estadísticas',
+  lockDiary: 'Bloquear diario',
+  settings: 'Ajustes',
+  settingsUpdateAvailable: 'Ajustes, actualización disponible',
+  settingsUpdateAvailableHint: 'Ajustes · actualización disponible',
 
   /* Search results */
-  noMatchingEntries: 'No matching entries',
-  results: plural({ one: '{count} result', other: '{count} results' }),
+  noMatchingEntries: 'No hay entradas que coincidan',
+  results: plural({ one: '{count} resultado', other: '{count} resultados' }),
   /** `{shown}` of the `{count}` results are listed so far. */
   showingResults: plural({
-    one: 'Showing {shown} of {count} result',
-    other: 'Showing {shown} of {count} results',
+    one: 'Mostrando {shown} de {count} resultado',
+    other: 'Mostrando {shown} de {count} resultados',
   }),
-  newestFirst: 'Newest first',
-  oldestFirst: 'Oldest first',
+  newestFirst: 'Más recientes primero',
+  oldestFirst: 'Más antiguas primero',
   /** Button naming the order now in use and what pressing it does. */
-  showNewestFirst: 'Oldest first, show newest first',
-  showOldestFirst: 'Newest first, show oldest first',
+  showNewestFirst: 'Más antiguas primero, mostrar más recientes primero',
+  showOldestFirst: 'Más recientes primero, mostrar más antiguas primero',
 
   /* Calendars */
-  previousMonth: 'Previous month',
-  nextMonth: 'Next month',
-  previousYear: 'Previous year',
-  nextYear: 'Next year',
-  selectMonthAndYear: 'Select month and year',
+  previousMonth: 'Mes anterior',
+  nextMonth: 'Mes siguiente',
+  previousYear: 'Año anterior',
+  nextYear: 'Año siguiente',
+  selectMonthAndYear: 'Elegir mes y año',
   /** Jumps to the current day or month. */
-  today: 'Today',
+  today: 'Hoy',
   /** A day in the calendar, read out in full: `{day}` is the date, `{titles}` the entry titles. */
   dayWithEntries: plural({
-    one: '{day}, {count} entry: {titles}',
-    other: '{day}, {count} entries: {titles}',
+    one: '{day}, {count} entrada: {titles}',
+    other: '{day}, {count} entradas: {titles}',
   }),
   /** Last line of a calendar cell whose entries do not all fit; `{count}` is how many are hidden. */
-  moreEntries: '+{count} more',
+  moreEntries: '+{count} más',
   /** A day in the small calendar: its date followed by what is special about it. */
-  dayHasEntries: 'has entries',
-  dayRangeStart: 'range start',
-  dayRangeEnd: 'range end',
-  daySelected: 'selected',
+  dayHasEntries: 'tiene entradas',
+  dayRangeStart: 'inicio del rango',
+  dayRangeEnd: 'fin del rango',
+  daySelected: 'seleccionado',
 
   /* Date pickers */
-  pickDate: 'Pick a date',
-  rangeEnds: 'Range ends',
+  pickDate: 'Elige una fecha',
+  rangeEnds: 'Extremos del rango',
   /** The two ends of a date range: the first day and the last day. */
-  rangeFrom: 'From',
-  rangeTo: 'To',
-  pickDay: 'Pick a day',
-  pickFirstDay: 'Pick the first day',
-  pickLastDay: 'Pick the last day',
+  rangeFrom: 'Desde',
+  rangeTo: 'Hasta',
+  pickDay: 'Elige un día',
+  pickFirstDay: 'Elige el primer día',
+  pickLastDay: 'Elige el último día',
   /** Days of the chosen range that hold at least one entry. */
-  rangeDaysWithEntries: '{count} with entries',
-  rangeNothingWritten: 'Nothing written',
-  apply: 'Apply',
+  rangeDaysWithEntries: '{count} con entradas',
+  rangeNothingWritten: 'Nada escrito',
+  apply: 'Aplicar',
 
   /* Day pane */
-  previousDay: 'Previous day',
-  nextDay: 'Next day',
-  noEarlierEntries: 'No earlier entries',
-  noLaterEntries: 'No later entries',
+  previousDay: 'Día anterior',
+  nextDay: 'Día siguiente',
+  noEarlierEntries: 'No hay entradas anteriores',
+  noLaterEntries: 'No hay entradas posteriores',
   /** Hints on the day arrows; `{day}` is the day they lead to. */
-  previousDayHint: 'Previous day · {day}',
-  nextDayHint: 'Next day · {day}',
-  previousEntry: 'Previous entry',
-  nextEntry: 'Next entry',
+  previousDayHint: 'Día anterior · {day}',
+  nextDayHint: 'Día siguiente · {day}',
+  previousEntry: 'Entrada anterior',
+  nextEntry: 'Entrada siguiente',
   /** Dot under the entry pager; `{number}` counts from 1. */
-  goToEntry: 'Go to entry {number}',
-  noEntriesOnDay: 'No entries on this day yet.',
-  writeForDay: 'Write an entry for this day',
-  newEntryOnDay: 'New entry on this day',
-  editEntryHint: 'Edit entry — or tap the text',
-  unsavedChanges: 'Unsaved changes to this entry',
-  continueEditing: 'Continue editing',
+  goToEntry: 'Ir a la entrada {number}',
+  noEntriesOnDay: 'Aún no hay entradas este día.',
+  writeForDay: 'Escribe una entrada para este día',
+  newEntryOnDay: 'Nueva entrada de este día',
+  editEntryHint: 'Editar entrada, o toca el texto',
+  unsavedChanges: 'Cambios sin guardar en esta entrada',
+  continueEditing: 'Seguir editando',
   /** Shown when a day is opened from a search; `{query}` is what was searched for. */
   matches: plural({
-    one: '{count} match for “{query}”',
-    other: '{count} matches for “{query}”',
+    one: '{count} coincidencia para “{query}”',
+    other: '{count} coincidencias para “{query}”',
   }),
-  noMatchesHere: 'No matches for “{query}” here',
-  fullScreen: 'Full screen',
-  exitFullScreen: 'Exit full screen',
-  backToTop: 'Back to top',
+  noMatchesHere: 'No hay coincidencias para “{query}” aquí',
+  fullScreen: 'Pantalla completa',
+  exitFullScreen: 'Salir de pantalla completa',
+  backToTop: 'Volver arriba',
 
   /* Entry feed (phones) */
-  feed: 'Entries',
-  noEntriesYet: 'No entries yet',
-  noEntriesYetHint: "Tap + to write today's, or pick a day from the calendar.",
+  feed: 'Entradas',
+  noEntriesYet: 'Aún no hay entradas',
+  noEntriesYetHint: 'Toca + para escribir la de hoy, o elige un día del calendario.',
   /** A feed row read out: `{day}` is its date, `{title}` the entry's title. */
   feedEntry: '{day}: {title}',
   /** The pinned month in the feed; `{month}` is the month shown. */
-  openCalendar: '{month}, open calendar',
+  openCalendar: '{month}, abrir calendario',
 
   /* Shared controls */
   /** Spoken name of a select: `{label}` is what is chosen, `{value}` the current choice. */
   selectValue: '{label}: {value}',
-  working: 'Working',
+  working: 'Procesando',
   /** A bar of the statistics charts that covers a week; `{day}` is its first day. */
-  weekOf: 'Week of {day}',
+  weekOf: 'Semana del {day}',
 };

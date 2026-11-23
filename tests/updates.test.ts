@@ -28,7 +28,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   },
 }));
 vi.mock('../src/lib/external', () => ({
-  DOWNLOAD_PAGE: 'https://icarus.4oli.com/download',
+  downloadPage: () => 'https://icarus.4oli.com/download',
   openExternal: async (url: string) => void state.opened.push(url),
 }));
 

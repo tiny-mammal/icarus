@@ -13,6 +13,7 @@
 import en, { type Messages } from './messages/en';
 import { formatMessage, numberFormat, dateTimeFormat, type Message, type Params } from './format';
 import { DEFAULT_LOCALE, isLocale, matchLocale, regionalTag, systemLanguages, type Locale } from './locales';
+import { setFormatLocaleReader } from './current';
 
 export type { Messages, Message, Params, Locale };
 
@@ -52,6 +53,7 @@ class I18n {
 }
 
 export const i18n = new I18n();
+setFormatLocaleReader(() => i18n.formatLocale);
 
 /** The current catalog, one getter per namespace so reads stay reactive. */
 export const t = {} as Messages;

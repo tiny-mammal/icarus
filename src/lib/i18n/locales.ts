@@ -21,6 +21,14 @@ export function isLocale(value: unknown): value is Locale {
   return LOCALES.includes(value as Locale);
 }
 
+/**
+ * Where a page of the public site lives in `locale`: English at the root,
+ * every other language under its own folder (`/es/download`).
+ */
+export function localizedPath(path: `/${string}`, locale: Locale): string {
+  return locale === DEFAULT_LOCALE ? path : `/${locale}${path}`;
+}
+
 /** The primary language subtag of a BCP 47 tag: `es` for `es-MX`. */
 function primary(tag: string): string {
   return tag.split(/[-_]/)[0].toLowerCase();

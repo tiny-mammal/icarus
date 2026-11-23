@@ -101,7 +101,6 @@ export default {
   couldNotOpenDiary: 'Could not open that diary.',
   /** `{error}` is the reason, written by the file parser (in English). */
   couldNotReadFile: "Couldn't read this file — {error}",
-  unknownParseError: 'Unknown parse error',
   couldNotSaveDiary: 'Could not save the diary.',
   couldNotSaveDiaryInLocation: 'Could not save the diary in the selected location.',
   couldNotCreateDiary: 'Could not create the diary.',

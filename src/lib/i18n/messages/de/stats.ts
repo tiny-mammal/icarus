@@ -2,138 +2,138 @@ import { plural } from '../../format';
 
 /** The statistics dialog: writing, tracking, the charts and the periods. */
 export default {
-  title: 'Statistics',
-  viewLabel: 'Statistics view',
-  views: { writing: 'Writing', tracking: 'Tracking' },
+  title: 'Statistik',
+  viewLabel: 'Statistikansicht',
+  views: { writing: 'Schreiben', tracking: 'Tracking' },
 
-  periodLabel: 'Statistics period',
+  periodLabel: 'Zeitraum der Statistik',
   periods: {
-    last30Days: 'Last 30 days',
-    lastYear: 'Last year',
-    thisYear: 'This year',
-    allTime: 'All time',
-    custom: 'Custom range…',
+    last30Days: 'Letzte 30 Tage',
+    lastYear: 'Letztes Jahr',
+    thisYear: 'Dieses Jahr',
+    allTime: 'Gesamte Zeit',
+    custom: 'Eigener Zeitraum…',
     /** The heading of the calendar that replaces the list of periods. */
-    customPanel: 'Custom range',
+    customPanel: 'Eigener Zeitraum',
   },
 
   /** A unit set in a quieter tone beside a number, like “5 days”. */
-  dayUnit: plural({ one: 'day', other: 'days' }),
-  characters: plural({ one: '{count} character', other: '{count} characters' }),
+  dayUnit: plural({ one: 'Tag', other: 'Tage' }),
+  characters: plural({ one: '{count} Zeichen', other: '{count} Zeichen' }),
   /** A moving average over the last `{count}` days, as in “7-day average”. */
-  movingAverage: plural({ one: '{count}-day average', other: '{count}-day average' }),
+  movingAverage: plural({ one: '{count}-Tage-Durchschnitt', other: '{count}-Tage-Durchschnitt' }),
 
   chart: {
     /** The legend entry for the bars: one bar per day, week or month. */
-    barsDaily: 'Daily',
-    barsWeekly: 'Weekly',
-    barsMonthly: 'Monthly',
+    barsDaily: 'Täglich',
+    barsWeekly: 'Wöchentlich',
+    barsMonthly: 'Monatlich',
     /** Weekly and monthly bars show an amount per day, not a total. */
-    barsWeeklyPerDay: 'Weekly (per day)',
-    barsMonthlyPerDay: 'Monthly (per day)',
+    barsWeeklyPerDay: 'Wöchentlich (pro Tag)',
+    barsMonthlyPerDay: 'Monatlich (pro Tag)',
   },
 
   writing: {
     /** A short label above a figure (all capitals): the number of entries. */
-    entries: 'Entries',
-    characters: 'Characters',
+    entries: 'Einträge',
+    characters: 'Zeichen',
     /** Short for “average entry”: fits a small tile label. */
-    averageEntry: 'Avg. entry',
-    charactersPerEntry: 'Characters per entry',
-    bestDay: 'Best day',
+    averageEntry: 'Ø Eintrag',
+    charactersPerEntry: 'Zeichen pro Eintrag',
+    bestDay: 'Bester Tag',
 
-    charactersPerDay: 'Characters per day',
-    chartLabel: 'Characters written over the selected period',
+    charactersPerDay: 'Zeichen pro Tag',
+    chartLabel: 'Geschriebene Zeichen im gewählten Zeitraum',
     /** `{characters}` is like “1,200 characters”, `{entries}` like “3 entries”. */
     chartTotals: '{characters} · {entries}',
     /** `{value}` is a number of characters; `{count}` is the days the average spans. */
     chartPerDayAverage: plural({
-      one: '{value} per day, {count}-day average',
-      other: '{value} per day, {count}-day average',
+      one: '{value} pro Tag, {count}-Tage-Durchschnitt',
+      other: '{value} pro Tag, {count}-Tage-Durchschnitt',
     }),
-    noEntries: 'No entries in this period.',
-    nothingWritten: 'Nothing written in this period.',
+    noEntries: 'Keine Einträge in diesem Zeitraum.',
+    nothingWritten: 'In diesem Zeitraum wurde nichts geschrieben.',
 
-    topDays: 'Top days',
-    topDaysHint: 'By characters written',
+    topDays: 'Top-Tage',
+    topDaysHint: 'Nach geschriebenen Zeichen',
   },
 
   tracking: {
-    nothingTracked: 'Nothing scored or marked in this period.',
+    nothingTracked: 'In diesem Zeitraum wurde nichts bewertet oder markiert.',
 
     /** Short for “average score”: fits a small tile label. */
-    averageScore: 'Avg. score',
-    daysScored: plural({ one: '{count} day scored', other: '{count} days scored' }),
-    passingDays: 'Passing days',
+    averageScore: 'Ø Bewertung',
+    daysScored: plural({ one: '{count} Tag bewertet', other: '{count} Tage bewertet' }),
+    passingDays: 'Bestandene Tage',
     /** `{passed}` of the `{count}` days that were scored. */
-    passedOfScored: plural({ one: '{passed} of {count} day', other: '{passed} of {count} days' }),
-    currentRun: 'Current run',
-    runPassing: 'Passing',
-    runFailing: 'Failing',
-    runNothingScored: 'Nothing scored yet',
-    bestRun: 'Best run',
-    worstRun: 'Worst run',
-    showWorstRun: 'Show worst run',
-    showBestRun: 'Show best run',
-    runStillGoing: 'Still going',
+    passedOfScored: plural({ one: '{passed} von {count} Tag', other: '{passed} von {count} Tagen' }),
+    currentRun: 'Aktuelle Serie',
+    runPassing: 'Bestanden',
+    runFailing: 'Nicht bestanden',
+    runNothingScored: 'Noch nichts bewertet',
+    bestRun: 'Beste Serie',
+    worstRun: 'Schlechteste Serie',
+    showWorstRun: 'Schlechteste Serie anzeigen',
+    showBestRun: 'Beste Serie anzeigen',
+    runStillGoing: 'Läuft noch',
     /** `{date}` is a month and year, like “March 2025”. */
-    runUntil: 'Until {date}',
-    noPassingDay: 'No passing day yet',
-    noFailingDay: 'No failing day yet',
+    runUntil: 'Bis {date}',
+    noPassingDay: 'Noch kein bestandener Tag',
+    noFailingDay: 'Noch kein nicht bestandener Tag',
     /** The tile as a screen reader reads it; `{action}` says what pressing it does. */
     runTileLabel: '{label}: {value}. {detail}. {action}',
 
-    scoreOverTime: 'Score over time',
-    chartLabel: 'Average score over the selected period',
+    scoreOverTime: 'Bewertung im Zeitverlauf',
+    chartLabel: 'Durchschnittliche Bewertung im gewählten Zeitraum',
     /** The pass mark's line across the chart; `{score}` is the lowest passing score. */
-    passMark: 'Pass mark ({score})',
+    passMark: 'Bestehensgrenze ({score})',
     /** `{value}` is an average score; `{days}` is like “3 days scored”. */
-    chartAverage: '{value} average · {days}',
-    chartNoScore: 'No score',
+    chartAverage: '{value} Durchschnitt · {days}',
+    chartNoScore: 'Keine Bewertung',
     /** `{value}` is an average score; `{count}` is the days the moving average spans. */
     chartMovingAverage: plural({
-      one: '{value}, {count}-day average',
-      other: '{value}, {count}-day average',
+      one: '{value}, {count}-Tage-Durchschnitt',
+      other: '{value}, {count}-Tage-Durchschnitt',
     }),
-    noScoredDays: 'No days scored in this period.',
+    noScoredDays: 'In diesem Zeitraum wurden keine Tage bewertet.',
 
-    scoreDistribution: 'Score distribution',
+    scoreDistribution: 'Verteilung der Bewertungen',
     /** Also the accessible name of the bars. */
-    daysGivenEachScore: 'Days given each score',
+    daysGivenEachScore: 'Tage pro Bewertung',
     /** One bar of the distribution; `{days}` is like “3 days”. */
-    scoreDays: 'Score {value}: {days}',
+    scoreDays: 'Bewertung {value}: {days}',
   },
 
   habits: {
-    title: 'Habits',
-    hint: 'Streaks span all time; rates follow the period',
-    done: 'Done',
-    missed: 'Missed',
-    notMarked: 'Not marked',
+    title: 'Gewohnheiten',
+    hint: 'Serien laufen über die gesamte Zeit; Quoten richten sich nach dem Zeitraum',
+    done: 'Erledigt',
+    missed: 'Verpasst',
+    notMarked: 'Nicht markiert',
 
-    noStreakYet: 'No streak yet',
-    archived: 'Archived',
+    noStreakYet: 'Noch keine Serie',
+    archived: 'Archiviert',
     /** `{date}` is the first day the habit was marked, like “3 Mar 2025”. */
-    trackedSince: 'Tracked since {date}',
-    notMarkedYet: 'Not marked yet',
+    trackedSince: 'Verfolgt seit {date}',
+    notMarkedYet: 'Noch nicht markiert',
     /** The tooltip on the streak's number; `{date}` is the day the streak began. */
-    streakStarted: 'Streak started: {date}',
-    streakStartedEstimated: 'Estimated streak start: {date}',
+    streakStarted: 'Serie begonnen: {date}',
+    streakStartedEstimated: 'Geschätzter Serienbeginn: {date}',
 
-    current: 'Current',
-    best: 'Best',
-    noActiveStreak: 'No active streak',
-    longestStreak: 'Your longest',
-    activeStreak: 'Active streak',
+    current: 'Aktuell',
+    best: 'Beste',
+    noActiveStreak: 'Keine aktive Serie',
+    longestStreak: 'Deine längste',
+    activeStreak: 'Aktive Serie',
     /** `{done}` of the `{count}` days the habit was counted on. */
-    rateOf: plural({ one: '{done} of {count} day', other: '{done} of {count} days' }),
-    rateNotMarked: 'Not marked in this period',
+    rateOf: plural({ one: '{done} von {count} Tag', other: '{done} von {count} Tagen' }),
+    rateNotMarked: 'In diesem Zeitraum nicht markiert',
 
-    lastDays: plural({ one: 'Last {count} day', other: 'Last {count} days' }),
+    lastDays: plural({ one: 'Letzter Tag', other: 'Letzte {count} Tage' }),
     /** The strip of recent marks as a screen reader reads it. */
     lastDaysSummary: plural({
-      one: 'Last {count} day: {done} done, {missed} missed',
-      other: 'Last {count} days: {done} done, {missed} missed',
+      one: 'Letzter Tag: {done} erledigt, {missed} verpasst',
+      other: 'Letzte {count} Tage: {done} erledigt, {missed} verpasst',
     }),
   },
 };

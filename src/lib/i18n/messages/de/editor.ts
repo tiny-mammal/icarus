@@ -2,62 +2,62 @@ import { plural } from '../../format';
 
 /** Writing: the entry editor, the spelling menu, drafts, deleting entries and the length count. */
 export default {
-  newEntry: 'New entry',
-  editEntry: 'Edit entry',
-  titlePlaceholder: 'Title',
-  locationPlaceholder: 'Add a location or subtitle',
+  newEntry: 'Neuer Eintrag',
+  editEntry: 'Eintrag bearbeiten',
+  titlePlaceholder: 'Titel',
+  locationPlaceholder: 'Ort oder Untertitel hinzufügen',
   /** Placeholder of an empty entry dated today. */
-  bodyPlaceholderToday: "Write today's chapter… Markdown is welcome.",
+  bodyPlaceholderToday: 'Schreibe das heutige Kapitel… Markdown ist willkommen.',
   /** Placeholder of an empty entry dated on another day. */
-  bodyPlaceholderOtherDay: 'Write this day’s chapter… Markdown is welcome.',
+  bodyPlaceholderOtherDay: 'Schreibe das Kapitel für diesen Tag… Markdown ist willkommen.',
 
-  redo: 'Redo',
+  redo: 'Wiederholen',
   /** Closes the editor but keeps unsaved work waiting in the draft strip. */
-  minimize: 'Minimize',
-  minimizeHint: 'Minimize — keep writing later from the strip',
+  minimize: 'Minimieren',
+  minimizeHint: 'Minimieren — später im Streifen weiterschreiben',
 
   /** Status in the editor footer: the work is autosaved as a draft, not yet saved as an entry. */
-  draftSaved: 'Draft saved',
+  draftSaved: 'Entwurf gespeichert',
   /** A shorter "Draft saved", for very narrow screens. */
-  draftSavedShort: 'Saved',
-  saveEntry: 'Save entry',
-  save: 'Save',
+  draftSavedShort: 'Gespeichert',
+  saveEntry: 'Eintrag speichern',
+  save: 'Speichern',
   /** The Save button while the entry is being written to the diary. */
-  saving: 'Saving',
+  saving: 'Wird gespeichert',
 
   /** Length of the entry, as the editor and the reader show it. */
-  chars: plural({ one: '{count} char', other: '{count} chars' }),
+  chars: plural({ one: '{count} Zeichen', other: '{count} Zeichen' }),
   /** Both counts side by side; `{words}` and `{chars}` are already written out, like "12 words". */
   lengthBoth: '{words} · {chars}',
 
-  spellingSuggestions: 'Spelling suggestions',
-  noSuggestions: 'No suggestions',
-  addToDictionary: 'Add to dictionary',
+  spellingSuggestions: 'Rechtschreibvorschläge',
+  noSuggestions: 'Keine Vorschläge',
+  addToDictionary: 'Zum Wörterbuch hinzufügen',
   /** Stop underlining this misspelled word (menu item). */
-  ignoreWord: 'Ignore',
+  ignoreWord: 'Ignorieren',
 
-  drafts: 'Drafts',
-  savedDrafts: 'Saved drafts',
-  noDrafts: 'No drafts yet.',
+  drafts: 'Entwürfe',
+  savedDrafts: 'Gespeicherte Entwürfe',
+  noDrafts: 'Noch keine Entwürfe.',
   /** Tag on a draft that revises an existing entry rather than a new one. */
-  draftIsEntryEdit: 'Entry edit',
-  deleteDraft: 'Delete draft',
+  draftIsEntryEdit: 'Bearbeitung',
+  deleteDraft: 'Entwurf löschen',
 
   /** The draft strip reopens the minimized editor; `{title}` is the draft's title or start. */
-  continueWriting: 'Continue writing: {title}',
+  continueWriting: 'Weiterschreiben: {title}',
   /** Second line of the draft strip; `{day}` is the day the entry is dated. */
-  stripEditingEntry: 'Editing entry · {day}',
-  stripDraft: 'Draft · {day}',
+  stripEditingEntry: 'Eintrag wird bearbeitet · {day}',
+  stripDraft: 'Entwurf · {day}',
 
-  deleteDraftTitle: 'Delete draft?',
-  discardDraftTitle: 'Discard draft?',
-  discard: 'Discard',
+  deleteDraftTitle: 'Entwurf löschen?',
+  discardDraftTitle: 'Entwurf verwerfen?',
+  discard: 'Verwerfen',
   /** `{subject}` is the draft's title, shown emphasised. */
-  deleteDraftBody: "{subject} will be permanently removed. This can't be undone.",
+  deleteDraftBody: '{subject} wird dauerhaft entfernt. Das kann nicht rückgängig gemacht werden.',
 
-  deleteEntry: 'Delete entry',
-  deleteEntryTitle: 'Delete entry?',
+  deleteEntry: 'Eintrag löschen',
+  deleteEntryTitle: 'Eintrag löschen?',
   /** `{subject}` is the entry's title, shown emphasised. */
-  deleteEntryBodyDevice: "{subject} will be permanently removed from this device. This can't be undone.",
-  deleteEntryBodyBrowser: "{subject} will be permanently removed from this browser. This can't be undone.",
+  deleteEntryBodyDevice: '{subject} wird dauerhaft von diesem Gerät entfernt. Das kann nicht rückgängig gemacht werden.',
+  deleteEntryBodyBrowser: '{subject} wird dauerhaft aus diesem Browser entfernt. Das kann nicht rückgängig gemacht werden.',
 };

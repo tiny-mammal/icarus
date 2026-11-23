@@ -14,7 +14,7 @@
  */
 import { runningUnderTauri } from './runtime';
 import { devError } from './log';
-import { DOWNLOAD_PAGE, openExternal } from './external';
+import { downloadPage, openExternal } from './external';
 import { detectPlatform, isAppleMobile, type PlatformId } from './user-agent';
 
 export type InstallMethod = 'download' | 'prompt' | 'ios' | 'manual';
@@ -67,7 +67,7 @@ class Install {
   /** Open the download page, install straight away where the browser allows it, or explain how. */
   async start(): Promise<void> {
     if (this.platform) {
-      await openExternal(`${DOWNLOAD_PAGE}#${this.platform}`);
+      await openExternal(`${downloadPage()}#${this.platform}`);
       return;
     }
     if (!this.deferred) {

@@ -1,4 +1,7 @@
-import { dateFormat, i18n } from './i18n/index.svelte';
+import { dateTimeFormat } from './i18n/format';
+import { formatLocale } from './i18n/current';
+
+const dateFormat = (options: Intl.DateTimeFormatOptions) => dateTimeFormat(formatLocale(), options);
 
 /**
  * Date helpers. Diary entries are day-granular, so we key everything by a
@@ -237,7 +240,7 @@ const relativeTimes = new Map<string, Intl.RelativeTimeFormat>();
 
 /** How long ago `date` was, in words: "today", "yesterday", "3 weeks ago". */
 export function timeAgo(date: Date, now: Date = new Date()): string {
-  const locale = i18n.formatLocale;
+  const locale = formatLocale();
   let relativeTime = relativeTimes.get(locale);
   if (!relativeTime) relativeTimes.set(locale, (relativeTime = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })));
   const days = daysBetween(date, now);

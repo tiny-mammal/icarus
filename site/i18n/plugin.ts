@@ -15,7 +15,7 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import type { Plugin } from 'vite';
-import { DEFAULT_LOCALE, LOCALES, LOCALE_NAMES, isLocale, type Locale } from '../../src/lib/i18n/locales';
+import { DEFAULT_LOCALE, LOCALES, LOCALE_NAMES, isLocale, localizedPath, type Locale } from '../../src/lib/i18n/locales';
 import { SITE_MESSAGES, type SiteMessages } from '.';
 
 export const ORIGIN = 'https://icarus.4oli.com';
@@ -30,9 +30,7 @@ type Page = keyof typeof PAGES;
 
 /** Where a page lives in `locale`. */
 export function pagePath(page: Page, locale: Locale): string {
-  const prefix = locale === DEFAULT_LOCALE ? '' : `/${locale}`;
-  if (page === 'index') return `${prefix}/`;
-  return `${prefix}/${page}`;
+  return localizedPath(page === 'index' ? '/' : `/${page}`, locale);
 }
 
 /** The page and language a built HTML path belongs to: `/es/download.html`. */

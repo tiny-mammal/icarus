@@ -14,7 +14,6 @@ import type { DayRecord, Diary, DiaryEntry, Habit, ParseResult, Tracker } from '
 import { DEFAULT_SCORE_SCALE, DEFAULT_UNMARKED_DAYS, EMPTY_TRACKER } from './tracker';
 import { randomId } from './random';
 import { dateKey } from './date';
-import { t } from './i18n/index.svelte';
 
 const PRODID = '-//Icarus Diary//Local-First Diary//EN';
 const CRLF = '\r\n';
@@ -255,7 +254,7 @@ export function parseIcs(text: string): ParseResult {
         }
         const entry: DiaryEntry = {
           uid: str(first('uid')?.[3]) ?? generateUid(),
-          title: str(first('summary')?.[3]) ?? t.common.untitled,
+          title: str(first('summary')?.[3]) ?? 'Untitled',
           content: str(first('description')?.[3]) ?? '',
           location: str(first('location')?.[3]),
           date,
@@ -281,7 +280,7 @@ export function parseIcs(text: string): ParseResult {
     if (extra) diary.extra = extra;
     return { ok: true, ...diary };
   } catch (err) {
-    const message = err instanceof Error ? err.message : t.app.unknownParseError;
+    const message = err instanceof Error ? err.message : 'Unknown parse error';
     return { ok: false, error: message };
   }
 }

@@ -2,62 +2,62 @@ import { plural } from '../../format';
 
 /** Writing: the entry editor, the spelling menu, drafts, deleting entries and the length count. */
 export default {
-  newEntry: 'New entry',
-  editEntry: 'Edit entry',
-  titlePlaceholder: 'Title',
-  locationPlaceholder: 'Add a location or subtitle',
+  newEntry: 'Nuova voce',
+  editEntry: 'Modifica voce',
+  titlePlaceholder: 'Titolo',
+  locationPlaceholder: 'Aggiungi un luogo o un sottotitolo',
   /** Placeholder of an empty entry dated today. */
-  bodyPlaceholderToday: "Write today's chapter… Markdown is welcome.",
+  bodyPlaceholderToday: 'Scrivi il capitolo di oggi… Il Markdown è benvenuto.',
   /** Placeholder of an empty entry dated on another day. */
-  bodyPlaceholderOtherDay: 'Write this day’s chapter… Markdown is welcome.',
+  bodyPlaceholderOtherDay: 'Scrivi il capitolo di questo giorno… Il Markdown è benvenuto.',
 
-  redo: 'Redo',
+  redo: 'Ripeti',
   /** Closes the editor but keeps unsaved work waiting in the draft strip. */
-  minimize: 'Minimize',
-  minimizeHint: 'Minimize — keep writing later from the strip',
+  minimize: 'Riduci',
+  minimizeHint: 'Riduci — continua a scrivere più tardi dalla barra',
 
   /** Status in the editor footer: the work is autosaved as a draft, not yet saved as an entry. */
-  draftSaved: 'Draft saved',
+  draftSaved: 'Bozza salvata',
   /** A shorter "Draft saved", for very narrow screens. */
-  draftSavedShort: 'Saved',
-  saveEntry: 'Save entry',
-  save: 'Save',
+  draftSavedShort: 'Salvata',
+  saveEntry: 'Salva voce',
+  save: 'Salva',
   /** The Save button while the entry is being written to the diary. */
-  saving: 'Saving',
+  saving: 'Salvataggio',
 
   /** Length of the entry, as the editor and the reader show it. */
-  chars: plural({ one: '{count} char', other: '{count} chars' }),
+  chars: plural({ one: '{count} car.', other: '{count} car.' }),
   /** Both counts side by side; `{words}` and `{chars}` are already written out, like "12 words". */
   lengthBoth: '{words} · {chars}',
 
-  spellingSuggestions: 'Spelling suggestions',
-  noSuggestions: 'No suggestions',
-  addToDictionary: 'Add to dictionary',
+  spellingSuggestions: 'Suggerimenti ortografici',
+  noSuggestions: 'Nessun suggerimento',
+  addToDictionary: 'Aggiungi al dizionario',
   /** Stop underlining this misspelled word (menu item). */
-  ignoreWord: 'Ignore',
+  ignoreWord: 'Ignora',
 
-  drafts: 'Drafts',
-  savedDrafts: 'Saved drafts',
-  noDrafts: 'No drafts yet.',
+  drafts: 'Bozze',
+  savedDrafts: 'Bozze salvate',
+  noDrafts: 'Nessuna bozza.',
   /** Tag on a draft that revises an existing entry rather than a new one. */
-  draftIsEntryEdit: 'Entry edit',
-  deleteDraft: 'Delete draft',
+  draftIsEntryEdit: 'Modifica di voce',
+  deleteDraft: 'Elimina bozza',
 
   /** The draft strip reopens the minimized editor; `{title}` is the draft's title or start. */
-  continueWriting: 'Continue writing: {title}',
+  continueWriting: 'Continua a scrivere: {title}',
   /** Second line of the draft strip; `{day}` is the day the entry is dated. */
-  stripEditingEntry: 'Editing entry · {day}',
-  stripDraft: 'Draft · {day}',
+  stripEditingEntry: 'Modifica voce · {day}',
+  stripDraft: 'Bozza · {day}',
 
-  deleteDraftTitle: 'Delete draft?',
-  discardDraftTitle: 'Discard draft?',
-  discard: 'Discard',
+  deleteDraftTitle: 'Eliminare la bozza?',
+  discardDraftTitle: 'Scartare la bozza?',
+  discard: 'Scarta',
   /** `{subject}` is the draft's title, shown emphasised. */
-  deleteDraftBody: "{subject} will be permanently removed. This can't be undone.",
+  deleteDraftBody: 'La bozza {subject} verrà eliminata in modo definitivo. Non si può annullare.',
 
-  deleteEntry: 'Delete entry',
-  deleteEntryTitle: 'Delete entry?',
+  deleteEntry: 'Elimina voce',
+  deleteEntryTitle: 'Eliminare la voce?',
   /** `{subject}` is the entry's title, shown emphasised. */
-  deleteEntryBodyDevice: "{subject} will be permanently removed from this device. This can't be undone.",
-  deleteEntryBodyBrowser: "{subject} will be permanently removed from this browser. This can't be undone.",
+  deleteEntryBodyDevice: 'La voce {subject} verrà eliminata in modo definitivo da questo dispositivo. Non si può annullare.',
+  deleteEntryBodyBrowser: 'La voce {subject} verrà eliminata in modo definitivo da questo browser. Non si può annullare.',
 };

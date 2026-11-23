@@ -157,10 +157,18 @@ export function ignoreWord(word: string): void {
 export function suggest(raw: string): string[] {
   if (!speller) return [];
   const word = normalize(raw);
-  return speller.hunspell
-    .suggest(word)
-    .slice(0, MAX_SUGGESTIONS)
-    .map((s) => matchCase(word, s));
+  return rankSuggestions(word, speller.hunspell.suggest(word)).map((s) => matchCase(word, s));
+}
+
+/**
+ * Hunspell also proposes splitting the word ("occured" → "occur ed"), which
+ * is rarely meant when a one-word fix exists: keep splits only as a last
+ * resort ("alot" → "a lot"). Exported for tests.
+ */
+export function rankSuggestions(word: string, suggestions: string[]): string[] {
+  const isSplit = (s: string) => /[ -]/.test(s) && s.replace(/[ -]/g, '') === word.replace(/-/g, '');
+  const whole = suggestions.filter((s) => !isSplit(s));
+  return (whole.length ? whole : suggestions).slice(0, MAX_SUGGESTIONS);
 }
 
 /**

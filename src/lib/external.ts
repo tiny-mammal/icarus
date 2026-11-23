@@ -1,7 +1,11 @@
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { i18n } from './i18n/index.svelte';
+import { localizedPath } from './i18n/locales';
 
-/** The public download page, with every native build. */
-export const DOWNLOAD_PAGE = 'https://icarus.4oli.com/download';
+/** The public download page, with every native build, in the app's language. */
+export function downloadPage(): string {
+  return `https://icarus.4oli.com${localizedPath('/download', i18n.locale)}`;
+}
 
 /** Public home of the project, linked from the settings dialog. */
 export const SOURCE_REPO = { label: 'tiny-mammal/icarus', url: 'https://github.com/tiny-mammal/icarus' };

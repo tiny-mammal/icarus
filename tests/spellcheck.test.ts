@@ -7,6 +7,7 @@ import {
   matchCase,
   misspelledRanges,
   parseUserWord,
+  rankSuggestions,
   removeUserWord,
   setUserWords,
   shouldCheck,
@@ -86,6 +87,13 @@ describe('shouldCheck', () => {
     expect(shouldCheck('Monday')).toBe(true);
     expect(shouldCheck('teh')).toBe(true);
     expect(shouldCheck("don't")).toBe(true);
+  });
+});
+
+describe('rankSuggestions', () => {
+  it('drops word splits when a one-word fix exists', () => {
+    expect(rankSuggestions('occured', ['occurred', 'occur ed', 'occur-ed'])).toEqual(['occurred']);
+    expect(rankSuggestions('alot', ['a lot'])).toEqual(['a lot']);
   });
 });
 

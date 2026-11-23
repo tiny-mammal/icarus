@@ -28,7 +28,7 @@ import { debugFlag } from './debug';
 import { devError } from './log';
 import { runningOnAndroid, runningUnderTauri } from './runtime';
 import { compareVersions, isVersion } from './semver';
-import { DOWNLOAD_PAGE, openExternal } from './external';
+import { downloadPage, openExternal } from './external';
 
 const DAY = 86_400_000;
 /** Wait after the diary opens, so the check never competes with it. */
@@ -159,7 +159,7 @@ class Updates {
 
   /** The download page, told which version is installed so it can compare. */
   get downloadUrl(): string {
-    return this.current ? `${DOWNLOAD_PAGE}?installed=${encodeURIComponent(this.current)}` : DOWNLOAD_PAGE;
+    return this.current ? `${downloadPage()}?installed=${encodeURIComponent(this.current)}` : downloadPage();
   }
 
   /** Read the preferences stored beside a newly opened diary and act on them. */

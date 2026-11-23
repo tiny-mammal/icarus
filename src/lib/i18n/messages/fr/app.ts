@@ -3,138 +3,138 @@ import { plural } from '../../format';
 /** The app shell, the welcome screen, importing and exporting, updates, installing, and the toasts the store raises. */
 export default {
   // App shell
-  calendar: 'Calendar',
+  calendar: 'Calendrier',
   notifications: 'Notifications',
-  unsavedChangesTitle: 'Unsaved changes',
-  quitAnyway: 'Quit anyway',
+  unsavedChangesTitle: 'Modifications non enregistrées',
+  quitAnyway: 'Quitter quand même',
   unsavedChangesBody:
-    'Some changes, the current draft or the diary itself, could not be saved to the diary folder. Quitting now discards them.',
+    'Certaines modifications, le brouillon en cours ou le journal lui-même, n’ont pas pu être enregistrées dans le dossier du journal. Quitter maintenant les supprimera.',
 
   // Welcome
   welcomeTitle: 'Icarus Diary',
-  welcomeTagline: 'A quiet, local-first place for your days.',
-  welcomeIntro: 'Start a new diary, or bring in one you already keep.',
-  startNewDiary: 'Start a new diary',
-  importDiary: 'Import a diary (.ics)',
-  releaseToOpen: 'Release to open',
-  chooseFileTouch: 'Tap to choose a .ics or .icarus file',
-  chooseFileDesktop: 'Drag & drop a file here, or click to browse',
-  nextProtect: "Next, you'll choose whether to protect it with a password.",
+  welcomeTagline: 'Un espace calme et local pour vos journées.',
+  welcomeIntro: 'Commencez un nouveau journal, ou importez celui que vous tenez déjà.',
+  startNewDiary: 'Commencer un nouveau journal',
+  importDiary: 'Importer un journal (.ics)',
+  releaseToOpen: 'Relâcher pour ouvrir',
+  chooseFileTouch: 'Touchez pour choisir un fichier .ics ou .icarus',
+  chooseFileDesktop: 'Glissez-déposez un fichier ici, ou cliquez pour parcourir',
+  nextProtect: 'Ensuite, vous choisirez s’il faut le protéger par un mot de passe.',
 
   // Replacing the diary
-  replaceTitle: 'Replace your diary?',
-  replaceStartOver: 'Start over',
-  replaceConfirm: 'Replace diary',
+  replaceTitle: 'Remplacer votre journal ?',
+  replaceStartOver: 'Recommencer',
+  replaceConfirm: 'Remplacer le journal',
   /** The diary that is open is replaced by a new, empty one. `*…*` marks emphasis. */
   replaceOpenWithEmpty: plural({
-    one: 'Your diary with *{count}* entry will be replaced by an empty one, and its drafts and personal dictionary erased.',
-    other: 'Your diary with *{count}* entries will be replaced by an empty one, and its drafts and personal dictionary erased.',
+    one: 'Votre journal contenant *{count}* entrée sera remplacé par un journal vide, et ses brouillons et son dictionnaire personnel seront effacés.',
+    other: 'Votre journal contenant *{count}* entrées sera remplacé par un journal vide, et ses brouillons et son dictionnaire personnel seront effacés.',
   }),
   /** The diary that is open is replaced by the imported file. */
   replaceOpenWithImport: plural({
-    one: 'Your diary with *{count}* entry will be replaced by the imported file, and its drafts and personal dictionary erased.',
-    other: 'Your diary with *{count}* entries will be replaced by the imported file, and its drafts and personal dictionary erased.',
+    one: 'Votre journal contenant *{count}* entrée sera remplacé par le fichier importé, et ses brouillons et son dictionnaire personnel seront effacés.',
+    other: 'Votre journal contenant *{count}* entrées sera remplacé par le fichier importé, et ses brouillons et son dictionnaire personnel seront effacés.',
   }),
   /** The saved diary could not be opened, so only its place is known. */
   replaceSavedDeviceWithEmpty:
-    'The diary saved on this device will be replaced by an empty one, and its drafts and personal dictionary erased.',
+    'Le journal enregistré sur cet appareil sera remplacé par un journal vide, et ses brouillons et son dictionnaire personnel seront effacés.',
   replaceSavedDeviceWithImport:
-    'The diary saved on this device will be replaced by the imported file, and its drafts and personal dictionary erased.',
+    'Le journal enregistré sur cet appareil sera remplacé par le fichier importé, et ses brouillons et son dictionnaire personnel seront effacés.',
   replaceSavedBrowserWithEmpty:
-    'The diary saved in this browser will be replaced by an empty one, and its drafts and personal dictionary erased.',
+    'Le journal enregistré dans ce navigateur sera remplacé par un journal vide, et ses brouillons et son dictionnaire personnel seront effacés.',
   replaceSavedBrowserWithImport:
-    'The diary saved in this browser will be replaced by the imported file, and its drafts and personal dictionary erased.',
-  replaceKeepsCopy: 'A copy from earlier today is kept, but export a backup first to keep your latest changes.',
-  replaceExportFirst: "Export a backup first if you may want it back. This can't be undone.",
+    'Le journal enregistré dans ce navigateur sera remplacé par le fichier importé, et ses brouillons et son dictionnaire personnel seront effacés.',
+  replaceKeepsCopy:
+    'Une copie datant de plus tôt aujourd’hui est conservée, mais exportez d’abord une sauvegarde pour garder vos dernières modifications.',
+  replaceExportFirst: 'Exportez d’abord une sauvegarde si vous voulez le récupérer. Cette action est irréversible.',
 
   // Installing as a web app
-  installTitle: 'Install the app',
-  installIosTitle: 'Add to Home Screen',
+  installTitle: 'Installer l’application',
+  installIosTitle: 'Ajouter à l’écran d’accueil',
   installIosIntro:
-    "Icarus will open full screen from your Home Screen, like any other app, and work offline. Safari can also clear a website's data if you don't visit it for a while; the Home Screen app keeps your diary.",
+    'Icarus s’ouvrira en plein écran depuis votre écran d’accueil, comme n’importe quelle autre application, et fonctionnera hors ligne. Safari peut aussi effacer les données d’un site web si vous ne le visitez pas pendant un moment ; l’application de l’écran d’accueil conserve votre journal.',
   /** `{share}` and `{more}` stand for the Share and More icons. */
-  installIosStepShare: "Tap the Share button {share} in the browser. If you don't see it, tap {more} first.",
+  installIosStepShare: 'Touchez le bouton Partager {share} dans le navigateur. Si vous ne le voyez pas, touchez d’abord {more}.',
   /** `*…*` marks the names of buttons in Safari. */
   installIosStepAdd:
-    'Choose *Add to Home Screen*. You may need to scroll down or tap *View More* to find it.',
-  installIosStepConfirm: 'Tap *Add*. Icarus appears on your Home Screen.',
-  installIntro: 'Icarus can open in its own window, like any other app, and work offline.',
+    'Choisissez *Sur l’écran d’accueil*. Vous devrez peut-être faire défiler vers le bas ou toucher *Afficher plus* pour le trouver.',
+  installIosStepConfirm: 'Touchez *Ajouter*. Icarus apparaît sur votre écran d’accueil.',
+  installIntro: 'Icarus peut s’ouvrir dans sa propre fenêtre, comme n’importe quelle autre application, et fonctionner hors ligne.',
   /** `{more}` stands for the browser's three-dot menu icon. */
-  installStepMenu: "Open your browser's menu, usually {more} or ☰ next to the address bar.",
+  installStepMenu: 'Ouvrez le menu de votre navigateur, généralement {more} ou ☰ à côté de la barre d’adresse.',
   /** `*…*` marks the names of menu items in browsers. */
-  installStepChoose: 'Choose *Install app*, *Install Icarus* or *Add to Home screen*.',
-  installNotFound: "Don't see it? Chrome, Edge and Safari can all install Icarus.",
-  installBringEntries: 'Bring your entries with you',
+  installStepChoose: 'Choisissez *Installer l’application*, *Installer Icarus* ou *Ajouter à l’écran d’accueil*.',
+  installNotFound: 'Vous ne le trouvez pas ? Chrome, Edge et Safari peuvent tous installer Icarus.',
+  installBringEntries: 'Apportez vos entrées avec vous',
   installBringEntriesHint:
-    'The installed app keeps its own diary, separate from the one in this browser. Export a backup now, then import it the first time you open the app.',
-  exportBackup: 'Export backup',
+    'L’application installée a son propre journal, distinct de celui de ce navigateur. Exportez une sauvegarde maintenant, puis importez-la la première fois que vous ouvrez l’application.',
+  exportBackup: 'Exporter une sauvegarde',
 
   // Updates
   /** `{version}` is a version number, like 0.9.0. */
-  updateReady: 'Icarus {version} is ready',
+  updateReady: 'Icarus {version} est disponible',
   /** `{ago}` reads like "3 weeks ago". */
-  updateReleased: 'Released {ago}',
-  updateGet: 'Get the update',
-  updateLater: 'Later',
-  updateInstallHint: 'Install the new version over this one. Your diary stays where it is.',
-  updateDismiss: 'Dismiss until next launch',
-  reminderTitle: 'Look for a newer Icarus?',
+  updateReleased: 'Publiée {ago}',
+  updateGet: 'Obtenir la mise à jour',
+  updateLater: 'Plus tard',
+  updateInstallHint: 'Installez la nouvelle version par-dessus celle-ci. Votre journal reste à sa place.',
+  updateDismiss: 'Ignorer jusqu’au prochain lancement',
+  reminderTitle: 'Chercher une version plus récente d’Icarus ?',
   /** `{version}` is the installed version and `{month}` the month it was built, like "October" or "October 2025". `*…*` marks emphasis. */
-  reminderBuilt: "You're on *{version}*, from {month}.",
+  reminderBuilt: 'Vous utilisez la *{version}*, de {month}.',
   /** Used when the build date is unknown. */
-  reminderNoDate: "You're on *{version}*.",
-  reminderBenefit: 'New versions bring fixes and new features.',
-  reminderCheck: 'Check for updates',
-  reminderChecking: 'Checking…',
-  reminderNotNow: 'Not now',
-  reminderRemindNextMonth: 'Remind me next month',
+  reminderNoDate: 'Vous utilisez la *{version}*.',
+  reminderBenefit: 'Les nouvelles versions apportent des corrections et de nouvelles fonctions.',
+  reminderCheck: 'Rechercher des mises à jour',
+  reminderChecking: 'Vérification…',
+  reminderNotNow: 'Pas maintenant',
+  reminderRemindNextMonth: 'Me le rappeler le mois prochain',
   /** `{version}` is the installed version. */
-  upToDate: 'You have the latest version, {version}.',
-  updateUnreachable: 'Could not reach icarus.4oli.com. Try again later.',
+  upToDate: 'Vous avez la dernière version, {version}.',
+  updateUnreachable: 'Impossible de joindre icarus.4oli.com. Réessayez plus tard.',
 
   // File dialogs
-  importDialogTitle: 'Import diary',
-  exportDialogTitle: 'Export diary',
+  importDialogTitle: 'Importer un journal',
+  exportDialogTitle: 'Exporter le journal',
 
   // Toasts: opening and importing
-  couldNotOpenSavedDiary: 'Could not open the saved diary.',
-  couldNotOpenDiary: 'Could not open that diary.',
+  couldNotOpenSavedDiary: 'Impossible d’ouvrir le journal enregistré.',
+  couldNotOpenDiary: 'Impossible d’ouvrir ce journal.',
   /** `{error}` is the reason, written by the file parser (in English). */
-  couldNotReadFile: "Couldn't read this file — {error}",
-  unknownParseError: 'Unknown parse error',
-  couldNotSaveDiary: 'Could not save the diary.',
-  couldNotSaveDiaryInLocation: 'Could not save the diary in the selected location.',
-  couldNotCreateDiary: 'Could not create the diary.',
-  couldNotReplaceDiary: 'Could not replace the diary.',
-  replacedButDraftsRemain: 'The diary was replaced, but the old drafts could not be erased.',
-  couldNotImportDiary: 'Could not import that diary.',
-  dropDiaryFile: 'Please drop an .ics or .icarus file.',
-  couldNotOpenFile: 'Could not open that file.',
-  couldNotDeleteDiary: 'Could not delete the diary.',
+  couldNotReadFile: 'Impossible de lire ce fichier — {error}',
+  couldNotSaveDiary: 'Impossible d’enregistrer le journal.',
+  couldNotSaveDiaryInLocation: 'Impossible d’enregistrer le journal à l’emplacement choisi.',
+  couldNotCreateDiary: 'Impossible de créer le journal.',
+  couldNotReplaceDiary: 'Impossible de remplacer le journal.',
+  replacedButDraftsRemain: 'Le journal a été remplacé, mais les anciens brouillons n’ont pas pu être effacés.',
+  couldNotImportDiary: 'Impossible d’importer ce journal.',
+  dropDiaryFile: 'Déposez un fichier .ics ou .icarus.',
+  couldNotOpenFile: 'Impossible d’ouvrir ce fichier.',
+  couldNotDeleteDiary: 'Impossible de supprimer le journal.',
 
   // Toasts: exporting
-  backupExported: 'Backup exported.',
-  encryptedBackupExported: 'Encrypted backup exported.',
-  backupExists: 'Backup already exists. Choose a new filename.',
-  exportFailed: 'Export failed.',
+  backupExported: 'Sauvegarde exportée.',
+  encryptedBackupExported: 'Sauvegarde chiffrée exportée.',
+  backupExists: 'Une sauvegarde existe déjà. Choisissez un nouveau nom de fichier.',
+  exportFailed: 'Échec de l’exportation.',
 
   // Toasts: saving
-  savedDevice: 'Saved on this device',
-  savedBrowser: 'Saved in this browser',
-  writeFailed: 'Write failed — your changes are still in memory.',
+  savedDevice: 'Enregistré sur cet appareil',
+  savedBrowser: 'Enregistré dans ce navigateur',
+  writeFailed: 'Échec de l’enregistrement — vos modifications sont toujours en mémoire.',
 
   // Toasts: entries, drafts and the dictionary
-  writeSomethingFirst: 'Write something first.',
-  entryGone: 'The original entry is no longer available.',
-  entryUpdated: 'Entry updated',
-  entryDeleted: 'Entry deleted',
-  couldNotReadDrafts: 'Could not read your drafts.',
-  draftNotSaved: 'Draft not saved — your text is still in the editor.',
-  couldNotUpdateDrafts: 'Could not update drafts.',
-  draftDiscarded: 'Draft discarded',
-  draftDeleted: 'Draft deleted',
+  writeSomethingFirst: 'Écrivez d’abord quelque chose.',
+  entryGone: 'L’entrée d’origine n’est plus disponible.',
+  entryUpdated: 'Entrée modifiée',
+  entryDeleted: 'Entrée supprimée',
+  couldNotReadDrafts: 'Impossible de lire vos brouillons.',
+  draftNotSaved: 'Brouillon non enregistré — votre texte est toujours dans l’éditeur.',
+  couldNotUpdateDrafts: 'Impossible de mettre à jour les brouillons.',
+  draftDiscarded: 'Brouillon abandonné',
+  draftDeleted: 'Brouillon supprimé',
   /** `{word}` is the word that was added. */
-  wordAdded: 'Added “{word}” to your dictionary',
+  wordAdded: '« {word} » ajouté à votre dictionnaire',
   /** `{word}` is the word that was removed. */
-  wordRemoved: 'Removed “{word}”',
+  wordRemoved: '« {word} » retiré',
 };
