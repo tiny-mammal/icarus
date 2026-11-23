@@ -57,7 +57,13 @@ const verdicts = new Map<string, boolean>();
 
 async function createSpeller(locale: Locale): Promise<Speller> {
   const [hunspellAsm, aff, dic] = await Promise.all([
-    (factory ??= import('hunspell-asm').then((m) => m.loadModule())),
+    (factory ??= import('hunspell-asm')
+      .then((m) => m.loadModule())
+      .catch((err) => {
+        // Let a later attempt retry, as with a dictionary that failed to load.
+        factory = null;
+        throw err;
+      })),
     AFFIXES[`../assets/spellcheck/${locale}.aff`](),
     WORDS[`../assets/spellcheck/${locale}.dic`](),
   ]);

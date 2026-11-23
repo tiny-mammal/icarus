@@ -921,7 +921,9 @@ class AppStore {
     }
 
     const fields = {
-      title: title || t.common.untitled,
+      // Saved empty, not as a translated "Untitled": the diary file stays the
+      // same whatever language the app is in, and each view shows the fallback.
+      title,
       content: this.draftContent,
       location: this.draftLocation.trim() || undefined,
       date: keyToDate(this.draftDateKey),
@@ -1198,13 +1200,18 @@ class AppStore {
     } catch (err) {
       devError('loadLanguage: could not read the language preference', err);
     }
-    await i18n.use(this.language ?? systemLocale());
+    try {
+      await i18n.use(this.language ?? systemLocale());
+    } catch (err) {
+      // A catalog that fails to load leaves the app in English, never stuck.
+      devError('loadLanguage: could not load the language', err);
+    }
   }
 
   /** Change the app language (`null` follows the system) and persist it. */
   async setLanguage(language: Locale | null): Promise<void> {
     this.language = language;
-    void i18n.use(language ?? systemLocale());
+    i18n.use(language ?? systemLocale()).catch((err) => devError('setLanguage: could not load the language', err));
     await this.savePreference('setLanguage', setSavedLanguage(language));
   }
 

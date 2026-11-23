@@ -233,7 +233,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
     <article class="min-h-full cursor-text" in:fade={{ duration: 150 }} onclick={editAtTap}>
       <h1 class="text-xl font-semibold tracking-tight text-text" data-field="title">
-        <Highlight text={page.title} {terms} />
+        <Highlight text={page.title.trim() || t.common.untitled} {terms} />
       </h1>
       {#if page.location}
         <p class="mt-1 text-sm text-muted" data-field="location">
