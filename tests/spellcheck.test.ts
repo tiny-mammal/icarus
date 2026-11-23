@@ -1,8 +1,5 @@
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
-import nspell from 'nspell';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { Schema, type Mark, type Node as PMNode } from '@tiptap/pm/model';
-import aff from '../src/assets/spellcheck/en.aff?raw';
-import dic from '../src/assets/spellcheck/en.dic?raw';
 import {
   addUserWord,
   ensureSpellchecker,
@@ -14,6 +11,7 @@ import {
   setUserWords,
   shouldCheck,
   spellingWindow,
+  suggest,
 } from '../src/lib/spellcheck';
 
 // A minimal schema (paragraphs with bold/code marks and hard breaks) is enough
@@ -79,11 +77,12 @@ describe('misspelledRanges', () => {
 });
 
 describe('shouldCheck', () => {
-  it('skips short, all-caps, camelCase and non-ASCII words', () => {
+  it('skips short, all-caps and camelCase words', () => {
     expect(shouldCheck('a')).toBe(false);
     expect(shouldCheck('NASA')).toBe(false);
     expect(shouldCheck('iPhone')).toBe(false);
-    expect(shouldCheck('café')).toBe(false);
+    expect(shouldCheck('MÜLLER')).toBe(false);
+    expect(shouldCheck('café')).toBe(true);
     expect(shouldCheck('Monday')).toBe(true);
     expect(shouldCheck('teh')).toBe(true);
     expect(shouldCheck("don't")).toBe(true);
@@ -98,14 +97,27 @@ describe('matchCase', () => {
   });
 });
 
-describe('bundled dictionary', () => {
-  it('is a valid English Hunspell dictionary', () => {
-    const spell = nspell(aff, dic);
+describe('bundled dictionaries', () => {
+  afterAll(() => ensureSpellchecker('en'));
 
-    expect(spell.correct('diary')).toBe(true);
-    expect(spell.correct('journal')).toBe(true);
-    expect(spell.correct('diery')).toBe(false);
-    expect(spell.suggest('diery')).toContain('diary');
+  it.each([
+    ['en', ['diary', 'journal', "o'clock"], 'diery', 'diary'],
+    ['es', ['mañana', 'caminábamos', 'canción'], 'cancion', 'canción'],
+    ['it', ['domani', "dell'anno", 'perché'], 'citta', 'città'],
+    ['fr', ['demain', "aujourd'hui", "l'homme"], 'ete', 'été'],
+    ['de', ['Morgen', 'Straße', 'gehen'], 'Strase', 'Straße'],
+  ] as const)('checks %s', async (locale, words, misspelled, suggestion) => {
+    await ensureSpellchecker(locale);
+    for (const word of words) expect(isCorrect(word), word).toBe(true);
+    expect(isCorrect(misspelled)).toBe(false);
+    expect(suggest(misspelled)).toContain(suggestion);
+  });
+
+  it('leaves accented words alone in English only', async () => {
+    await ensureSpellchecker('en');
+    expect(isCorrect('Zoë')).toBe(true);
+    await ensureSpellchecker('es');
+    expect(isCorrect('Zoë')).toBe(false);
   });
 });
 
@@ -129,7 +141,7 @@ describe('spellingWindow', () => {
 
 describe('personal dictionary', () => {
   beforeAll(async () => {
-    await ensureSpellchecker();
+    await ensureSpellchecker('en');
   });
   afterEach(() => setUserWords([]));
 

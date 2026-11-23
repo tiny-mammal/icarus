@@ -53,6 +53,10 @@ import {
   setSavedWeekStart,
   getSavedSpellcheck,
   setSavedSpellcheck,
+  getSavedLanguage,
+  setSavedLanguage,
+  getSavedSpellLanguage,
+  setSavedSpellLanguage,
   getSavedSpellWords,
   setSavedSpellWords,
   getSavedAutoLock,
@@ -76,6 +80,8 @@ import {
 import { resetSearch, warmSearch } from './search';
 import { addMonths, adjacentKey, dateKey, keyToDate, startOfMonth } from './date';
 import { addUserWord, removeUserWord, setUserWords } from './spellcheck';
+import { addressLocale, i18n, systemLocale } from './i18n/index.svelte';
+import type { Locale } from './i18n/locales';
 import { updates } from './updates.svelte';
 import { randomId } from './random';
 import { devError } from './log';
@@ -218,8 +224,16 @@ class AppStore {
   /** Which end of the diary a new search starts from. */
   searchOrder = $state<SearchOrder>('newest');
 
+  /** The chosen app language; `null` follows the system. User preference. */
+  language = $state<Locale | null>(null);
+
   /** Underline misspellings in the writing fields. User preference. */
   spellcheck = $state(true);
+
+  /** The spell-check language; `null` follows the app language. User preference. */
+  spellLanguage = $state<Locale | null>(null);
+  /** The dictionary spell check uses. */
+  spellLocale = $derived<Locale>(this.spellLanguage ?? i18n.locale);
 
   /** What the editor's length count shows. User preference. */
   lengthCount = $state<LengthCount>('both');
@@ -297,6 +311,8 @@ class AppStore {
   // --- boot ---------------------------------------------------------------
   /** Reopen the saved diary, else show Welcome. */
   async init(): Promise<void> {
+    // The first screen waits for its language, so it never flashes English.
+    const language = this.loadLanguage();
     void this.loadDraftsFromDisk();
     void this.loadWeekStart();
     void this.loadDateFormat();
@@ -318,6 +334,7 @@ class AppStore {
       devError('init: failed to restore the saved vault', err);
       this.toast('error', 'Could not open the saved diary.');
     } finally {
+      await language;
       this.ready = true;
     }
     this.view = 'welcome';
@@ -1169,13 +1186,42 @@ class AppStore {
     await this.savePreference('setSearchOrder', setSavedSearchOrder(order));
   }
 
-  /** Restore the saved spell-check preference on boot (defaults to on). */
+  /**
+   * Restore the app language on boot. Without a saved choice it follows the
+   * system, unless the public site linked here in another language
+   * (`/app/?lang=es`): that choice is kept.
+   */
+  async loadLanguage(): Promise<void> {
+    try {
+      this.language = await getSavedLanguage();
+      const hint = this.language ? null : addressLocale();
+      if (hint) await this.setLanguage(hint);
+    } catch (err) {
+      devError('loadLanguage: could not read the language preference', err);
+    }
+    await i18n.use(this.language ?? systemLocale());
+  }
+
+  /** Change the app language (`null` follows the system) and persist it. */
+  async setLanguage(language: Locale | null): Promise<void> {
+    this.language = language;
+    void i18n.use(language ?? systemLocale());
+    await this.savePreference('setLanguage', setSavedLanguage(language));
+  }
+
+  /** Restore the saved spell-check preferences on boot (on, in the app language). */
   async loadSpellcheck(): Promise<void> {
     try {
-      this.spellcheck = await getSavedSpellcheck();
+      [this.spellcheck, this.spellLanguage] = await Promise.all([getSavedSpellcheck(), getSavedSpellLanguage()]);
     } catch (err) {
       devError('loadSpellcheck: could not read the spell-check preference', err);
     }
+  }
+
+  /** Check spelling in `language` (`null` follows the app language) and persist it. */
+  async setSpellLanguage(language: Locale | null): Promise<void> {
+    this.spellLanguage = language;
+    await this.savePreference('setSpellLanguage', setSavedSpellLanguage(language));
   }
 
   /** Turn native spell-check highlighting on/off and persist it. */

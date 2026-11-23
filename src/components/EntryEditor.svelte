@@ -188,14 +188,14 @@
       class="w-full bg-transparent text-xl font-semibold tracking-tight text-text placeholder:text-muted focus:outline-none"
       placeholder="Title"
       bind:value={app.draftTitle}
-      use:spellCheck={app.spellcheck}
+      use:spellCheck={{ enabled: app.spellcheck, lang: app.spellLocale }}
     />
     <input
       bind:this={locationEl}
       class="mt-1 w-full bg-transparent text-sm text-muted placeholder:text-muted/70 focus:outline-none"
       placeholder="Add a location or subtitle"
       bind:value={app.draftLocation}
-      use:spellCheck={app.spellcheck}
+      use:spellCheck={{ enabled: app.spellcheck, lang: app.spellLocale }}
     />
 
     {#if RichEditor}

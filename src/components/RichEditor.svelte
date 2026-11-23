@@ -120,7 +120,7 @@
           class: 'markdown min-h-full focus:outline-none',
           // Native checking stays off: ours is the only underline.
           spellcheck: 'false',
-          lang: 'en',
+          lang: app.spellLocale,
         },
       },
       onUpdate: ({ editor }) => {
@@ -167,13 +167,14 @@
   // or added/removed in Settings). Nothing is underlined before it loads.
   $effect(() => {
     const enabled = app.spellcheck;
+    const locale = app.spellLocale;
     void app.spellWords;
     const current = editor;
     if (!current) return;
 
     let cancelled = false;
     if (enabled) {
-      void ensureSpellchecker().then(() => {
+      void ensureSpellchecker(locale).then(() => {
         if (!cancelled && editor) refreshSpellcheck(editor);
       });
     } else {

@@ -5,15 +5,15 @@ import { multiTap, spellCheck, trapFocus } from '../src/lib/actions';
 import { dismissTopLayer, layerOpen } from '../src/lib/back-button.svelte';
 
 describe('spellCheck action', () => {
-  it('toggles checking and pins the language to English', () => {
+  it('toggles checking in the chosen language', () => {
     const el = document.createElement('div');
-    const action = spellCheck(el, true);
+    const action = spellCheck(el, { enabled: true, lang: 'en' });
     expect(el.spellcheck).toBe(true);
     expect(el.lang).toBe('en');
 
-    action.update(false);
+    action.update({ enabled: false, lang: 'de' });
     expect(el.spellcheck).toBe(false);
-    expect(el.lang).toBe('en');
+    expect(el.lang).toBe('de');
   });
 });
 
