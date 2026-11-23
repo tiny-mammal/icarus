@@ -22,6 +22,7 @@
   import EntryEditor, { type EditorFocus } from './EntryEditor.svelte';
   import DayTracker from './DayTracker.svelte';
   import { formatLength } from '../lib/text-count';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   /**
    * The one place where a day is read and written. It slides over the
@@ -203,13 +204,13 @@
 {#snippet readerPage(page: DiaryEntry | null, current: boolean)}
   {#if !page}
     <div class="flex h-full flex-col items-center justify-center text-center text-muted">
-      <p class="text-sm">No entries on this day yet.</p>
+      <p class="text-sm">{t.nav.noEntriesOnDay}</p>
       <button
         class="mt-4 flex items-center gap-2 rounded-lg border border-slate px-3.5 py-2 text-sm text-text transition-colors hover:bg-slate"
         onclick={writeHere}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-        Write an entry for this day
+        {t.nav.writeForDay}
       </button>
     </div>
   {:else}
@@ -219,12 +220,12 @@
         class="mb-5 flex items-center justify-between gap-3 rounded-xl border border-slate bg-slate-soft py-2 pr-2 pl-3.5 text-sm text-muted"
         role="status"
       >
-        <span class="min-w-0">Unsaved changes to this entry</span>
+        <span class="min-w-0">{t.nav.unsavedChanges}</span>
         <button
           class="shrink-0 rounded-lg px-2.5 py-1.5 font-medium text-text transition-colors hover:bg-slate"
           onclick={() => edit(page, { field: 'body', at: 'end' })}
         >
-          Continue editing
+          {t.nav.continueEditing}
         </button>
       </div>
     {/if}
@@ -283,10 +284,9 @@
             {#if terms.length}
               <p class="min-w-0 truncate text-[0.7rem] font-medium text-muted">
                 {#if matchCount > 0}
-                  <span class="text-text">{matchCount}</span>
-                  {matchCount === 1 ? 'match' : 'matches'} for “{app.searchHighlight}”
+                  {fmt(t.nav.matches, { count: matchCount, query: app.searchHighlight })}
                 {:else}
-                  No matches for “{app.searchHighlight}” here
+                  {fmt(t.nav.noMatchesHere, { query: app.searchHighlight })}
                 {/if}
               </p>
             {:else if entry?.content && app.lengthCount !== 'off'}
@@ -300,8 +300,8 @@
         <div class="flex shrink-0 items-center gap-1">
           <button
             class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
-            aria-label="New entry on this day"
-            use:tooltip={{ label: 'New entry on this day', keys: ['N'] }}
+            aria-label={t.nav.newEntryOnDay}
+            use:tooltip={{ label: t.nav.newEntryOnDay, keys: ['N'] }}
             onclick={writeHere}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -309,16 +309,16 @@
           {#if entry}
             <button
               class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
-              aria-label="Edit entry"
-              use:tooltip={{ label: 'Edit entry — or tap the text', keys: ['E'] }}
+              aria-label={t.editor.editEntry}
+              use:tooltip={{ label: t.nav.editEntryHint, keys: ['E'] }}
               onclick={() => entry && edit(entry, { field: 'body', at: 'end' })}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
             </button>
             <button
               class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-red-400 sm:h-8 sm:w-8"
-              aria-label="Delete entry"
-              use:tooltip={'Delete entry'}
+              aria-label={t.editor.deleteEntry}
+              use:tooltip={t.editor.deleteEntry}
               onclick={() => entry && app.requestDeleteEntry(entry.uid)}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
@@ -327,8 +327,8 @@
           <PaneSizeToggle />
           <button
             class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
-            aria-label="Close"
-            use:tooltip={{ label: 'Close', keys: ['Esc'] }}
+            aria-label={t.common.close}
+            use:tooltip={{ label: t.common.close, keys: ['Esc'] }}
             onclick={() => app.closeDay()}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>

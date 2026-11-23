@@ -4,6 +4,7 @@
   import { app } from '../lib/store.svelte';
   import { keyToDate, nearDayLabel } from '../lib/date';
   import { previewText } from '../lib/text';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   /**
    * The minimized editor: while work in progress waits for the user to read
@@ -18,7 +19,7 @@
   const parked = $derived(app.parkedDraft);
   const heading = $derived(
     parked
-      ? parked.title.trim() || previewText(parked.content, 60) || parked.location.trim() || 'Untitled'
+      ? parked.title.trim() || previewText(parked.content, 60) || parked.location.trim() || t.common.untitled
       : '',
   );
 </script>
@@ -35,7 +36,7 @@
   <button
     class="draft-strip fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-float flex items-center gap-3 rounded-2xl border border-faint bg-slate py-2.5 pr-3 pl-2.5 text-left transition-colors hover:bg-faint
       sm:right-5 sm:bottom-5 sm:left-auto sm:w-80"
-    aria-label="Continue writing: {heading}"
+    aria-label={fmt(t.editor.continueWriting, { title: heading })}
     onclick={() => app.resumeParked()}
     in:fly={{ y: 24, duration: 200, delay: STRIP_DELAY_MS, easing: cubicOut }}
     out:fly={{ y: 24, duration: 150, easing: cubicOut }}
@@ -46,7 +47,9 @@
     <span class="min-w-0 flex-1">
       <span class="block truncate text-sm font-medium text-text">{heading}</span>
       <span class="block truncate text-xs text-muted">
-        {parked.revision ? 'Editing entry' : 'Draft'} · {nearDayLabel(keyToDate(parked.dateKey), app.dateFormat)}
+        {fmt(parked.revision ? t.editor.stripEditingEntry : t.editor.stripDraft, {
+          day: nearDayLabel(keyToDate(parked.dateKey), app.dateFormat),
+        })}
       </span>
     </span>
     <svg class="shrink-0 text-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg>

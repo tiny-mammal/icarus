@@ -5,6 +5,7 @@ Icarus is a free, open-source diary app for keeping a private diary over many ye
 - Home page: https://icarus.4oli.com/
 - Web app: https://icarus.4oli.com/app/
 - Desktop app for Windows, macOS and Linux, and an Android app (APK, not on Google Play): https://icarus.4oli.com/download
+- The site in other languages: https://icarus.4oli.com/es/ (Spanish), https://icarus.4oli.com/it/ (Italian), https://icarus.4oli.com/fr/ (French), https://icarus.4oli.com/de/ (German)
 
 ## What it does
 
@@ -13,6 +14,7 @@ Icarus is a free, open-source diary app for keeping a private diary over many ye
 - Search all entries by title, location or text.
 - Import an existing diary from any `.ics` file and export the diary as `.ics` at any time.
 - Keep unsaved drafts while writing.
+- Use the app in English, Spanish, Italian, French or German, with an offline spell checker for each language.
 
 ## Privacy
 
@@ -33,3 +35,5 @@ Icarus suits people who want a long-term personal diary or journal that stays pr
 **What happens if I forget my password?** Use the recovery key saved when the password was set. Without the password or the recovery key, the diary cannot be opened.
 
 **Can I bring my existing diary?** Yes. Import any `.ics` file and each entry appears on its day.
+
+**Which languages does Icarus speak?** English, Spanish, Italian, French and German, with a spell checker for each. It follows the system language and can be changed in Settings.

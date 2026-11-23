@@ -9,14 +9,14 @@ import {
   assetPath,
   compareVersions,
   isReleaseManifest,
-  type PlatformId,
   type ReleaseManifest,
 } from './releases';
 import { detectPlatform } from '../src/lib/user-agent';
 import { isVersion } from '../src/lib/semver';
-import { startPromoTracking } from './promo';
+// Promo tracking and the language menu.
+import './main';
+import { fmt, lang, strings } from './strings';
 
-startPromoTracking();
 
 const platform = detectPlatform();
 if (platform) {
@@ -28,15 +28,15 @@ if (platform) {
 const status = document.querySelector<HTMLElement>('[data-release-status]');
 
 function formatSize(bytes: number): string {
-  return `${Math.max(1, Math.round(bytes / 1_000_000))} MB`;
+  return fmt(strings.size, { size: Math.max(1, Math.round(bytes / 1_000_000)) });
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en', { year: 'numeric', month: 'long', day: 'numeric' });
+  return new Date(iso).toLocaleDateString(lang, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function showRelease(manifest: ReleaseManifest): void {
-  if (status) status.textContent = `Version ${manifest.version}, released ${formatDate(manifest.published)}`;
+  if (status) status.textContent = fmt(strings.release, { version: manifest.version, date: formatDate(manifest.published) });
   for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-asset]')) {
     const id = link.dataset.asset ?? '';
     const asset = manifest.assets[id];
@@ -67,16 +67,6 @@ function installedVersion(): string | null {
   return value && isVersion(value) ? value : null;
 }
 
-/** How to install over the current version, per platform. */
-const UPDATE_STEPS: Record<PlatformId, string> = {
-  android:
-    "Download the APK below, open it and tap Update. Android keeps your diary. Don't uninstall the old version first: that erases the diary.",
-  windows: 'Run the new installer. It replaces this version, and your diary stays where it was.',
-  macos: 'Open the disk image and drag Icarus to Applications, replacing the old one. Your diary stays where it was.',
-  linux:
-    'Install the new package over the old one, or swap in the new AppImage and delete the old file. Your diary stays where it was.',
-};
-
 /** Tell someone who came from the app whether there is anything new. */
 function showUpdateCheck(manifest: ReleaseManifest): void {
   const installed = installedVersion();
@@ -87,17 +77,17 @@ function showUpdateCheck(manifest: ReleaseManifest): void {
   const newer = compareVersions(manifest.version, installed) > 0;
   box.dataset.state = newer ? 'newer' : 'current';
   if (newer) {
-    title.textContent = `Icarus ${manifest.version} is out. You have ${installed}.`;
-    detail.textContent = platform ? UPDATE_STEPS[platform] : 'Pick your system below and install over your current version.';
+    title.textContent = fmt(strings.updateNewer, { latest: manifest.version, installed });
+    detail.textContent = platform ? strings.updateSteps[platform] : strings.updatePick;
   } else {
-    title.textContent = `You're up to date with ${installed}.`;
-    detail.textContent = "There's nothing new to install. Icarus will ask again in a month.";
+    title.textContent = fmt(strings.updateCurrent, { installed });
+    detail.textContent = strings.updateNothing;
   }
   box.classList.remove('hidden');
 }
 
 function showNoRelease(): void {
-  if (status) status.textContent = 'The first release is on its way. Until then, you can write in the web app.';
+  if (status) status.textContent = strings.noRelease;
   for (const link of document.querySelectorAll<HTMLAnchorElement>('[data-asset]')) {
     link.removeAttribute('href');
     link.setAttribute('aria-disabled', 'true');

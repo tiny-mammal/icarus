@@ -7,12 +7,13 @@
   import WritingStats from './WritingStats.svelte';
   import type { StatsPeriod } from '../lib/stats';
   import { hasTracking } from '../lib/tracker-stats';
+  import { t } from '../lib/i18n/index.svelte';
 
   type View = 'writing' | 'tracking';
-  const VIEWS: readonly { value: View; label: string }[] = [
-    { value: 'writing', label: 'Writing' },
-    { value: 'tracking', label: 'Tracking' },
-  ];
+  const views = $derived<{ value: View; label: string }[]>([
+    { value: 'writing', label: t.stats.views.writing },
+    { value: 'tracking', label: t.stats.views.tracking },
+  ]);
 
   let period = $state<StatsPeriod>('all');
   let chosen = $state<View>('writing');
@@ -23,7 +24,7 @@
 
 {#if app.statsOpen}
   <Modal
-    title="Statistics"
+    title={t.stats.title}
     onclose={() => (app.statsOpen = false)}
     width="sm:max-w-2xl"
     z="z-sheet"
@@ -37,9 +38,9 @@
       <div class="mb-4">
         <Segmented
           value={view}
-          options={VIEWS}
+          options={views}
           onchange={(next) => (chosen = next)}
-          label="Statistics view"
+          label={t.stats.viewLabel}
         />
       </div>
     {/if}

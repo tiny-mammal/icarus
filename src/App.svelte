@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { app } from './lib/store.svelte';
+  import { t } from './lib/i18n/index.svelte';
   import Welcome from './components/Welcome.svelte';
   import TopBar from './components/TopBar.svelte';
   import Calendar from './components/Calendar.svelte';
@@ -144,7 +145,7 @@
       <DayPane />
     </main>
     {#if viewport.compact && app.calendarOpen}
-      <Modal title="Calendar" titleHidden onclose={() => (app.calendarOpen = false)} bodyClass="">
+      <Modal title={t.app.calendar} titleHidden onclose={() => (app.calendarOpen = false)} bodyClass="">
         <Calendar />
       </Modal>
     {/if}
@@ -169,13 +170,12 @@
 <DraftDeleteDialog />
 {#if discardAndQuit}
   <ConfirmDialog
-    title="Unsaved changes"
-    confirmLabel="Quit anyway"
+    title={t.app.unsavedChangesTitle}
+    confirmLabel={t.app.quitAnyway}
     onconfirm={discardAndQuit}
     oncancel={() => (discardAndQuit = null)}
   >
-    Some changes, the current draft or the diary itself, could not be saved to the diary folder.
-    Quitting now discards them.
+    {t.app.unsavedChangesBody}
   </ConfirmDialog>
 {/if}
 <EntryDeleteDialog />

@@ -8,6 +8,7 @@
   import { scale } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { clickOutside, trapFocus } from '../lib/actions';
+  import { t } from '../lib/i18n/index.svelte';
 
   let {
     x,
@@ -70,7 +71,7 @@
   use:clickOutside={onClose}
   use:trapFocus={onClose}
   role="menu"
-  aria-label="Spelling suggestions"
+  aria-label={t.editor.spellingSuggestions}
   tabindex="-1"
   onkeydown={onKeydown}
 >
@@ -94,7 +95,7 @@
       {/each}
     </div>
   {:else}
-    <p class="px-3 py-1.5 text-sm text-muted">No suggestions</p>
+    <p class="px-3 py-1.5 text-sm text-muted">{t.editor.noSuggestions}</p>
   {/if}
 
   <div class="my-1.5 border-t border-slate"></div>
@@ -105,7 +106,7 @@
     onclick={onAdd}
   >
     <svg class="text-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M12 7v6M9 10h6"/></svg>
-    Add to dictionary
+    {t.editor.addToDictionary}
   </button>
 
   <button
@@ -114,6 +115,6 @@
     onclick={onIgnore}
   >
     <svg class="text-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.5 13.5 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="m2 2 20 20"/></svg>
-    Ignore
+    {t.editor.ignoreWord}
   </button>
 </div>

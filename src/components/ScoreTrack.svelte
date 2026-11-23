@@ -1,6 +1,7 @@
 <script lang="ts">
   import { isBestScore, sunColor } from '../lib/sun';
   import { selectionHaptic } from '../lib/haptics';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   /**
    * The day's score, 1 to `scale`, as a track that fills with light up to it,
@@ -108,7 +109,7 @@
   class="relative h-10 overflow-hidden rounded-full border border-slate bg-slate-soft [touch-action:pan-y] sm:h-[1.875rem]
     {glowing ? 'rainbow-halo' : ''} {dragging ? 'cursor-grabbing' : ''}"
   role="radiogroup"
-  aria-label="Score"
+  aria-label={t.tracker.score}
   tabindex="-1"
   {onkeydown}
   {onpointerdown}
@@ -142,7 +143,7 @@
         type="button"
         role="radio"
         aria-checked={chosen}
-        aria-label="{step} of {scale}"
+        aria-label={fmt(t.tracker.scoreStep, { step, scale })}
         tabindex={chosen || (value === null && step === 1) ? 0 : -1}
         class="group grid min-w-0 flex-1 place-items-center text-xs tabular-nums focus:outline-none
           {sun ? 'font-bold text-ink' : glowing ? 'on-rainbow font-semibold text-text' : shown !== null && step < shown ? 'text-text' : 'text-muted hover:text-text'}"

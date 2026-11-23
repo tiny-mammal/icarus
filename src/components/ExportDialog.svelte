@@ -2,6 +2,7 @@
   import BusyLabel from './BusyLabel.svelte';
   import Modal from './Modal.svelte';
   import { app } from '../lib/store.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   /**
    * Backup format choice for an encrypted diary. The encrypted backup is the
@@ -18,7 +19,7 @@
   }
 </script>
 
-<Modal title="Export backup" onclose={() => (app.exportOpen = false)}>
+<Modal title={t.privacy.exportBackup} onclose={() => (app.exportOpen = false)}>
   <div class="space-y-2">
     <button
       class="flex w-full flex-col rounded-lg border border-faint bg-slate-soft px-3.5 py-3 text-left text-sm text-text transition-colors hover:bg-slate disabled:opacity-60"
@@ -26,37 +27,36 @@
       disabled={app.busy}
     >
       <span class="font-medium"
-        ><BusyLabel busy={running === 'encrypted'}>Encrypted backup (.icarus)</BusyLabel></span
+        ><BusyLabel busy={running === 'encrypted'}>{t.privacy.exportEncrypted}</BusyLabel></span
       >
-      <span class="text-xs text-muted">Recommended. Opens in Icarus with the same password or recovery key.</span>
+      <span class="text-xs text-muted">{t.privacy.exportEncryptedHint}</span>
     </button>
     {#if !confirmPlain}
       <button
         class="flex w-full flex-col rounded-lg border border-slate px-3.5 py-3 text-left text-sm text-text transition-colors hover:bg-slate"
         onclick={() => (confirmPlain = true)}
       >
-        <span class="font-medium">Unencrypted .ics</span>
-        <span class="text-xs text-muted">For calendar apps or other tools.</span>
+        <span class="font-medium">{t.privacy.exportPlain}</span>
+        <span class="text-xs text-muted">{t.privacy.exportPlainHint}</span>
       </button>
     {:else}
       <div class="rounded-lg border border-amber-300/30 bg-amber-300/5 px-3.5 py-3">
         <p class="text-sm leading-relaxed text-amber-200/90">
-          Anyone who gets this file can read your whole diary. Store it carefully and delete it when
-          you no longer need it.
+          {t.privacy.exportPlainWarning}
         </p>
         <div class="mt-3 flex justify-end gap-2">
           <button
             class="rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-slate hover:text-text"
             onclick={() => (confirmPlain = false)}
           >
-            Cancel
+            {t.common.cancel}
           </button>
           <button
             class="rounded-lg border border-amber-300/40 px-3 py-1.5 text-sm font-medium text-amber-200 transition-colors hover:bg-amber-300/10 disabled:opacity-60"
             onclick={() => run('plain')}
             disabled={app.busy}
           >
-            <BusyLabel busy={running === 'plain'}>Export unencrypted</BusyLabel>
+            <BusyLabel busy={running === 'plain'}>{t.privacy.exportPlainConfirm}</BusyLabel>
           </button>
         </div>
       </div>

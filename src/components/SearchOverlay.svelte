@@ -6,6 +6,7 @@
   import { queryTerms, snippetAround } from '../lib/highlight';
   import { longDayLabel } from '../lib/date';
   import { app } from '../lib/store.svelte';
+  import { fmt, t } from '../lib/i18n/index.svelte';
   import Highlight from './Highlight.svelte';
 
   let {
@@ -88,19 +89,19 @@
   transition:fly={{ y: -6, duration: 150 }}
 >
   {#if hits.length === 0}
-    <div class="px-4 py-6 text-center text-sm text-muted">No matching entries</div>
+    <div class="px-4 py-6 text-center text-sm text-muted">{t.nav.noMatchingEntries}</div>
   {:else}
     {#if total > 1}
       <div class="flex shrink-0 items-center justify-between gap-3 border-b border-slate py-1 pl-4 pr-1.5 text-[0.7rem] text-muted">
-        <span>{total} results</span>
+        <span>{fmt(t.nav.results, { count: total })}</span>
         <button
           class="flex h-8 items-center gap-1.5 rounded-md px-2.5 transition-colors hover:bg-slate hover:text-text sm:h-7"
-          aria-label={oldestFirst ? 'Oldest first, show newest first' : 'Newest first, show oldest first'}
+          aria-label={oldestFirst ? t.nav.showNewestFirst : t.nav.showOldestFirst}
           onmousedown={(e) => e.preventDefault()}
           onclick={ontoggleorder}
         >
           <svg class="transition-transform {oldestFirst ? '[transform:rotate(180deg)]' : ''}" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
-          {oldestFirst ? 'Oldest first' : 'Newest first'}
+          {oldestFirst ? t.nav.oldestFirst : t.nav.newestFirst}
         </button>
       </div>
     {/if}
@@ -142,7 +143,7 @@
       {/each}
       {#if hits.length < total}
         <li class="px-4 py-2 text-center text-[0.7rem] text-muted">
-          Showing {hits.length} of {total} results
+          {fmt(t.nav.showingResults, { shown: hits.length, count: total })}
         </li>
       {/if}
     </ul>

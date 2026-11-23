@@ -19,8 +19,8 @@
   } from '../lib/legacy-scores';
   import { sunColor } from '../lib/sun';
   import { viewport } from '../lib/viewport.svelte';
+  import { fmt, formatNumber, t } from '../lib/i18n/index.svelte';
 
-  const numberFmt = new Intl.NumberFormat();
   const SCORES = Array.from({ length: LEGACY_SCALE }, (_, i) => i + 1);
 
   const plan = $derived(planLegacyScores(app.entries, app.tracker));
@@ -30,14 +30,15 @@
   const current = $derived<LegacyConflict | null>(pending[0] ?? null);
   const found = $derived(plan.ready.size + plan.unchanged + plan.conflicts.length);
 
+  // Read at render time so the text follows the language.
   const REASONS: Record<ConflictReason, (conflict: LegacyConflict) => string> = {
-    missing: () => 'A mark has no score beside it.',
-    range: () => `A score is outside 1 to ${LEGACY_SCALE}.`,
-    letter: () => 'The letter and the score disagree on whether the day passed.',
-    differs: () => 'The day has more than one score.',
-    unsure: () => 'A mark looks mistyped.',
+    missing: () => t.tracker.legacy.reasonMissing,
+    range: () => fmt(t.tracker.legacy.reasonRange, { scale: LEGACY_SCALE }),
+    letter: () => t.tracker.legacy.reasonLetter,
+    differs: () => t.tracker.legacy.reasonDiffers,
+    unsure: () => t.tracker.legacy.reasonUnsure,
     existing: ({ existing }) =>
-      `The diary already scores this day ${existing?.value} out of ${existing?.scale}.`,
+      fmt(t.tracker.legacy.reasonExisting, { value: existing?.value ?? '', scale: existing?.scale ?? '' }),
   };
 
   /** The entries of the conflict's day, each with the text of its marks lit. */
@@ -57,7 +58,7 @@
   function importReady() {
     const count = plan.ready.size;
     app.importDayScores(plan.ready);
-    app.toast('success', `Imported ${numberFmt.format(count)} ${count === 1 ? 'score' : 'scores'}`);
+    app.toast('success', fmt(t.tracker.legacy.imported, { count }));
   }
 
   function settle(conflict: LegacyConflict, value: number | null) {
@@ -84,20 +85,28 @@
 <svelte:window onkeydown={onKey} />
 
 {#if app.legacyScoresOpen}
-  <Modal title="Import old scores" onclose={close} width="sm:max-w-xl" z="z-sheet" divided>
+  <Modal title={t.tracker.legacy.title} onclose={close} width="sm:max-w-xl" z="z-sheet" divided>
     <div class="grid grid-cols-3 gap-3">
       <StatTile
-        label="Marks"
-        value={numberFmt.format(found)}
-        sub="in {numberFmt.format(plan.days)} days"
+        label={t.tracker.legacy.marks}
+        value={formatNumber(found)}
+        sub={fmt(t.tracker.legacy.marksSub, { count: plan.days })}
       />
-      <StatTile label="Ready" value={numberFmt.format(plan.ready.size)} sub="Certain, new" />
-      <StatTile label="To review" value={numberFmt.format(pending.length)} sub="Need a look" />
+      <StatTile
+        label={t.tracker.legacy.ready}
+        value={formatNumber(plan.ready.size)}
+        sub={t.tracker.legacy.readySub}
+      />
+      <StatTile
+        label={t.tracker.legacy.toReview}
+        value={formatNumber(pending.length)}
+        sub={t.tracker.legacy.toReviewSub}
+      />
     </div>
 
     <div class="mt-4 flex items-center justify-between gap-4">
       <p class="text-xs text-muted">
-        Only the score is read; run lengths like 2DAC are ignored. Entries are not changed.
+        {t.tracker.legacy.note}
       </p>
       <button
         type="button"
@@ -105,20 +114,19 @@
         disabled={plan.ready.size === 0}
         onclick={importReady}
       >
-        Import {numberFmt.format(plan.ready.size)}
-        {plan.ready.size === 1 ? 'score' : 'scores'}
+        {fmt(t.tracker.legacy.importScores, { count: plan.ready.size })}
       </button>
     </div>
 
     {#if current}
       {#key current.key}
-        <section class="mt-6 border-t border-slate pt-5" aria-label="Day to review">
+        <section class="mt-6 border-t border-slate pt-5" aria-label={t.tracker.legacy.dayToReview}>
           <div class="flex items-baseline justify-between gap-4">
             <h3 class="text-sm font-medium text-text">
               {longDayLabel(keyToDate(current.key), app.dateFormat)}
             </h3>
             <p class="shrink-0 text-xs tabular-nums text-muted">
-              {handled.size + 1} of {handled.size + pending.length}
+              {fmt(t.tracker.legacy.progress, { current: handled.size + 1, total: handled.size + pending.length })}
             </p>
           </div>
           <ul class="mt-1.5 space-y-0.5 text-xs text-muted">
@@ -145,7 +153,9 @@
           </div>
 
           <p class="mt-4 text-xs text-muted">
-            Score for this day{current.suggestion !== null ? ` · ringed is the one written (${current.suggestion})` : ''}
+            {current.suggestion !== null
+              ? fmt(t.tracker.legacy.scoreForDaySuggested, { score: current.suggestion })
+              : t.tracker.legacy.scoreForDay}
           </p>
           <div class="mt-2 grid grid-cols-5 gap-1.5 sm:grid-cols-10">
             {#each SCORES as value}
@@ -154,7 +164,7 @@
                 class="rounded-lg border py-2 text-sm font-medium tabular-nums text-text transition-colors hover:bg-slate
                   {current.suggestion === value ? 'border-text' : 'border-slate'}"
                 style:background-color={sunColor({ value, scale: LEGACY_SCALE }, 0.14)}
-                aria-label="Score {value}"
+                aria-label={fmt(t.tracker.legacy.scoreValue, { value })}
                 onclick={() => settle(current, value)}
               >
                 {value}
@@ -163,14 +173,14 @@
           </div>
           <div class="mt-3 flex items-center justify-between gap-4">
             <p class="text-[0.7rem] text-muted">
-              {#if !viewport.compact}Press 1–9, 0 for 10, or S to skip.{/if}
+              {#if !viewport.compact}{t.tracker.legacy.shortcuts}{/if}
             </p>
             <button
               type="button"
               class="rounded-lg border border-slate px-3 py-1.5 text-xs text-muted transition-colors hover:bg-slate hover:text-text"
               onclick={() => settle(current, null)}
             >
-              Skip this day
+              {t.tracker.legacy.skip}
             </button>
           </div>
         </section>
@@ -178,10 +188,10 @@
     {:else}
       <p class="mt-6 rounded-xl border border-dashed border-slate px-4 py-6 text-center text-sm text-muted">
         {found === 0
-          ? 'No marks found in your entries.'
+          ? t.tracker.legacy.noMarks
           : plan.ready.size > 0
-            ? 'Import the ready scores, then settle the rest.'
-            : 'Nothing left to review.'}
+            ? t.tracker.legacy.importThenSettle
+            : t.tracker.legacy.nothingLeft}
       </p>
     {/if}
   </Modal>

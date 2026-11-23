@@ -6,6 +6,7 @@
   import { clickOutside, trapFocus } from '../lib/actions';
   import { keyToDate, longDayLabel } from '../lib/date';
   import { previewText } from '../lib/text';
+  import { t } from '../lib/i18n/index.svelte';
 
   // On wide screens the list hangs below the trigger, from its right edge. On
   // phones the trigger shares the bar with other controls, so a trigger-wide
@@ -48,10 +49,10 @@
     onclick={() => (open = !open)}
     aria-haspopup="dialog"
     aria-expanded={open}
-    aria-label="Drafts"
+    aria-label={t.editor.drafts}
   >
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 2H8.6c-.4 0-.8.2-1.1.5-.3.3-.5.7-.5 1.1V18c0 .4.2.8.5 1.1.3.3.7.5 1.1.5h9.8c.4 0 .8-.2 1.1-.5.3-.3.5-.7.5-1.1V6.5L15.5 2z"/><path d="M3 7.6v12.8c0 .4.2.8.5 1.1.3.3.7.5 1.1.5H15"/><path d="M15 2v5h5"/></svg>
-    <span class={compact ? 'hidden sm:inline' : ''}>Drafts</span>
+    <span class={compact ? 'hidden sm:inline' : ''}>{t.editor.drafts}</span>
     {#if app.drafts.length > 0}
       <span
         class="grid h-4 min-w-4 place-items-center rounded-full bg-slate px-1 text-[0.65rem] font-semibold tabular-nums text-text
@@ -69,10 +70,10 @@
       transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
       use:trapFocus={() => (open = false)}
       role="dialog"
-      aria-label="Saved drafts"
+      aria-label={t.editor.savedDrafts}
     >
       {#if sorted.length === 0}
-        <p class="px-3 py-6 text-center text-sm text-muted">No drafts yet.</p>
+        <p class="px-3 py-6 text-center text-sm text-muted">{t.editor.noDrafts}</p>
       {:else}
         {#each sorted as draft (draft.id)}
           <div
@@ -84,11 +85,11 @@
               onclick={() => choose(draft.id)}
             >
               <p class="truncate text-sm font-medium text-text">
-                {draft.title.trim() || 'Untitled'}
+                {draft.title.trim() || t.common.untitled}
               </p>
               {#if draft.editingUid}
                 <p class="text-[0.65rem] font-medium uppercase tracking-wide text-muted">
-                  Entry edit
+                  {t.editor.draftIsEntryEdit}
                 </p>
               {/if}
               {#if preview(draft.content)}
@@ -100,8 +101,8 @@
             </button>
             <button
               class="shrink-0 rounded-md p-2 text-muted transition-all hover:bg-slate hover:text-red-400 focus-visible:opacity-100 sm:p-1 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100"
-              aria-label="Delete draft"
-              use:tooltip={'Delete draft'}
+              aria-label={t.editor.deleteDraft}
+              use:tooltip={t.editor.deleteDraft}
               onclick={() => askDelete(draft.id)}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>

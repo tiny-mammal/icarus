@@ -21,16 +21,6 @@ export const APP_VAULT: VaultRef = { kind: 'app' };
 /** Where a backend stores the diary; see the module comment. */
 export type StorageKind = 'browser' | 'device';
 
-/** How UI copy names the place that holds the diary, as in "erased from this device". */
-export function appPlaceName(kind: StorageKind): string {
-  return kind === 'device' ? 'this device' : 'this browser';
-}
-
-/** The place with its preposition, as in "stored on this device" or "in this browser". */
-export function appPlaceWithPreposition(kind: StorageKind): string {
-  return `${kind === 'device' ? 'on' : 'in'} ${appPlaceName(kind)}`;
-}
-
 /** Key-value namespaces: JSON files beside the diary, or IndexedDB stores. */
 export type StoreName = 'settings' | 'drafts';
 

@@ -5,6 +5,7 @@
   import { app } from '../lib/store.svelte';
   import { dateKey, keyToDate, startOfMonth, nearDayLabel } from '../lib/date';
   import MiniCalendar from './MiniCalendar.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   // Bound to a local `YYYY-MM-DD` key (e.g. app.draftDateKey).
   // `align` picks which edge of the trigger the popover hangs from.
@@ -58,7 +59,7 @@
       transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
       use:trapFocus={() => (open = false)}
       role="dialog"
-      aria-label="Pick a date"
+      aria-label={t.nav.pickDate}
     >
       <MiniCalendar bind:month={viewMonth} start={selected} end={selected} onpick={pick} />
 
@@ -68,7 +69,7 @@
         class="mt-2 w-full rounded-lg py-1.5 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text"
         onclick={() => pick(today)}
       >
-        Today
+        {t.nav.today}
       </button>
     </div>
   {/if}

@@ -5,6 +5,7 @@
   import { getCurrentWebview } from '@tauri-apps/api/webview';
   import { app } from '../lib/store.svelte';
   import { runningOnAndroid, runningUnderTauri } from '../lib/runtime';
+  import { t } from '../lib/i18n/index.svelte';
 
   let dragHover = $state(false);
 
@@ -65,10 +66,10 @@
       <div class="mx-auto mb-8 grid h-14 w-14 place-items-center rounded-full border border-faint">
         <span class="h-2.5 w-2.5 rounded-full bg-muted"></span>
       </div>
-      <h1 class="text-3xl font-semibold tracking-tight text-text">Icarus Diary</h1>
+      <h1 class="text-3xl font-semibold tracking-tight text-text">{t.app.welcomeTitle}</h1>
       <p class="mt-3 text-sm leading-relaxed text-muted">
-        A quiet, local-first place for your days.<br />
-        Start a new diary, or bring in one you already keep.
+        {t.app.welcomeTagline}<br />
+        {t.app.welcomeIntro}
       </p>
     </div>
 
@@ -78,7 +79,7 @@
       disabled={app.busy}
       in:fly={{ y: 16, duration: 700, delay: 180, easing: cubicOut }}
     >
-      Start a new diary
+      {t.app.startNewDiary}
     </button>
 
     <!-- Drop zone / primary action -->
@@ -99,19 +100,17 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
       </span>
       <span class="text-sm font-medium text-text">
-        {dragHover ? 'Release to open' : 'Import a diary (.ics)'}
+        {dragHover ? t.app.releaseToOpen : t.app.importDiary}
       </span>
       <span class="text-xs text-muted">
-        {runningOnAndroid()
-          ? 'Tap to choose a .ics or .icarus file'
-          : 'Drag & drop a file here, or click to browse'}
+        {runningOnAndroid() ? t.app.chooseFileTouch : t.app.chooseFileDesktop}
       </span>
     </button>
 
     <!-- What happens next: the protection choice. -->
     <p class="mt-7 flex items-center gap-2 text-xs text-muted" in:fade={{ duration: 600, delay: 420 }}>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      Next, you'll choose whether to protect it with a password.
+      {t.app.nextProtect}
     </p>
   </main>
 </div>

@@ -6,6 +6,7 @@
   import NewPasswordFields from './NewPasswordFields.svelte';
   import PasswordField from './PasswordField.svelte';
   import { app } from '../lib/store.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   /**
    * Shown instead of the diary while it is encrypted and locked: unlock with
@@ -39,7 +40,7 @@
         ? await app.unlock({ password })
         : await app.unlock({ recoveryKey }, newPassword);
       if (result === 'wrong-secret') {
-        error = mode === 'password' ? 'That password is not correct.' : 'That recovery key is not correct.';
+        error = mode === 'password' ? t.privacy.passwordIncorrect : t.privacy.recoveryKeyIncorrect;
       }
     } finally {
       working = false;
@@ -62,30 +63,29 @@
     <div class="mb-6 grid h-14 w-14 place-items-center rounded-full border border-faint text-muted">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
     </div>
-    <h1 class="text-2xl font-semibold tracking-tight text-text">Diary locked</h1>
+    <h1 class="text-2xl font-semibold tracking-tight text-text">{t.privacy.diaryLocked}</h1>
     <p class="mt-2 text-center text-sm text-muted">
-      This diary is encrypted.
+      {t.privacy.diaryIsEncrypted}
     </p>
 
     {#if !app.encryptionSupported}
       <p class="mt-8 rounded-lg border border-amber-300/30 bg-amber-300/5 px-4 py-3 text-sm text-amber-200/90">
-        Unlocking needs a secure connection. Open Icarus over HTTPS (or on localhost), or use the
-        desktop app.
+        {t.privacy.unlockNeedsSecureConnection}
       </p>
     {:else}
       <form class="mt-8 w-full space-y-4" onsubmit={submit}>
         {#if mode === 'password'}
-          <PasswordField label="Password" bind:value={password} autofocus invalid={!!error} />
+          <PasswordField label={t.privacy.password} bind:value={password} autofocus invalid={!!error} />
         {:else}
           <div>
-            <label for="recovery-key" class="mb-1.5 block text-xs font-medium text-muted">Recovery key</label>
+            <label for="recovery-key" class="mb-1.5 block text-xs font-medium text-muted">{t.privacy.recoveryKey}</label>
             <input
               id="recovery-key"
               bind:value={recoveryKey}
               autocomplete="off"
               spellcheck="false"
               autocapitalize="characters"
-              placeholder="XXXX-XXXX-XXXX-…"
+              placeholder={t.privacy.recoveryKeyPlaceholder}
               aria-invalid={!!error}
               class="w-full rounded-lg border bg-slate-soft px-3 py-2 font-mono text-sm uppercase tracking-wide text-text placeholder:text-muted focus:border-faint focus:outline-none
                 {error ? 'border-red-400/60' : 'border-slate'}"
@@ -104,9 +104,9 @@
           disabled={!canSubmit || working}
         >
           {#if working}
-            <BusyLabel>Unlocking</BusyLabel>
+            <BusyLabel>{t.privacy.unlocking}</BusyLabel>
           {:else}
-            {mode === 'password' ? 'Unlock' : 'Unlock and set new password'}
+            {mode === 'password' ? t.privacy.unlock : t.privacy.unlockAndSetPassword}
           {/if}
         </button>
       </form>
@@ -115,13 +115,13 @@
         class="mt-5 text-xs text-muted underline-offset-4 transition-colors hover:text-text hover:underline"
         onclick={() => switchMode(mode === 'password' ? 'recovery' : 'password')}
       >
-        {mode === 'password' ? 'Forgot your password? Use the recovery key' : 'Use the password instead'}
+        {mode === 'password' ? t.privacy.forgotPassword : t.privacy.usePasswordInstead}
       </button>
     {/if}
 
     <div class="mt-8 flex gap-4 text-xs text-muted">
       <button class="underline-offset-4 transition-colors hover:text-red-400 hover:underline" onclick={() => (confirmForget = true)}>
-        Delete this diary
+        {t.privacy.deleteThisDiary}
       </button>
     </div>
   </main>
@@ -129,12 +129,11 @@
 
 {#if confirmForget}
   <ConfirmDialog
-    title="Delete this diary?"
-    confirmLabel="Delete diary"
+    title={t.privacy.deleteDiaryTitle}
+    confirmLabel={t.privacy.deleteDiaryConfirm}
     onconfirm={forget}
     oncancel={() => (confirmForget = false)}
   >
-    The encrypted diary and its drafts will be permanently erased from {app.appPlace}. Only do this
-    if the password and recovery key are lost. This can't be undone.
+    {app.storageKind === 'device' ? t.privacy.deleteDiaryWarningDevice : t.privacy.deleteDiaryWarningBrowser}
   </ConfirmDialog>
 {/if}

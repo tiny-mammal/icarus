@@ -13,6 +13,7 @@ import {
   startOfMonth,
   type DateFormat,
 } from './date';
+import { t } from './i18n/index.svelte';
 import { isInvalidDate } from './ical';
 import { countChars } from './text-count';
 import { EMPTY_TIMELINE, buildTimeline, type DayTotal, type Timeline } from './timeline';
@@ -35,12 +36,15 @@ export interface StatsPresetOption {
 }
 
 /** Preset choices, in the order they appear in the selector. */
-export const STATS_PRESETS: readonly StatsPresetOption[] = [
-  { value: '30d', label: 'Last 30 days' },
-  { value: '12m', label: 'Last year' },
-  { value: 'year', label: 'This year' },
-  { value: 'all', label: 'All time' },
-];
+export function statsPresets(): StatsPresetOption[] {
+  const { periods } = t.stats;
+  return [
+    { value: '30d', label: periods.last30Days },
+    { value: '12m', label: periods.lastYear },
+    { value: 'year', label: periods.thisYear },
+    { value: 'all', label: periods.allTime },
+  ];
+}
 
 /** Aggregated characters for one calendar day. */
 export interface DayStat {
@@ -101,7 +105,7 @@ export function periodLabel(period: StatsPeriod, format: DateFormat = 'auto'): s
   if (isCustomRange(period)) {
     return rangeLabel(keyToDate(period.start), keyToDate(period.end), format);
   }
-  return STATS_PRESETS.find((p) => p.value === period)?.label ?? '';
+  return statsPresets().find((p) => p.value === period)?.label ?? '';
 }
 
 /** Inclusive day range a period covers. */

@@ -30,6 +30,15 @@ function builtAt(): string {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [svelte(), tailwindcss(), legacyWebView(), preloadFonts(), ...pwa()],
+  resolve: {
+    alias: [
+      // hunspell-asm's ESM build (and its loader's) calls `import * as
+      // nanoid` as a function, which bundles into a crash; their CommonJS
+      // builds import it correctly.
+      { find: /^hunspell-asm$/, replacement: 'hunspell-asm/dist/cjs/index.js' },
+      { find: /^emscripten-wasm-loader$/, replacement: 'emscripten-wasm-loader/dist/cjs/index.js' },
+    ],
+  },
   define: { __ICARUS_BUILT_AT__: JSON.stringify(builtAt()) },
 
   // Tauri expects a fixed port and owns the terminal output, so don't let Vite

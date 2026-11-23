@@ -20,6 +20,7 @@
   import MonthYearGrid from './MonthYearGrid.svelte';
   import { viewport } from '../lib/viewport.svelte';
   import type { DiaryEntry } from '../lib/types';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   const today = new Date();
   const weekdays = $derived(weekdayLabels(app.weekStart));
@@ -172,7 +173,7 @@
     return app.entriesByDay.get(dateKey(d)) ?? [];
   }
   function entryTitle(e: DiaryEntry): string {
-    return e.title.trim() || 'Untitled';
+    return e.title.trim() || t.common.untitled;
   }
   // When a day overflows, title slots are traded for the "+N more" line so
   // the list never grows past the cell.
@@ -192,10 +193,9 @@
   function dayLabel(d: Date): string {
     const base = longDayLabel(d, app.dateFormat);
     const entries = entriesOn(d);
-    const n = entries.length;
-    if (n === 0) return base;
+    if (entries.length === 0) return base;
     const titles = entries.map(entryTitle).join(', ');
-    return `${base}, ${n} ${n === 1 ? 'entry' : 'entries'}: ${titles}`;
+    return fmt(t.nav.dayWithEntries, { day: base, count: entries.length, titles });
   }
 </script>
 
@@ -257,7 +257,9 @@
             {/each}
             {#if count > shown.length}
               <li class="h-[0.875rem] shrink-0 px-1.5 text-[0.65rem] font-medium leading-[0.875rem] text-muted">
-                {shown.length ? `+${count - shown.length} more` : `${count} entries`}
+                {shown.length
+                  ? fmt(t.nav.moreEntries, { count: count - shown.length })
+                  : fmt(t.common.entries, { count })}
               </li>
             {/if}
           </ul>
@@ -279,8 +281,8 @@
     <div class="flex items-center gap-1">
       <button
         class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
-        aria-label="Previous month"
-        use:tooltip={'Previous month'}
+        aria-label={t.nav.previousMonth}
+        use:tooltip={t.nav.previousMonth}
         onclick={() => page(-1)}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -306,7 +308,7 @@
           transition:scale={{ duration: 160, start: 0.95, easing: cubicOut }}
           use:trapFocus={() => (pickerOpen = false)}
           role="dialog"
-          aria-label="Select month and year"
+          aria-label={t.nav.selectMonthAndYear}
         >
           <MonthYearGrid
             bind:year={pickerYear}
@@ -319,8 +321,8 @@
 
       <button
         class="grid h-10 w-10 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text sm:h-8 sm:w-8"
-        aria-label="Next month"
-        use:tooltip={'Next month'}
+        aria-label={t.nav.nextMonth}
+        use:tooltip={t.nav.nextMonth}
         onclick={() => page(1)}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
@@ -331,7 +333,7 @@
       class="rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-slate hover:text-text sm:py-1.5"
       onclick={() => app.goToToday()}
     >
-      Today
+      {t.nav.today}
     </button>
   </header>
 

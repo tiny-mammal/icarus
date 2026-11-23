@@ -4,6 +4,8 @@
  * protects an encrypted file against offline guessing.
  */
 
+import { fmt, t } from './i18n/index.svelte';
+
 export const MIN_PASSWORD_LENGTH = 10;
 
 export type PasswordStrength = 'too-short' | 'weak' | 'fair' | 'strong';
@@ -35,7 +37,7 @@ export function assessPassword(password: string): PasswordAssessment {
       strength: 'too-short',
       score: 0,
       acceptable: false,
-      hint: `Use at least ${MIN_PASSWORD_LENGTH} characters.`,
+      hint: fmt(t.privacy.passwordTooShort, { count: MIN_PASSWORD_LENGTH }),
     };
   }
   const bits = estimateBits(password);
@@ -44,11 +46,11 @@ export function assessPassword(password: string): PasswordAssessment {
       strength: 'weak',
       score: 1,
       acceptable: true,
-      hint: 'Weak. A phrase of several random words is easier to remember and much stronger.',
+      hint: t.privacy.passwordWeak,
     };
   }
   if (bits < 75) {
-    return { strength: 'fair', score: 2, acceptable: true, hint: 'Fair. A few more words would make it strong.' };
+    return { strength: 'fair', score: 2, acceptable: true, hint: t.privacy.passwordFair };
   }
-  return { strength: 'strong', score: 3, acceptable: true, hint: 'Strong.' };
+  return { strength: 'strong', score: 3, acceptable: true, hint: t.privacy.passwordStrong };
 }

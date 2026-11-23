@@ -8,6 +8,7 @@
   import { compactDayLabel, keyToDate } from '../lib/date';
   import { activeHabits, dayRecord } from '../lib/tracker';
   import { isBestScore, sunColor } from '../lib/sun';
+  import { fmt, t } from '../lib/i18n/index.svelte';
   import Modal from './Modal.svelte';
   import DayTrackerPanel from './DayTrackerPanel.svelte';
   import HabitMarkIcon from './HabitMarkIcon.svelte';
@@ -36,16 +37,18 @@
     const found = app.passRun(dayKey);
     return found && found.length > 1 ? found : null;
   });
-  const runLabel = $derived(run ? `${run.passed ? 'Passed' : 'Failed'} ${run.length} days in a row` : '');
+  const runLabel = $derived(
+    run ? fmt(run.passed ? t.tracker.runPassed : t.tracker.runFailed, { count: run.length }) : '',
+  );
   // The sun's colour for the score, or every colour for the best one.
   const best = $derived(score !== undefined && isBestScore(score));
   const sunTint = $derived(score && !best ? sunColor(score) : undefined);
 
   const summary = $derived(
     [
-      score ? `Score ${score.value} of ${score.scale}` : 'Not scored',
+      score ? fmt(t.tracker.scoreSummary, { value: score.value, scale: score.scale }) : t.tracker.notScored,
       runLabel,
-      habits.length ? `${done} of ${habits.length} habits done` : '',
+      habits.length ? fmt(t.tracker.habitsDone, { done, count: habits.length }) : '',
     ]
       .filter(Boolean)
       .join(', '),
@@ -70,11 +73,11 @@
     type="button"
     class="-mx-1.5 -my-1 flex items-center gap-2 rounded-md px-1.5 py-1 text-[0.7rem] font-medium text-muted transition-colors hover:bg-slate hover:text-text
       {open ? 'bg-slate text-text' : ''}"
-    aria-label="{summary}. Score and habits"
+    aria-label={fmt(t.tracker.summaryLabel, { summary })}
     aria-haspopup="dialog"
     aria-expanded={open}
     use:tooltip={{
-      label: runLabel ? `Score and habits · ${runLabel}` : 'Score and habits',
+      label: runLabel ? fmt(t.tracker.scoreAndHabitsWithRun, { run: runLabel }) : t.tracker.scoreAndHabits,
       keys: writing ? undefined : ['R'],
     }}
     onclick={() => (open = !open)}
@@ -102,7 +105,7 @@
           {score.scale === app.tracker.scoreScale ? score.value : `${score.value}/${score.scale}`}
         </span>
       {:else if !habits.length && !writing}
-        <span>Score the day</span>
+        <span>{t.tracker.scoreTheDay}</span>
       {/if}
     </span>
     {#if run}
@@ -142,7 +145,7 @@
         transition:scale={{ duration: viewport.reducedMotion ? 0 : 160, start: 0.96, easing: cubicOut }}
         use:trapFocus={() => (open = false)}
         role="dialog"
-        aria-label="Score and habits"
+        aria-label={t.tracker.scoreAndHabits}
       >
         <DayTrackerPanel {dayKey} onmanage={manageHabits} />
       </div>

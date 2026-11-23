@@ -2,6 +2,7 @@
   import { tooltip } from '../lib/tooltip';
   import { fade } from 'svelte/transition';
   import { app } from '../lib/store.svelte';
+  import { t } from '../lib/i18n/index.svelte';
 
   /**
    * The primary "write" action: starts a new entry dated today (work in
@@ -20,17 +21,17 @@
 {#if variant === 'header'}
   <button
     class="hidden h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg bg-text px-3 text-sm font-medium text-ink transition-opacity hover:opacity-90 sm:flex"
-    aria-label="New entry"
-    use:tooltip={{ label: 'New entry', keys: ['N'] }}
+    aria-label={t.editor.newEntry}
+    use:tooltip={{ label: t.editor.newEntry, keys: ['N'] }}
     onclick={() => app.startNewEntry()}
   >
     {@render plus(16)}
-    <span class="hidden md:inline">New entry</span>
+    <span class="hidden md:inline">{t.editor.newEntry}</span>
   </button>
 {:else if !app.selectedKey && !app.parkedDraft}
   <button
     class="fixed bottom-[calc(1.25rem+env(safe-area-inset-bottom))] right-5 z-float grid h-14 w-14 place-items-center rounded-full bg-text text-ink shadow-xl shadow-black/50 transition-transform active:[transform:scale(0.95)] sm:hidden"
-    aria-label="New entry"
+    aria-label={t.editor.newEntry}
     onclick={() => app.startNewEntry()}
     transition:fade={{ duration: 150 }}
   >

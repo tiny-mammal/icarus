@@ -5,6 +5,8 @@
   import { app } from '../lib/store.svelte';
   import { updates } from '../lib/updates.svelte';
   import { timeAgo } from '../lib/date';
+  import { dateFormat, fmt, t } from '../lib/i18n/index.svelte';
+  import Rich from './Rich.svelte';
   import UpdateMark from './UpdateMark.svelte';
 
   /**
@@ -21,20 +23,21 @@
     const built = updates.builtAt;
     if (!built) return '';
     const sameYear = built.getFullYear() === new Date().getFullYear();
-    return built.toLocaleDateString('en', sameYear ? { month: 'long' } : { month: 'long', year: 'numeric' });
+    return dateFormat(sameYear ? { month: 'long' } : { month: 'long', year: 'numeric' }).format(built);
   });
 
   const checking = $derived(updates.status === 'checking');
+  const dismissLabel = $derived(kind === 'update' ? t.app.updateDismiss : t.app.reminderRemindNextMonth);
 
   function download() {
     void updates.download();
-    app.toast('info', 'Install the new version over this one. Your diary stays where it is.');
+    app.toast('info', t.app.updateInstallHint);
   }
 
   async function look() {
     const result = await updates.lookForUpdate();
-    if (result === 'current') app.toast('success', `You have the latest version, ${updates.current}.`);
-    else if (result === 'failed') app.toast('error', 'Could not reach icarus.4oli.com. Try again later.');
+    if (result === 'current') app.toast('success', fmt(t.app.upToDate, { version: updates.current }));
+    else if (result === 'failed') app.toast('error', t.app.updateUnreachable);
   }
 </script>
 
@@ -50,46 +53,52 @@
       <UpdateMark still={kind === 'reminder'} />
       <div class="min-w-0 flex-1">
         {#if kind === 'update' && updates.latest}
-          <p class="text-sm font-medium text-text">Icarus {updates.latest.version} is ready</p>
+          <p class="text-sm font-medium text-text">{fmt(t.app.updateReady, { version: updates.latest.version })}</p>
           <p class="mt-0.5 text-xs text-muted">
-            Released {released}
+            {fmt(t.app.updateReleased, { ago: released })}
             <span class="text-faint">·</span>
             <span class="tabular-nums">{updates.current}</span>
             <span aria-hidden="true">→</span>
             <span class="tabular-nums text-text">{updates.latest.version}</span>
           </p>
         {:else}
-          <p class="text-sm font-medium text-text">Look for a newer Icarus?</p>
+          <p class="text-sm font-medium text-text">{t.app.reminderTitle}</p>
           <p class="mt-0.5 text-xs leading-relaxed text-muted">
-            You're on <span class="tabular-nums text-text">{updates.current}</span>{#if builtLabel}, from {builtLabel}{/if}.
-            New versions bring fixes and new features.
+            <Rich
+              message={fmt(builtLabel ? t.app.reminderBuilt : t.app.reminderNoDate, {
+                version: updates.current,
+                month: builtLabel,
+              })}
+              emphasisClass="tabular-nums text-text"
+            />
+            {t.app.reminderBenefit}
           </p>
         {/if}
 
         <div class="mt-3.5 flex items-center gap-2">
           {#if kind === 'update'}
-            <button class="primary" onclick={download}>Get the update</button>
-            <button class="secondary" onclick={() => updates.snooze()}>Later</button>
+            <button class="primary" onclick={download}>{t.app.updateGet}</button>
+            <button class="secondary" onclick={() => updates.snooze()}>{t.app.updateLater}</button>
           {:else}
             <button class="primary flex items-center gap-1.5" onclick={look} disabled={checking}>
               {#if checking}
                 <svg class="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.56"/></svg>
-                Checking…
+                {t.app.reminderChecking}
               {:else}
-                Check for updates
+                {t.app.reminderCheck}
                 {#if !updates.canCheck}
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>
                 {/if}
               {/if}
             </button>
-            <button class="secondary" onclick={() => void updates.snoozeReminder()} disabled={checking}>Not now</button>
+            <button class="secondary" onclick={() => void updates.snoozeReminder()} disabled={checking}>{t.app.reminderNotNow}</button>
           {/if}
         </div>
       </div>
       <button
         class="-mr-1 -mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-slate hover:text-text"
-        aria-label={kind === 'update' ? 'Dismiss until next launch' : 'Remind me next month'}
-        use:tooltip={kind === 'update' ? 'Dismiss until next launch' : 'Remind me next month'}
+        aria-label={dismissLabel}
+        use:tooltip={dismissLabel}
         onclick={() => (kind === 'update' ? updates.snooze() : void updates.snoozeReminder())}
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>

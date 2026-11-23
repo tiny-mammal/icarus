@@ -32,8 +32,6 @@ import { APP_VAULT, isDiaryFileName, storage, type UnlockSecret, type VaultRef }
 import { BackupExistsError, VaultLockedError } from './storage/errors';
 import {
   PRIVATE_ITEMS,
-  appPlaceName,
-  appPlaceWithPreposition,
   type StorageKind,
 } from './storage/types';
 import {
@@ -80,13 +78,18 @@ import {
 import { resetSearch, warmSearch } from './search';
 import { addMonths, adjacentKey, dateKey, keyToDate, startOfMonth } from './date';
 import { addUserWord, removeUserWord, setUserWords } from './spellcheck';
-import { addressLocale, i18n, systemLocale } from './i18n/index.svelte';
+import { addressLocale, fmt, i18n, systemLocale, t } from './i18n/index.svelte';
 import type { Locale } from './i18n/locales';
 import { updates } from './updates.svelte';
 import { randomId } from './random';
 import { devError } from './log';
 
 type View = 'welcome' | 'locked' | 'main';
+
+/** What to tell the user about an encrypted diary that could not be read. */
+function corruptVaultMessage(err: CorruptVaultError): string {
+  return err.newerVersion ? t.privacy.newerVersionDiary : t.privacy.corruptDiary;
+}
 
 /** Outcome of a password-gated action, so dialogs can show the right message. */
 export type SecretResult = 'ok' | 'wrong-secret' | 'failed';
@@ -160,10 +163,6 @@ class AppStore {
   vault = $state<VaultRef | null>(null);
   /** Which backend this session runs on — drives platform-aware UI copy. */
   readonly storageKind: StorageKind = storage.kind;
-  /** "this browser" or "this device": where an app-owned diary is kept. */
-  readonly appPlace: string = appPlaceName(storage.kind);
-  /** "on this device" or "in this browser". */
-  readonly appPlaceIn: string = appPlaceWithPreposition(storage.kind);
   view = $state<View>('welcome');
   ready = $state(false); // finished the initial boot check
 
@@ -332,7 +331,7 @@ class AppStore {
     } catch (err) {
       // Welcome still offers import; replacing a saved diary asks first.
       devError('init: failed to restore the saved vault', err);
-      this.toast('error', 'Could not open the saved diary.');
+      this.toast('error', t.app.couldNotOpenSavedDiary);
     } finally {
       await language;
       this.ready = true;
@@ -353,9 +352,7 @@ class AppStore {
         return false;
       }
       devError('loadVault: could not open the diary', err);
-      this.toast('error', err instanceof CorruptVaultError
-        ? 'This encrypted diary is damaged or was modified.'
-        : 'Could not open that diary.');
+      this.toast('error', err instanceof CorruptVaultError ? corruptVaultMessage(err) : t.app.couldNotOpenDiary);
       return false;
     } finally {
       this.busy = false;
@@ -376,7 +373,7 @@ class AppStore {
     if (isEncryptedVault(text)) return this.adoptEncryptedFile(ref, text, replaces);
     const res = parseIcs(text);
     if (!res.ok) {
-      this.toast('error', `Couldn't read this file — ${res.error}`);
+      this.toast('error', fmt(t.app.couldNotReadFile, { error: res.error }));
       return false;
     }
     if (save) {
@@ -384,7 +381,7 @@ class AppStore {
         await storage.writeVault(ref, serializeIcs(res));
       } catch (err) {
         devError('adoptVault: could not save the diary', err);
-        this.toast('error', 'Could not save the diary.');
+        this.toast('error', t.app.couldNotSaveDiary);
         return false;
       }
     }
@@ -438,7 +435,7 @@ class AppStore {
     }
     const res = parseIcs(text);
     if (!res.ok) {
-      this.toast('error', `Couldn't read this file — ${res.error}`);
+      this.toast('error', fmt(t.app.couldNotReadFile, { error: res.error }));
       return;
     }
     this.settingsOpen = false;
@@ -481,7 +478,7 @@ class AppStore {
       await this.proposeDiary(APP_VAULT, serializeIcs({ entries: [] }), 'new');
     } catch (err) {
       devError('startNewDiary: could not reach the diary storage', err);
-      this.toast('error', 'Could not create the diary.');
+      this.toast('error', t.app.couldNotCreateDiary);
     }
   }
 
@@ -499,7 +496,7 @@ class AppStore {
       await this.proposeDiary(request.ref, request.text, request.source, true);
     } catch (err) {
       devError('confirmReplace: could not replace the diary', err);
-      this.toast('error', 'Could not replace the diary.');
+      this.toast('error', t.app.couldNotReplaceDiary);
     } finally {
       this.busy = false;
     }
@@ -515,7 +512,7 @@ class AppStore {
       for (const item of PRIVATE_ITEMS) await storage.removeItem(item.store, item.key);
     } catch (err) {
       devError('eraseReplacedItems: could not erase the old drafts', err);
-      this.toast('error', 'The diary was replaced, but the old drafts could not be erased.');
+      this.toast('error', t.app.replacedButDraftsRemain);
     }
   }
 
@@ -529,16 +526,14 @@ class AppStore {
    */
   private async adoptEncryptedFile(ref: VaultRef, text: string, replaces = false): Promise<boolean> {
     if (!this.encryptionSupported) {
-      this.toast('error', 'Encrypted diaries need HTTPS or the desktop app.');
+      this.toast('error', t.privacy.encryptedNeedsSecureConnection);
       return false;
     }
     try {
       await storage.encryption.storeEncrypted(ref, text);
     } catch (err) {
       devError('adoptEncryptedFile: could not store the encrypted diary', err);
-      this.toast('error', err instanceof CorruptVaultError
-        ? 'This encrypted diary is damaged or was modified.'
-        : 'Could not save the diary in the selected location.');
+      this.toast('error', err instanceof CorruptVaultError ? corruptVaultMessage(err) : t.app.couldNotSaveDiaryInLocation);
       return false;
     }
     if (replaces) await this.eraseReplacedItems();
@@ -662,9 +657,7 @@ class AppStore {
     } catch (err) {
       if (err instanceof WrongSecretError) return 'wrong-secret';
       devError('unlock: could not open the keyring', err);
-      this.toast('error', err instanceof CorruptVaultError
-        ? err.message
-        : 'Could not read the diary.');
+      this.toast('error', err instanceof CorruptVaultError ? corruptVaultMessage(err) : t.privacy.couldNotReadDiary);
       return 'failed';
     } finally {
       this.busy = false;
@@ -675,7 +668,7 @@ class AppStore {
     }
     if (newPassword !== undefined) {
       const keys = await changePassword(storage.encryption.currentKeys(), newPassword);
-      if (await this.rekey(keys)) this.toast('success', 'Password changed.');
+      if (await this.rekey(keys)) this.toast('success', t.privacy.passwordChanged);
     }
     return 'ok';
   }
@@ -719,9 +712,7 @@ class AppStore {
       return true;
     } catch (err) {
       devError('confirmEncryption: could not encrypt the diary', err);
-      this.toast('error', diary
-        ? 'Could not save the encrypted diary. Nothing was written.'
-        : 'Could not encrypt the diary. Nothing was changed.');
+      this.toast('error', diary ? t.privacy.couldNotSaveEncryptedDiary : t.privacy.couldNotEncryptDiary);
       return false;
     } finally {
       this.busy = false;
@@ -752,7 +743,7 @@ class AppStore {
     if (!storage.encryption.copiesRemain()) return;
     this.toast(
       'error',
-      `Older copies of the diary ${this.appPlaceIn} could not be erased yet and can still be read without the current password. Icarus retries on every save.`,
+      this.storageKind === 'device' ? t.privacy.copiesRemainDevice : t.privacy.copiesRemainBrowser,
     );
   }
 
@@ -766,7 +757,7 @@ class AppStore {
       return true;
     } catch (err) {
       devError('rekey: could not rewrite the diary', err);
-      this.toast('error', 'Could not save the diary. The previous password still applies.');
+      this.toast('error', t.privacy.couldNotRekey);
       return false;
     } finally {
       this.busy = false;
@@ -813,7 +804,7 @@ class AppStore {
     } catch (err) {
       if (err instanceof WrongSecretError) return 'wrong-secret';
       devError('disableEncryption: could not decrypt the diary', err);
-      this.toast('error', 'Could not remove encryption. The diary is still encrypted.');
+      this.toast('error', t.privacy.couldNotRemoveEncryption);
       return 'failed';
     } finally {
       this.busy = false;
@@ -826,7 +817,7 @@ class AppStore {
       await save;
     } catch (err) {
       devError(`${caller}: could not persist the preference`, err);
-      this.toast('error', 'Could not save settings.');
+      this.toast('error', t.common.couldNotSaveSettings);
     }
   }
 
@@ -865,7 +856,7 @@ class AppStore {
       if (text !== null) await this.proposeDiary(APP_VAULT, text, 'import');
     } catch (err) {
       devError('importVault: could not import the diary', err);
-      this.toast('error', 'Could not import that diary.');
+      this.toast('error', t.app.couldNotImportDiary);
     } finally {
       this.busy = false;
     }
@@ -874,7 +865,7 @@ class AppStore {
   /** A diary dropped onto the welcome zone (desktop path drop). */
   async openDroppedPath(path: string): Promise<void> {
     if (!isDiaryFileName(path)) {
-      this.toast('error', 'Please drop an .ics or .icarus file.');
+      this.toast('error', t.app.dropDiaryFile);
       return;
     }
     this.busy = true;
@@ -884,7 +875,7 @@ class AppStore {
       if (text !== null) await this.proposeDiary(APP_VAULT, text, 'import');
     } catch (err) {
       devError('openDroppedPath: could not read the file', err);
-      this.toast('error', 'Could not open that file.');
+      this.toast('error', t.app.couldNotOpenFile);
     } finally {
       this.busy = false;
     }
@@ -893,7 +884,7 @@ class AppStore {
   /** A diary dropped onto the welcome zone in a browser (File object). */
   async openDroppedFile(file: File): Promise<void> {
     if (!isDiaryFileName(file.name)) {
-      this.toast('error', 'Please drop an .ics or .icarus file.');
+      this.toast('error', t.app.dropDiaryFile);
       return;
     }
     this.busy = true;
@@ -901,7 +892,7 @@ class AppStore {
       if (this.vault && !(await this.flushDraftNow())) return;
       await this.proposeDiary(APP_VAULT, await file.text(), 'import');
     } catch {
-      this.toast('error', 'Could not open that file.');
+      this.toast('error', t.app.couldNotOpenFile);
     } finally {
       this.busy = false;
     }
@@ -917,12 +908,12 @@ class AppStore {
   async commit(): Promise<void> {
     const title = this.draftTitle.trim();
     if (!title && !this.draftContent.trim()) {
-      this.toast('info', 'Write something first.');
+      this.toast('info', t.app.writeSomethingFirst);
       return;
     }
 
     const fields = {
-      title: title || 'Untitled',
+      title: title || t.common.untitled,
       content: this.draftContent,
       location: this.draftLocation.trim() || undefined,
       date: keyToDate(this.draftDateKey),
@@ -934,7 +925,7 @@ class AppStore {
       const uid = this.editingUid;
       const previous = this.entries.find((e) => e.uid === uid);
       if (!previous) {
-        this.toast('error', 'The original entry is no longer available.');
+        this.toast('error', t.app.entryGone);
         await this.flushDraftNow();
         return;
       }
@@ -948,8 +939,8 @@ class AppStore {
         return;
       }
       const snapshot = { ...previous };
-      this.toast('success', 'Entry updated', {
-        label: 'Undo',
+      this.toast('success', t.app.entryUpdated, {
+        label: t.common.undo,
         run: () => void this.restoreEntry(snapshot),
       });
     } else {
@@ -1137,7 +1128,7 @@ class AppStore {
     } catch (err) {
       devError('loadDraftsFromDisk: could not read persisted drafts', err);
       // Encrypted drafts wait for the unlock, which loads them again.
-      if (!(err instanceof VaultLockedError)) this.toast('error', 'Could not read your drafts.');
+      if (!(err instanceof VaultLockedError)) this.toast('error', t.app.couldNotReadDrafts);
     }
   }
 
@@ -1285,8 +1276,8 @@ class AppStore {
   addSpellWord(word: string, announce = false): void {
     this.saveSpellWords(addUserWord(word));
     if (announce) {
-      this.toast('success', `Added “${word}” to your dictionary`, {
-        label: 'Undo',
+      this.toast('success', fmt(t.app.wordAdded, { word }), {
+        label: t.common.undo,
         run: () => this.removeSpellWord(word, false),
       });
     }
@@ -1299,8 +1290,8 @@ class AppStore {
   removeSpellWord(word: string, announce = true): void {
     this.saveSpellWords(removeUserWord(word));
     if (announce) {
-      this.toast('info', `Removed “${word}”`, {
-        label: 'Undo',
+      this.toast('info', fmt(t.app.wordRemoved, { word }), {
+        label: t.common.undo,
         run: () => this.addSpellWord(word),
       });
     }
@@ -1314,7 +1305,7 @@ class AppStore {
     this.spellWords = words;
     void setSavedSpellWords(words).catch((err) => {
       devError('saveSpellWords: could not persist the personal dictionary', err);
-      this.toast('error', 'Could not save settings.');
+      this.toast('error', t.common.couldNotSaveSettings);
     });
   }
 
@@ -1394,7 +1385,7 @@ class AppStore {
     } catch (err) {
       if (this.draftId === draft.id) this.draftSaved = false;
       devError('flushDraft: could not persist the draft list', err);
-      this.toast('error', 'Draft not saved — your text is still in the editor.');
+      this.toast('error', t.app.draftNotSaved);
       return false;
     }
   }
@@ -1426,7 +1417,7 @@ class AppStore {
     } catch (err) {
       this.drafts = previous;
       devError('removeDraft: could not persist the draft list', err);
-      this.toast('error', 'Could not update drafts.');
+      this.toast('error', t.app.couldNotUpdateDrafts);
       return false;
     }
   }
@@ -1468,7 +1459,7 @@ class AppStore {
     this.confirmDeleteId = null;
     if (!id) return;
     if (await this.deleteDraft(id)) {
-      this.toast('info', discarding ? 'Draft discarded' : 'Draft deleted');
+      this.toast('info', discarding ? t.app.draftDiscarded : t.app.draftDeleted);
     }
   }
 
@@ -1540,8 +1531,8 @@ class AppStore {
     if (this.selectedKey && this.entriesByDay.get(this.selectedKey)?.length === 0) {
       this.closeDay();
     }
-    this.toast('info', 'Entry deleted', {
-      label: 'Undo',
+    this.toast('info', t.app.entryDeleted, {
+      label: t.common.undo,
       run: () => void this.restoreEntry(removed, index),
     });
   }
@@ -1602,8 +1593,8 @@ class AppStore {
   private async persist(quiet = false): Promise<boolean> {
     if (!this.vault) return false;
     const saved = await this.writeDiary.run();
-    if (!saved) this.toast('error', 'Write failed — your changes are still in memory.');
-    else if (!quiet) this.toast('success', `Saved ${this.appPlaceIn}`);
+    if (!saved) this.toast('error', t.app.writeFailed);
+    else if (!quiet) this.toast('success', this.storageKind === 'device' ? t.app.savedDevice : t.app.savedBrowser);
     return saved;
   }
 
@@ -1688,7 +1679,7 @@ class AppStore {
       if (ref) await storage.forgetVault(ref);
     } catch (err) {
       devError('forgetVault: could not delete the diary', err);
-      this.toast('error', 'Could not delete the diary.');
+      this.toast('error', t.app.couldNotDeleteDiary);
       return;
     }
     storage.encryption.keepSessionFor(null);
@@ -1715,13 +1706,11 @@ class AppStore {
           )
         : await storage.saveBackup(ics, 'icarus-diary-backup.ics');
       if (!saved) return;
-      this.toast('success', format === 'encrypted' ? 'Encrypted backup exported.' : 'Backup exported.');
+      this.toast('success', format === 'encrypted' ? t.app.encryptedBackupExported : t.app.backupExported);
       this.exportOpen = false;
       this.settingsOpen = false;
     } catch (err) {
-      this.toast('error', err instanceof BackupExistsError
-        ? 'Backup already exists. Choose a new filename.'
-        : 'Export failed.');
+      this.toast('error', err instanceof BackupExistsError ? t.app.backupExists : t.app.exportFailed);
     } finally {
       this.busy = false;
     }
@@ -1856,7 +1845,7 @@ class AppStore {
     setTimeout(() => this.dismiss(id), action ? 7000 : 3600);
   }
   dismiss(id: number): void {
-    this.toasts = this.toasts.filter((t) => t.id !== id);
+    this.toasts = this.toasts.filter((toast) => toast.id !== id);
   }
 }
 

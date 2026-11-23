@@ -4,6 +4,7 @@
   import { compactDayLabel, keyToDate, rangeLabel } from '../lib/date';
   import { RECENT_DAYS, type HabitStats } from '../lib/tracker-stats';
   import { tooltip } from '../lib/tooltip';
+  import { fmt, formatNumber, t } from '../lib/i18n/index.svelte';
 
   /**
    * How one habit is going: its streak now and at its best (both over the
@@ -11,22 +12,22 @@
    */
   let { stats }: { stats: HabitStats } = $props();
 
-  const numberFmt = new Intl.NumberFormat();
-
   const { habit } = $derived(stats);
   // A streak in progress that is also the longest ever is the one to light up.
   const record = $derived(stats.current > 0 && stats.current >= (stats.best?.length ?? 0));
   const bestDates = $derived(
     stats.best
       ? rangeLabel(keyToDate(stats.best.start), keyToDate(stats.best.end), app.dateFormat)
-      : 'No streak yet',
+      : t.stats.habits.noStreakYet,
   );
   const since = $derived(
     habit.archived
-      ? 'Archived'
+      ? t.stats.habits.archived
       : stats.since
-        ? `Tracked since ${compactDayLabel(keyToDate(stats.since), app.dateFormat)}`
-        : 'Not marked yet',
+        ? fmt(t.stats.habits.trackedSince, {
+            date: compactDayLabel(keyToDate(stats.since), app.dateFormat),
+          })
+        : t.stats.habits.notMarkedYet,
   );
   const recentDone = $derived(stats.recent.filter((mark) => mark === 'done').length);
   const recentMissed = $derived(stats.recent.filter((mark) => mark === 'missed').length);
@@ -42,26 +43,30 @@
 
   <div class="flex gap-6">
     <div>
-      <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">Current</p>
+      <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">{t.stats.habits.current}</p>
       <p
         class="text-lg font-semibold tabular-nums tracking-tight {record ? 'text-sun' : 'text-text'}"
       >
         {#if stats.currentStart}
-          <button type="button" class="cursor-help rounded-sm underline decoration-dotted underline-offset-4" use:tooltip={{ label: `${stats.currentStart.estimated ? 'Estimated streak start' : 'Streak started'}: ${compactDayLabel(keyToDate(stats.currentStart.day), app.dateFormat)}`, haptic: app.trackerHaptics }}>{stats.current}</button>
+          <button type="button" class="cursor-help rounded-sm underline decoration-dotted underline-offset-4" use:tooltip={{ label: fmt(stats.currentStart.estimated ? t.stats.habits.streakStartedEstimated : t.stats.habits.streakStarted, { date: compactDayLabel(keyToDate(stats.currentStart.day), app.dateFormat) }), haptic: app.trackerHaptics }}>{stats.current}</button>
         {:else}
           {stats.current}
         {/if}
-        <span class="text-xs font-normal text-muted">{stats.current === 1 ? 'day' : 'days'}</span>
+        <span class="text-xs font-normal text-muted">{fmt(t.stats.dayUnit, { count: stats.current })}</span>
       </p>
       <p class="text-[0.7rem] whitespace-nowrap text-muted">
-        {stats.current === 0 ? 'No active streak' : record ? 'Your longest' : 'Active streak'}
+        {stats.current === 0
+          ? t.stats.habits.noActiveStreak
+          : record
+            ? t.stats.habits.longestStreak
+            : t.stats.habits.activeStreak}
       </p>
     </div>
     <div>
-      <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">Best</p>
+      <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">{t.stats.habits.best}</p>
       <p class="text-lg font-semibold tabular-nums tracking-tight text-text">
         {stats.best?.length ?? 0}
-        <span class="text-xs font-normal text-muted">{stats.best?.length === 1 ? 'day' : 'days'}</span>
+        <span class="text-xs font-normal text-muted">{fmt(t.stats.dayUnit, { count: stats.best?.length ?? 0 })}</span>
       </p>
       <p class="text-[0.7rem] whitespace-nowrap text-muted">{bestDates}</p>
     </div>
@@ -76,8 +81,8 @@
     </div>
     <p class="text-[0.7rem] whitespace-nowrap text-muted">
       {stats.rate === null
-        ? 'Not marked in this period'
-        : `${numberFmt.format(stats.done)} of ${numberFmt.format(stats.counted)} days`}
+        ? t.stats.habits.rateNotMarked
+        : fmt(t.stats.habits.rateOf, { done: formatNumber(stats.done), count: stats.counted })}
     </p>
   </div>
 
@@ -87,13 +92,13 @@
       <div
         class="flex max-w-xs flex-1 items-center justify-between"
         role="img"
-        aria-label="Last {RECENT_DAYS} days: {recentDone} done, {recentMissed} missed"
+        aria-label={fmt(t.stats.habits.lastDaysSummary, { count: RECENT_DAYS, done: recentDone, missed: recentMissed })}
       >
         {#each stats.recent as mark, i (i)}
           <HabitMarkIcon {mark} dot />
         {/each}
       </div>
-      <span class="shrink-0 text-[0.65rem] text-muted">Last {RECENT_DAYS} days</span>
+      <span class="shrink-0 text-[0.65rem] text-muted">{fmt(t.stats.habits.lastDays, { count: RECENT_DAYS })}</span>
     </div>
   {/if}
 </div>

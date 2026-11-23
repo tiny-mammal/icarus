@@ -2,16 +2,19 @@
   import { tooltip, type TooltipContent } from '../lib/tooltip';
   import { app } from '../lib/store.svelte';
   import { compactDayLabel, keyToDate, longDayLabel, shortDayLabel } from '../lib/date';
+  import { fmt, t } from '../lib/i18n/index.svelte';
 
   // The open day's label flanked by arrows that jump to the previous/next day
   // with entries.
   let { date }: { date: Date } = $props();
 
-  function hint(dir: 'Previous' | 'Next', key: string | null): TooltipContent {
-    if (!key) return { label: `No ${dir === 'Previous' ? 'earlier' : 'later'} entries` };
+  function hint(dir: 'previous' | 'next', key: string | null): TooltipContent {
+    if (!key) return { label: dir === 'previous' ? t.nav.noEarlierEntries : t.nav.noLaterEntries };
     return {
-      label: `${dir} day · ${shortDayLabel(keyToDate(key), app.dateFormat)}`,
-      keys: ['Shift', dir === 'Previous' ? '←' : '→'],
+      label: fmt(dir === 'previous' ? t.nav.previousDayHint : t.nav.nextDayHint, {
+        day: shortDayLabel(keyToDate(key), app.dateFormat),
+      }),
+      keys: ['Shift', dir === 'previous' ? '←' : '→'],
     };
   }
 </script>
@@ -19,8 +22,8 @@
 <div class="flex min-w-0 items-center gap-1">
   <button
     class="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
-    aria-label="Previous day"
-    use:tooltip={hint('Previous', app.prevDayKey)}
+    aria-label={t.nav.previousDay}
+    use:tooltip={hint('previous', app.prevDayKey)}
     disabled={!app.prevDayKey}
     onclick={() => app.stepDay(-1)}
   >
@@ -35,8 +38,8 @@
   </h2>
   <button
     class="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-slate hover:text-text disabled:pointer-events-none disabled:opacity-30"
-    aria-label="Next day"
-    use:tooltip={hint('Next', app.nextDayKey)}
+    aria-label={t.nav.nextDay}
+    use:tooltip={hint('next', app.nextDayKey)}
     disabled={!app.nextDayKey}
     onclick={() => app.stepDay(1)}
   >
