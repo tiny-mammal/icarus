@@ -4,6 +4,7 @@ import {
   adjacentKey,
   calendarKeyTarget,
   dateKey,
+  daysAgo,
   compactDayLabel,
   isSameDay,
   keyToDate,
@@ -255,6 +256,26 @@ describe('date formats', () => {
     expect(parseDateFormat('nope')).toBe('auto');
     expect(parseDateFormat(undefined)).toBe('auto');
     expect(parseDateFormat('mdy')).toBe('mdy');
+  });
+});
+
+describe('daysAgo', () => {
+  const now = new Date(2026, 10, 5, 9, 30);
+
+  it('counts calendar days, not hours', () => {
+    expect(daysAgo(new Date(2026, 10, 5, 23, 59), now)).toBe('today');
+    expect(daysAgo(new Date(2026, 10, 4, 23, 50), now)).toBe('yesterday');
+    expect(daysAgo(new Date(2026, 9, 24), now)).toBe('12 days ago');
+  });
+
+  it('stays in days for entries years old', () => {
+    expect(daysAgo(new Date(2025, 10, 5), now)).toBe('365 days ago');
+    expect(daysAgo(new Date(2015, 10, 5), now)).toBe('4,018 days ago');
+  });
+
+  it('reads days still to come', () => {
+    expect(daysAgo(new Date(2026, 10, 6), now)).toBe('tomorrow');
+    expect(daysAgo(new Date(2026, 10, 8), now)).toBe('in 3 days');
   });
 });
 

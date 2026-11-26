@@ -61,6 +61,15 @@ const VIEWPORTS = {
 /** Scenes that need years of history rather than the one sample entry. */
 const LONG_DIARY = serializeIcs({ entries: seedEntries(3), tracker: seedTracker(3) });
 const LONG_SCENES = new Set(['stats-writing', 'stats-score', 'stats-habits']);
+const SAMPLE_DIARY = diaryIcs([SAMPLE_ENTRY], SAMPLE_TRACKER);
+/** One entry from over a decade ago, to show how old days read. */
+const OLD_ENTRY = { ...SAMPLE_ENTRY, date: '2014-03-12' };
+const OLD_DIARY = diaryIcs([OLD_ENTRY], SAMPLE_TRACKER);
+
+function diaryFor(scene: string): string {
+  if (LONG_SCENES.has(scene)) return LONG_DIARY;
+  return scene === 'reader-old' ? OLD_DIARY : SAMPLE_DIARY;
+}
 
 async function openStatistics(page: Page, view?: 'Tracking'): Promise<void> {
   await page.getByRole('button', { name: 'Statistics' }).click();
@@ -71,6 +80,7 @@ async function openStatistics(page: Page, view?: 'Tracking'): Promise<void> {
 const SCENES: Record<string, (page: Page) => Promise<void>> = {
   home: async () => {},
   reader: (page) => openDay(page, SAMPLE_ENTRY.date),
+  'reader-old': (page) => openDay(page, OLD_ENTRY.date),
   tracker: async (page) => {
     await openDay(page, SAMPLE_ENTRY.date);
     await page.getByTestId('day-tracker').click();
@@ -132,7 +142,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
   for (const [scene, show] of Object.entries(LOCALIZED_SCENES)) {
     test(`${scene} in ${LOCALE} on ${device}`, async ({ page }) => {
       await page.setViewportSize(viewport);
-      await importPlainIcs(page, LONG_SCENES.has(scene) ? LONG_DIARY : diaryIcs([SAMPLE_ENTRY], SAMPLE_TRACKER));
+      await importPlainIcs(page, diaryFor(scene));
       await hideToasts(page);
       await useLanguage(page);
       await show(page);
@@ -146,7 +156,7 @@ for (const [device, viewport] of Object.entries(VIEWPORTS)) {
   for (const [scene, show] of Object.entries(SCENES)) {
     test(`${scene} on ${device}`, async ({ page }) => {
       await page.setViewportSize(viewport);
-      await importPlainIcs(page, LONG_SCENES.has(scene) ? LONG_DIARY : diaryIcs([SAMPLE_ENTRY], SAMPLE_TRACKER));
+      await importPlainIcs(page, diaryFor(scene));
       await hideToasts(page);
       await show(page);
       // Let pane transitions settle before capturing.

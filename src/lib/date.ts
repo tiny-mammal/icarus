@@ -238,11 +238,26 @@ export function adjacentKey(
 
 const relativeTimes = new Map<string, Intl.RelativeTimeFormat>();
 
-/** How long ago `date` was, in words: "today", "yesterday", "3 weeks ago". */
-export function timeAgo(date: Date, now: Date = new Date()): string {
+function relativeTimeFormat(): Intl.RelativeTimeFormat {
   const locale = formatLocale();
   let relativeTime = relativeTimes.get(locale);
   if (!relativeTime) relativeTimes.set(locale, (relativeTime = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })));
+  return relativeTime;
+}
+
+/**
+ * The exact number of calendar days between `date` and `now`, in words:
+ * "today", "yesterday", "4,102 days ago". Unlike `timeAgo` it never rounds up
+ * to weeks, months or years, so even a decade-old entry says how many days.
+ * A day still to come reads "tomorrow" or "in 3 days".
+ */
+export function daysAgo(date: Date, now: Date = new Date()): string {
+  return relativeTimeFormat().format(-daysBetween(date, now), 'day');
+}
+
+/** How long ago `date` was, in words: "today", "yesterday", "3 weeks ago". */
+export function timeAgo(date: Date, now: Date = new Date()): string {
+  const relativeTime = relativeTimeFormat();
   const days = daysBetween(date, now);
   if (days < 7) return relativeTime.format(-Math.max(0, days), 'day');
   if (days < 30) return relativeTime.format(-Math.floor(days / 7), 'week');

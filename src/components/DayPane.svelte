@@ -4,7 +4,7 @@
   import { fade, fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { app } from '../lib/store.svelte';
-  import { keyToDate } from '../lib/date';
+  import { daysAgo, keyToDate } from '../lib/date';
   import { isPlainShortcut } from '../lib/keyboard';
   import { dragPager, pageTurner } from '../lib/gestures';
   import { queryTerms, countMatches } from '../lib/highlight';
@@ -288,6 +288,7 @@
         <div class="min-w-0">
           <DayStepper date={dayDate} />
           <div class="mt-1 flex min-w-0 items-center gap-3 pl-8">
+            <p class="shrink-0 text-[0.7rem] font-medium text-muted tabular-nums" data-testid="days-ago">{daysAgo(dayDate)}</p>
             {#if terms.length}
               <p class="min-w-0 truncate text-[0.7rem] font-medium text-muted">
                 {#if matchCount > 0}
