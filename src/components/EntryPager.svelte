@@ -25,10 +25,11 @@
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
   </button>
 
-  <div class="flex items-center gap-1.5">
+  <!-- Fixed width: the springy pill overshoots, which would otherwise make the row jiggle. -->
+  <div class="flex items-center justify-center gap-1.5" style:width="{(count - 1) * 12 + 28}px">
     {#each entries as e, i (e.uid)}
       <button
-        class="h-1.5 rounded-full transition-all {i === page ? 'w-4 bg-text' : 'w-1.5 bg-faint hover:bg-muted'}"
+        class="h-1.5 rounded-full [transition:width_520ms_cubic-bezier(.34,1.7,.5,1),background-color_200ms_ease] motion-reduce:transition-none {i === page ? 'w-4 bg-text' : 'w-1.5 bg-faint hover:bg-muted'}"
         aria-label={fmt(t.nav.goToEntry, { number: i + 1 })}
         aria-current={i === page}
         onclick={() => (page = i)}
