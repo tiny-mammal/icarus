@@ -21,7 +21,6 @@
   import { indexAfterVisible } from '../lib/caret';
   import { formatLength } from '../lib/text-count';
   import { i18n, t } from '../lib/i18n/index.svelte';
-  import DraftsMenu from './DraftsMenu.svelte';
   import DatePicker from './DatePicker.svelte';
   import DayTracker from './DayTracker.svelte';
   import PaneSizeToggle from './PaneSizeToggle.svelte';
@@ -140,19 +139,18 @@
   role="form"
   aria-label={app.editingUid ? t.editor.editEntry : t.editor.newEntry}
 >
-  <!-- Positioned: on phones the drafts list spans this bar. -->
   <header
-    class="relative flex items-center justify-between gap-2 border-b border-slate py-3 pr-2 pl-4 sm:gap-3 sm:py-5 sm:pr-[var(--pane-gutter)] sm:pl-[calc(var(--pane-gutter)-0.25rem)]"
+    class="flex items-center justify-between gap-2 border-b border-slate py-3 pr-2 pl-4 sm:gap-3 sm:py-5 sm:pr-[var(--pane-gutter)] sm:pl-[calc(var(--pane-gutter)-0.25rem)]"
   >
     <div class="flex min-w-0 items-center gap-3">
       <DatePicker bind:value={app.draftDateKey} align="left" />
-      <!-- The day being written about: its score and habits, without leaving the text. -->
-      <DayTracker dayKey={app.draftDateKey} writing />
+      <!-- The day being written about: its score and habits, without leaving the text.
+        On phones it yields to the date (and clips) when the buttons leave little room. -->
+      <div class="min-w-0 max-sm:overflow-hidden">
+        <DayTracker dayKey={app.draftDateKey} writing />
+      </div>
     </div>
     <div class="flex shrink-0 items-center gap-1">
-      {#if !app.editingUid && app.drafts.length > 0}
-        <DraftsMenu compact />
-      {/if}
       <!-- Only once there is history, so a fresh entry keeps a quiet header. -->
       {#if canUndo || canRedo}
         {@render historyButton(t.common.undo, ['⌘/Ctrl', 'Z'], canUndo, () => body?.undo(), 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11')}

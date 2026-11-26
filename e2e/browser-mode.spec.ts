@@ -158,10 +158,9 @@ test('the top bar leaves writing actions to the open editor', async ({ page }) =
   await expect(banner.getByRole('button', { name: 'Drafts', exact: true })).toBeVisible();
   const searchBefore = await search.boundingBox();
 
-  // While writing, only the editor offers drafts; the search stays put.
+  // While writing, drafts wait until the editor is minimized; the search stays put.
   await startWriting(page);
-  await expect(page.getByRole('form', { name: 'New entry' }).getByRole('button', { name: 'Drafts', exact: true })).toBeVisible();
-  await expect(banner.getByRole('button', { name: 'Drafts', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Drafts', exact: true })).toHaveCount(0);
   await expect(banner.getByRole('button', { name: /^(New entry|Continue draft)$/ })).toHaveCount(0);
   expect((await search.boundingBox())?.x).toBe(searchBefore?.x);
 });

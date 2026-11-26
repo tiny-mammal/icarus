@@ -39,7 +39,7 @@
   }
 </script>
 
-<div class="relative" use:clickOutside={() => (open = false)}>
+<div class="relative shrink-0" use:clickOutside={() => (open = false)}>
   <!-- Trigger: mirrors the old native input's chip styling -->
   <button
     type="button"
@@ -49,7 +49,7 @@
     aria-expanded={open}
   >
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-    <span class="tabular-nums">{triggerLabel}</span>
+    <span class="whitespace-nowrap tabular-nums">{triggerLabel}</span>
   </button>
 
   {#if open}

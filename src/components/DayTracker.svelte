@@ -31,7 +31,7 @@
   const score = $derived(record.score);
   const done = $derived(habits.filter((h) => record.marks[h.id] === 'done').length);
   // Past a handful, dots stop being readable at a glance: count instead.
-  const MAX_DOTS = 8;
+  const MAX_DOTS = 5;
   // A run of one day says nothing the score doesn't.
   const run = $derived.by(() => {
     const found = app.passRun(dayKey);
