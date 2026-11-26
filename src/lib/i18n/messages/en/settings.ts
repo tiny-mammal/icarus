@@ -22,14 +22,14 @@ export default {
   personalDictionary: 'Personal dictionary',
   dictionaryCount: plural({ one: '{count} word added', other: '{count} words added' }),
   dictionaryEmpty: 'Words you add while writing show up here',
-  lengthCount: 'Length count',
+  lengthCount: 'Count while writing',
   lengthCountWords: 'Words',
   lengthCountChars: 'Characters',
   lengthCountBoth: 'Both',
   lengthCountOff: 'Off',
-  lengthCountNone: 'No count while reading or writing',
+  lengthCountNone: 'No count while writing',
   /** `{sample}` is a count as the editor shows it, like "248 words". */
-  lengthCountPreview: 'Shown with each entry, like “{sample}”',
+  lengthCountPreview: 'Shown in the editor, like “{sample}”',
   hideCountWhileTyping: 'Hide the count while typing',
   hideCountHint: 'It returns when you pause',
 

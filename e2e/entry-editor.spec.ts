@@ -21,7 +21,7 @@ test('the length count steps aside while typing and returns after a pause', asyn
   await expect(count).toContainText('2 words · 9 chars');
 });
 
-test('the reader shows the same length as the editor under the date', async ({ page }) => {
+test('the reader shows the same length as the editor under the title', async ({ page }) => {
   await startPlainDiary(page);
   await page.getByRole('button', { name: 'New entry', exact: true }).click();
   await page.locator('.ProseMirror').click();
@@ -33,16 +33,13 @@ test('the reader shows the same length as the editor under the date', async ({ p
   const length = page.getByTestId('entry-length');
   await expect(length).toHaveText('2 words · 10 chars');
 
-  // The reader follows the length-count preference too.
+  // The reader always shows both counts, whatever the editor's preference.
   await page.getByRole('button', { name: 'Settings' }).click();
   const settings = page.getByRole('dialog', { name: 'Settings' });
-  const counts = settings.getByRole('button', { name: /^Length count/ });
-  await counts.click();
-  await settings.getByRole('option', { name: 'Characters' }).click();
-  await expect(length).toHaveText('10 chars');
+  const counts = settings.getByRole('button', { name: /^Count while writing/ });
   await counts.click();
   await settings.getByRole('option', { name: 'Off' }).click();
-  await expect(length).toBeHidden();
+  await expect(length).toHaveText('2 words · 10 chars');
 });
 
 test('undo and redo buttons appear once writing starts and step through the body history', async ({ page }) => {
@@ -74,11 +71,11 @@ test('the length count follows the chosen counts and can stay visible while typi
   await startPlainDiary(page);
   await page.getByRole('button', { name: 'Settings' }).click();
   const settings = page.getByRole('dialog', { name: 'Settings' });
-  const counts = settings.getByRole('button', { name: /^Length count/ });
+  const counts = settings.getByRole('button', { name: /^Count while writing/ });
   const hides = settings.getByRole('switch', { name: 'Hide the count while typing' });
   await counts.click();
   await settings.getByRole('option', { name: 'Words' }).click();
-  await expect(settings.getByText('Shown with each entry, like “248 words”')).toBeVisible();
+  await expect(settings.getByText('Shown in the editor, like “248 words”')).toBeVisible();
   await hides.click();
   await settings.getByRole('button', { name: 'Close' }).click();
 

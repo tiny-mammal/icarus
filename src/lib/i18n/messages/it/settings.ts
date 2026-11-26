@@ -22,14 +22,14 @@ export default {
   personalDictionary: 'Dizionario personale',
   dictionaryCount: plural({ one: '{count} parola aggiunta', other: '{count} parole aggiunte' }),
   dictionaryEmpty: 'Le parole che aggiungi mentre scrivi compaiono qui',
-  lengthCount: 'Conteggio lunghezza',
+  lengthCount: 'Conteggio mentre scrivi',
   lengthCountWords: 'Parole',
   lengthCountChars: 'Caratteri',
   lengthCountBoth: 'Entrambi',
   lengthCountOff: 'Spento',
-  lengthCountNone: 'Nessun conteggio mentre leggi o scrivi',
+  lengthCountNone: 'Nessun conteggio mentre scrivi',
   /** `{sample}` is a count as the editor shows it, like "248 words". */
-  lengthCountPreview: 'Mostrato con ogni voce, per esempio “{sample}”',
+  lengthCountPreview: 'Mostrato nell’editor, per esempio “{sample}”',
   hideCountWhileTyping: 'Nascondi il conteggio mentre scrivi',
   hideCountHint: 'Torna quando fai una pausa',
 

@@ -235,9 +235,16 @@
       <h1 class="text-xl font-semibold tracking-tight text-text" data-field="title">
         <Highlight text={page.title.trim() || t.common.untitled} {terms} />
       </h1>
-      {#if page.location}
-        <p class="mt-1 text-sm text-muted" data-field="location">
-          <Highlight text={page.location} {terms} />
+      {#if page.location || page.content}
+        <!-- One subtitle line. The length is always both counts: the preference only governs the editor. -->
+        <p class="mt-1 text-sm text-muted">
+          {#if page.location}
+            <span data-field="location"><Highlight text={page.location} {terms} /></span>
+          {/if}
+          {#if page.location && page.content}<span aria-hidden="true">{' · '}</span>{/if}
+          {#if page.content}
+            <span class="tabular-nums" data-testid={current ? 'entry-length' : undefined}>{formatLength(page.content)}</span>
+          {/if}
         </p>
       {/if}
       {#if page.content}
@@ -288,10 +295,6 @@
                 {:else}
                   {fmt(t.nav.noMatchesHere, { query: app.searchHighlight })}
                 {/if}
-              </p>
-            {:else if entry?.content && app.lengthCount !== 'off'}
-              <p class="min-w-0 truncate text-[0.7rem] font-medium text-muted tabular-nums" data-testid="entry-length">
-                {formatLength(entry.content, app.lengthCount)}
               </p>
             {/if}
             <DayTracker dayKey={app.selectedKey} bind:open={trackerOpen} />

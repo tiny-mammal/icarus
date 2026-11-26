@@ -22,14 +22,14 @@ export default {
   personalDictionary: 'Dictionnaire personnel',
   dictionaryCount: plural({ one: '{count} mot ajouté', other: '{count} mots ajoutés' }),
   dictionaryEmpty: 'Les mots ajoutés pendant la rédaction apparaissent ici',
-  lengthCount: 'Décompte de longueur',
+  lengthCount: 'Décompte pendant la rédaction',
   lengthCountWords: 'Mots',
   lengthCountChars: 'Caractères',
   lengthCountBoth: 'Les deux',
   lengthCountOff: 'Aucun',
-  lengthCountNone: 'Aucun décompte à la lecture ni pendant la rédaction',
+  lengthCountNone: 'Aucun décompte pendant la rédaction',
   /** `{sample}` is a count as the editor shows it, like "248 words". */
-  lengthCountPreview: 'Affiché avec chaque entrée, par exemple « {sample} »',
+  lengthCountPreview: 'Affiché dans l’éditeur, par exemple « {sample} »',
   hideCountWhileTyping: 'Masquer le décompte pendant la frappe',
   hideCountHint: 'Il réapparaît dès que vous faites une pause',
 

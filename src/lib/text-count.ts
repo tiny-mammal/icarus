@@ -69,7 +69,7 @@ export function countWords(markdown: string): number {
   return plainText(markdown).match(WORD)?.length ?? 0;
 }
 
-/** What the length count shows, in the editor and the reader (user preference). */
+/** What the editor's length count shows (user preference); the reader always shows both. */
 export const LENGTH_COUNTS = ['words', 'chars', 'both', 'off'] as const;
 export type LengthCount = (typeof LENGTH_COUNTS)[number];
 
@@ -89,8 +89,8 @@ export function lengthLabel(count: { words: number; chars: number }, shown: Leng
 
 /**
  * "120 words · 640 chars": the length line shown by the editor and the
- * reader, limited to what the preference shows ('' when off). Only what is
- * shown gets counted.
+ * reader, limited to what `shown` asks for ('' when off). Only what is shown
+ * gets counted.
  */
 export function formatLength(markdown: string, shown: LengthCount = 'both'): string {
   if (shown === 'off') return '';
