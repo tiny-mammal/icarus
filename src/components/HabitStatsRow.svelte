@@ -33,53 +33,56 @@
   const recentMissed = $derived(stats.recent.filter((mark) => mark === 'missed').length);
 </script>
 
+<!--
+  Fixed columns, the same in every row, so streaks and rates line up down the
+  list; captions wrap within them rather than spill into the next one. On a
+  phone the rate sits beside the name so the streaks get the full width.
+-->
 <div
-  class="grid grid-cols-2 items-center gap-x-6 gap-y-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto_7rem]"
+  class="grid grid-cols-[8rem_minmax(0,1fr)_7rem] items-start gap-x-4 gap-y-3 py-4 sm:grid-cols-[minmax(0,1fr)_7.5rem_9rem_7rem] sm:items-center sm:gap-x-6"
 >
   <div class="col-span-2 min-w-0 sm:col-span-1">
     <p class="truncate text-sm font-medium text-text">{habit.name}</p>
     <p class="mt-0.5 truncate text-[0.7rem] text-muted">{since}</p>
   </div>
 
-  <div class="flex gap-6">
-    <div>
-      <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">{t.stats.habits.current}</p>
-      <p
-        class="text-lg font-semibold tabular-nums tracking-tight {record ? 'text-sun' : 'text-text'}"
-      >
-        {#if stats.currentStart}
-          <button type="button" class="cursor-help rounded-sm underline decoration-dotted underline-offset-4" use:tooltip={{ label: fmt(stats.currentStart.estimated ? t.stats.habits.streakStartedEstimated : t.stats.habits.streakStarted, { date: compactDayLabel(keyToDate(stats.currentStart.day), app.dateFormat) }), haptic: app.trackerHaptics }}>{stats.current}</button>
-        {:else}
-          {stats.current}
-        {/if}
-        <span class="text-xs font-normal text-muted">{fmt(t.stats.dayUnit, { count: stats.current })}</span>
-      </p>
-      <p class="text-[0.7rem] whitespace-nowrap text-muted">
-        {stats.current === 0
-          ? t.stats.habits.noActiveStreak
-          : record
-            ? t.stats.habits.longestStreak
-            : t.stats.habits.activeStreak}
-      </p>
-    </div>
-    <div>
-      <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">{t.stats.habits.best}</p>
-      <p class="text-lg font-semibold tabular-nums tracking-tight text-text">
-        {stats.best?.length ?? 0}
-        <span class="text-xs font-normal text-muted">{fmt(t.stats.dayUnit, { count: stats.best?.length ?? 0 })}</span>
-      </p>
-      <p class="text-[0.7rem] whitespace-nowrap text-muted">{bestDates}</p>
-    </div>
+  <div>
+    <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">{t.stats.habits.current}</p>
+    <p
+      class="text-lg font-semibold tabular-nums tracking-tight {record ? 'text-sun' : 'text-text'}"
+    >
+      {#if stats.currentStart}
+        <button type="button" class="cursor-help rounded-sm underline decoration-dotted underline-offset-4" use:tooltip={{ label: fmt(stats.currentStart.estimated ? t.stats.habits.streakStartedEstimated : t.stats.habits.streakStarted, { date: compactDayLabel(keyToDate(stats.currentStart.day), app.dateFormat) }), haptic: app.trackerHaptics }}>{stats.current}</button>
+      {:else}
+        {stats.current}
+      {/if}
+      <span class="text-xs font-normal text-muted">{fmt(t.stats.dayUnit, { count: stats.current })}</span>
+    </p>
+    <p class="text-[0.7rem] text-balance text-muted">
+      {stats.current === 0
+        ? t.stats.habits.noActiveStreak
+        : record
+          ? t.stats.habits.longestStreak
+          : t.stats.habits.activeStreak}
+    </p>
+  </div>
+  <div class="col-span-2 sm:col-span-1">
+    <p class="text-[0.65rem] font-medium tracking-wider text-muted uppercase">{t.stats.habits.best}</p>
+    <p class="text-lg font-semibold tabular-nums tracking-tight text-text">
+      {stats.best?.length ?? 0}
+      <span class="text-xs font-normal text-muted">{fmt(t.stats.dayUnit, { count: stats.best?.length ?? 0 })}</span>
+    </p>
+    <p class="text-[0.7rem] text-balance text-muted">{bestDates}</p>
   </div>
 
-  <div class="justify-self-end text-right">
+  <div class="col-start-3 row-start-1 text-right sm:col-start-auto sm:row-start-auto">
     <p class="text-sm font-semibold tabular-nums text-text">
       {stats.rate === null ? '—' : `${Math.round(stats.rate * 100)}%`}
     </p>
-    <div class="mt-1.5 mb-1 h-1 w-28 overflow-hidden rounded-full bg-slate">
+    <div class="mt-1.5 mb-1 h-1 overflow-hidden rounded-full bg-slate">
       <div class="h-full rounded-full bg-muted" style:width="{(stats.rate ?? 0) * 100}%"></div>
     </div>
-    <p class="text-[0.7rem] whitespace-nowrap text-muted">
+    <p class="text-[0.7rem] text-balance text-muted">
       {stats.rate === null
         ? t.stats.habits.rateNotMarked
         : fmt(t.stats.habits.rateOf, { done: formatNumber(stats.done), count: stats.counted })}
@@ -88,7 +91,7 @@
 
   <!-- A habit not marked lately has nothing to show here but empty rings. -->
   {#if recentDone + recentMissed > 0}
-    <div class="col-span-2 flex items-center gap-3 sm:col-span-3">
+    <div class="col-span-3 flex items-center gap-3 sm:col-span-4">
       <div
         class="flex max-w-xs flex-1 items-center justify-between"
         role="img"

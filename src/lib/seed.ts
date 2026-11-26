@@ -85,6 +85,8 @@ interface SeedHabit {
   /** Days it has been done in a row up to today, whatever the dice say. */
   streak?: number;
   archived?: boolean;
+  /** Just added and never marked, so it has no streaks or rate to show. */
+  unmarked?: boolean;
 }
 
 const SEED_HABITS: SeedHabit[] = [
@@ -93,6 +95,7 @@ const SEED_HABITS: SeedHabit[] = [
   { id: 'seed-sugar', name: 'No sugar', sticky: 0.7, resume: 0.35 },
   { id: 'seed-meditate', name: 'Meditate', sticky: 0.75, resume: 0.25, startedAgo: 140, streak: 4 },
   { id: 'seed-journal', name: 'Journal before bed', sticky: 0.8, resume: 0.3, archived: true },
+  { id: 'seed-stretch', name: 'Stretch', sticky: 0, resume: 0, unmarked: true },
 ];
 
 /**
@@ -112,6 +115,7 @@ export function seedTracker(years = 3, today = new Date(), seed = 1): Tracker {
     const marks: Record<string, HabitMark> = {};
     let doneToday = 0;
     for (const habit of SEED_HABITS) {
+      if (habit.unmarked) continue;
       // The archived habit only lived through the diary's first year.
       if (habit.archived ? i < total - 365 : i > (habit.startedAgo ?? total)) continue;
       if (rand() < 0.08) continue; // forgot to mark it either way

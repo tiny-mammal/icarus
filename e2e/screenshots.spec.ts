@@ -118,6 +118,14 @@ const LOCALIZED_SCENES: Record<string, (page: Page) => Promise<void>> = {
   'stats-writing': async (page) => {
     await page.getByRole('button', { name: m.nav.statistics, exact: true }).click();
   },
+  // Longer captions than English's have to fit in each habit's row.
+  'stats-habits': async (page) => {
+    await page.getByRole('button', { name: m.nav.statistics, exact: true }).click();
+    await page.getByRole('dialog', { name: m.nav.statistics }).getByRole('button', { name: m.stats.views.tracking }).click();
+    await page
+      .getByRole('heading', { name: m.stats.habits.title })
+      .evaluate((heading) => heading.scrollIntoView({ block: 'start' }));
+  },
 };
 
 for (const [device, viewport] of Object.entries(VIEWPORTS)) {
