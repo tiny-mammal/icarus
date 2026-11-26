@@ -1,6 +1,15 @@
 import { devices, expect, test, type Page } from '@playwright/test';
 import { dateKey } from '../src/lib/date';
-import { diaryIcs, importPlainIcs, openSearch, startPlainDiary, searchResult, touchDrag as drag } from './helpers';
+import {
+  diaryIcs,
+  importPlainIcs,
+  openSearch,
+  SAMPLE_ENTRY,
+  SAMPLE_TRACKER,
+  startPlainDiary,
+  searchResult,
+  touchDrag as drag,
+} from './helpers';
 
 /**
  * Phone layout: every entry in one feed with a calendar sheet to jump around,
@@ -70,6 +79,55 @@ test('lists every entry, jumps through the calendar sheet and swipes days', asyn
   const box = (await settings.boundingBox())!;
   await drag(cdp, [200, box.y + 16], [200, box.y + 260], 320);
   await expect(settings).toBeHidden();
+});
+
+test('statistics page between writing and tracking with a swipe', async ({ page, context }) => {
+  await importPlainIcs(page, diaryIcs([SAMPLE_ENTRY], SAMPLE_TRACKER));
+  const cdp = await context.newCDPSession(page);
+  await page.getByRole('button', { name: 'Statistics' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Statistics' });
+  await dialog.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
+  const views = dialog.getByRole('group', { name: 'View' });
+  const writing = views.getByRole('button', { name: 'Writing' });
+  const tracking = views.getByRole('button', { name: 'Tracking' });
+  await expect(writing).toHaveAttribute('aria-pressed', 'true');
+
+  const box = (await dialog.locator('.will-change-transform').boundingBox())!;
+  const y = box.y + 80;
+
+  // The highlight follows the finger: halfway through the drag it sits
+  // between the two options.
+  const pill = views.locator('span[aria-hidden]');
+  const left = async () => (await pill.boundingBox())!.x;
+  const start = await left();
+  const end = (await tracking.boundingBox())!.x;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 340, y }] });
+  for (const x of [320, 300, 280, 260, 240, 220]) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
+  }
+  await page.waitForTimeout(100);
+  const mid = await left();
+  expect(mid).toBeGreaterThan(start + 2);
+  expect(mid).toBeLessThan(end);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(tracking).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForTimeout(450);
+  await drag(cdp, [60, y], [340, y + 10]);
+  await expect(writing).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForTimeout(450);
+  await drag(cdp, [340, y], [60, y + 10]);
+  await expect(tracking).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForTimeout(450);
+  // Past the last view it springs back.
+  await drag(cdp, [340, y], [60, y + 10]);
+  await page.waitForTimeout(450);
+  await expect(tracking).toHaveAttribute('aria-pressed', 'true');
+  await drag(cdp, [60, y], [340, y + 10]);
+  await expect(writing).toHaveAttribute('aria-pressed', 'true');
+  // The switch slides it as well.
+  await page.waitForTimeout(450);
+  await tracking.click();
+  await expect(tracking).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('search unfolds from its icon over the whole top bar', async ({ page }) => {

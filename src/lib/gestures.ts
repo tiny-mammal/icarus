@@ -180,6 +180,51 @@ export function pageTurner(onpage: (dir: -1 | 1) => void | Promise<void>) {
   };
 }
 
+/**
+ * Report how far a pager's track is from rest, in pages (+1 shows the next
+ * page, -1 the previous), on every frame it moves: while a finger drags it,
+ * while it settles and while a button turns it. Lets something else, such as
+ * a tab highlight, move in step with it. Returns a function that stops it.
+ */
+export function watchPager(
+  node: HTMLElement,
+  track: HTMLElement,
+  onoffset: (pages: number) => void,
+): () => void {
+  let frame = 0;
+  let idle = 0;
+  let last = NaN;
+
+  const offset = () => {
+    const width = node.clientWidth;
+    const x = new DOMMatrixReadOnly(getComputedStyle(track).transform).m41;
+    return width > 0 ? -(x + width) / width || 0 : 0;
+  };
+  const tick = () => {
+    const pages = offset();
+    if (pages !== last) {
+      last = pages;
+      idle = 0;
+      onoffset(pages);
+    } else if (++idle > 4 && track.getAnimations().length === 0) {
+      frame = 0;
+      return;
+    }
+    frame = requestAnimationFrame(tick);
+  };
+  const wake = () => {
+    idle = 0;
+    if (!frame) frame = requestAnimationFrame(tick);
+  };
+
+  const events = ['pointerdown', 'pointermove', 'wheel', 'transitionrun'] as const;
+  for (const type of events) node.addEventListener(type, wake, { passive: true, capture: true });
+  return () => {
+    for (const type of events) node.removeEventListener(type, wake, { capture: true });
+    cancelAnimationFrame(frame);
+  };
+}
+
 export interface DragPagerOptions {
   /** The sliding row holding the previous, current and next pages. */
   track: HTMLElement | null;
